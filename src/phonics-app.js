@@ -86,10 +86,35 @@ if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = loadVoices;
 }
 
+function voicesForLang(lang) {
+  return voices.filter((voice) => voice.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
+}
+
 function pickVoice(lang) {
-  const languageVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
+  const languageVoices = voicesForLang(lang);
   const preferredGender = state.voiceMode === 'male' ? ['male', 'david', 'mark', 'george', 'microsoft zira?'] : ['female', 'zira', 'samantha', 'susan', 'victoria', 'google uk english female'];
   return languageVoices.find((voice) => preferredGender.some((term) => voice.name.toLowerCase().includes(term.replace('?', '')))) || languageVoices[0] || null;
+}
+
+// Arabic system voices are far less commonly installed than English ones, so
+// speechSynthesis.speak() can silently produce no sound at all when a device
+// has zero Arabic voices (no error is thrown; the browser just has nothing
+// to speak with). Detect that case up front and surface it instead of
+// leaving the learner clicking a button that never makes a sound.
+let audioNoticeTimer = null;
+function showAudioNotice(message) {
+  let el = document.getElementById('audio-notice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'audio-notice';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.classList.add('is-visible');
+  clearTimeout(audioNoticeTimer);
+  audioNoticeTimer = setTimeout(() => el.classList.remove('is-visible'), 7000);
 }
 
 function speak(text, lang = 'en-US', rate = 0.75) {
@@ -98,12 +123,20 @@ function speak(text, lang = 'en-US', rate = 0.75) {
     return;
   }
   loadVoices();
+  const voice = pickVoice(lang);
+  if (!voice && lang.toLowerCase().startsWith('ar')) {
+    showAudioNotice('No Arabic voice is installed on this browser/device, so Arabic speech may not play. Try Chrome or Edge with an Arabic language pack, or a phone with an Arabic voice installed.');
+  }
   speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang;
   utterance.rate = rate;
-  const voice = pickVoice(lang);
   if (voice) utterance.voice = voice;
+  utterance.onerror = (event) => {
+    if (event.error !== 'canceled' && event.error !== 'interrupted') {
+      showAudioNotice(`Couldn't play "${text}" — this browser/device could not generate that speech.`);
+    }
+  };
   speechSynthesis.speak(utterance);
 }
 
@@ -226,12 +259,12 @@ function wordCardTemplate(item) {
       <div class="pic">${imageSvg(item.visual, item.word)}</div>
       <div>
         <h2>${markVowels(item.word)}</h2>
-        <p class="arabic" dir="rtl">${escapeHtml(item.arabic)}</p>
+        <p class="arabic" dir="rtl" lang="ar" role="button" tabindex="0" data-say="${escapeHtml(item.arabic)}" data-lang="ar-SA" aria-label="Play Arabic pronunciation of ${escapeHtml(item.arabic)}">${escapeHtml(item.arabic)}${icon('speaker')}</p>
         <p class="hint">${escapeHtml(item.hint)}</p>
       </div>
       <div class="actions">
-        <button data-say="${item.word}" data-lang="en-US">${icon('speaker')}English</button>
-        <button data-say="${escapeHtml(item.arabic)}" data-lang="ar-SA">${icon('speaker')}العربية</button>
+        <button class="say-btn lang-en" data-say="${item.word}" data-lang="en-US"><span class="lang-tag">EN</span>${icon('speaker')}English</button>
+        <button class="say-btn lang-ar" lang="ar" data-say="${escapeHtml(item.arabic)}" data-lang="ar-SA"><span class="lang-tag">AR</span>${icon('speaker')}العربية</button>
         <button data-say="${item.word}. ${escapeHtml(item.hint)}" data-lang="en-US">${icon('chat')}Sentence cue</button>
         <button data-toggle="${item.word}" class="${done ? 'is-done' : ''}">${icon('check')}${done ? 'Known' : 'I know it'}</button>
       </div>
@@ -335,7 +368,17 @@ function render() {
   $('[data-reset]').onclick = () => { state.done = {}; localStorage.removeItem('donePhonics'); render(); };
   $('[data-level]').onchange = (event) => setState('level', event.target.value);
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
-  document.querySelectorAll('[data-say]').forEach((button) => button.onclick = () => speak(button.dataset.say, button.dataset.lang));
+  document.querySelectorAll('[data-say]').forEach((el) => {
+    el.onclick = () => speak(el.dataset.say, el.dataset.lang);
+    if (el.tagName !== 'BUTTON') {
+      el.onkeydown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          speak(el.dataset.say, el.dataset.lang);
+        }
+      };
+    }
+  });
   document.querySelectorAll('[data-toggle]').forEach((button) => button.onclick = () => toggleDone(button.dataset.toggle));
   document.querySelectorAll('[data-practice]').forEach((button) => button.onclick = () => {
     const item = PhonemeData.SOUND_PRACTICE.find((entry) => entry.word === button.dataset.practice);
