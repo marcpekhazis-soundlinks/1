@@ -197,13 +197,13 @@ function imageSvg(type, label) {
   return `<svg class="word-image" viewBox="0 0 300 230" role="img" aria-label="Picture for ${text}"><rect width="300" height="230" rx="26" class="svgBg"/><g class="svgStroke">${drawings[type] || drawings.display}</g><text x="150" y="215" text-anchor="middle" class="svgCaption">${text}</text></svg>`;
 }
 
-function learnTemplate() {
-  const filtered = WORDS.filter((word) => state.level === 'all' || word.level == state.level);
-  return `<section class="grid">${filtered.map((item) => `
+const LEVEL_LABEL = { 1: 'Level 1 · Short ay words', 2: 'Level 2 · Longer ay words' };
+
+function wordCardTemplate(item) {
+  return `
     <article class="card ${state.done[item.word] ? 'done' : ''}">
       <div class="pic">${imageSvg(item.visual, item.word)}</div>
       <div>
-        <p class="group">${item.level === 1 ? 'Level 1: short ay words' : 'Level 2: longer ay words'}</p>
         <h2>${markVowels(item.word)}</h2>
         <p class="arabic" dir="rtl">${escapeHtml(item.arabic)}</p>
         <p class="hint">${escapeHtml(item.hint)}</p>
@@ -214,7 +214,17 @@ function learnTemplate() {
         <button data-say="${item.word}. ${escapeHtml(item.hint)}" data-lang="en-US">Sentence cue</button>
         <button data-toggle="${item.word}">${state.done[item.word] ? '✅ ' : ''}I know it</button>
       </div>
-    </article>`).join('')}</section>`;
+    </article>`;
+}
+
+function learnTemplate() {
+  const filtered = WORDS.filter((word) => state.level === 'all' || word.level == state.level);
+  const levels = [...new Set(filtered.map((item) => item.level))].sort((a, b) => a - b);
+  return levels.map((level) => `
+    <section class="level-group" data-level="${level}">
+      <div class="level-heading"><span class="level-dot">${level}</span><h2>${LEVEL_LABEL[level] || `Level ${level}`}</h2></div>
+      <div class="grid">${filtered.filter((item) => item.level === level).map(wordCardTemplate).join('')}</div>
+    </section>`).join('');
 }
 
 function rulesTemplate() {
@@ -223,6 +233,8 @@ function rulesTemplate() {
     ${RULES.map((rule) => `<article class="rule"><h3>${escapeHtml(rule.title)}</h3><p>${escapeHtml(rule.note)}</p><ul>${rule.rows.map((row) => `<li><strong>${escapeHtml(row[0])}</strong> → <span class="ipa">${escapeHtml(row[1])}</span> <b>${escapeHtml(row[2])}</b> <button data-say="${escapeHtml(row[3])}" data-lang="en-US">🔊 hear "${escapeHtml(row[3])}"</button></li>`).join('')}</ul></article>`).join('')}
   </section>`;
 }
+
+const FEEDBACK_ICON = { correct: '🎉', incorrect: '🔁', listening: '🎙️', error: '⚠️' };
 
 function practiceTemplate() {
   return `<section class="grid">${PhonemeData.SOUND_PRACTICE.map((item) => {
@@ -237,9 +249,9 @@ function practiceTemplate() {
       </div>
       <div class="actions">
         <button data-say="${item.word}" data-lang="en-US">🔊 Hear it</button>
-        <button data-practice="${item.word}" ${status === 'listening' ? 'disabled' : ''}>${status === 'listening' ? '🎙️ Listening…' : '🎤 Try it'}</button>
+        <button data-practice="${item.word}" class="${status === 'listening' ? 'is-listening' : ''}" ${status === 'listening' ? 'disabled' : ''}>${status === 'listening' ? '🎙️ Listening…' : '🎤 Try it'}</button>
       </div>
-      ${result ? `<p class="practice-feedback practice-${status}">${escapeHtml(result.message)}${result.transcript ? ` <em>(heard: "${escapeHtml(result.transcript)}")</em>` : ''}</p>` : ''}
+      ${result ? `<p class="practice-feedback practice-${status}"><span class="feedback-icon" aria-hidden="true">${FEEDBACK_ICON[status] || ''}</span><span>${escapeHtml(result.message)}${result.transcript ? ` <em>(heard: "${escapeHtml(result.transcript)}")</em>` : ''}</span></p>` : ''}
     </article>`;
   }).join('')}</section>`;
 }
@@ -263,6 +275,7 @@ function instructionsTemplate() {
 
 function render() {
   const score = Object.values(state.done).filter(Boolean).length;
+  const pct = WORDS.length ? Math.round((score / WORDS.length) * 100) : 0;
   document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''}`;
   $('#app').innerHTML = `
     <header class="hero">
@@ -271,17 +284,21 @@ function render() {
         <h1>Interactive English Phonics for Arabic Speakers</h1>
         <p>Self-paced lessons highlight vowel teams in red, connect English sounds to Arabic cues, and let learners listen in English or Arabic, repeat, view pictures, and mark progress.</p>
       </div>
-      <div class="progress"><strong>${score}/${WORDS.length}</strong><span>words completed</span></div>
+      <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${WORDS.length}</strong><span>words done</span></div></div>
     </header>
     <nav class="toolbar" aria-label="Learning controls">
-      <button data-view="learn" class="${state.view === 'learn' ? 'active' : ''}">📖 Learn words</button>
-      <button data-view="rules" class="${state.view === 'rules' ? 'active' : ''}">👁️ Rules</button>
-      <button data-view="practice" class="${state.view === 'practice' ? 'active' : ''}">🎤 Sound Practice</button>
-      <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
-      <button data-big>⚙️ Large text</button>
-      <button data-contrast>⚙️ High contrast</button>
-      <select data-level aria-label="Choose pace level"><option value="all">All levels</option><option value="1">Level 1: short words</option><option value="2">Level 2: longer words</option></select>
-      <button data-reset>↺ Reset</button>
+      <div class="tabs" role="tablist">
+        <button data-view="learn" role="tab" aria-selected="${state.view === 'learn'}" class="${state.view === 'learn' ? 'active' : ''}">📖 Learn words</button>
+        <button data-view="rules" role="tab" aria-selected="${state.view === 'rules'}" class="${state.view === 'rules' ? 'active' : ''}">👁️ Rules</button>
+        <button data-view="practice" role="tab" aria-selected="${state.view === 'practice'}" class="${state.view === 'practice' ? 'active' : ''}">🎤 Sound Practice</button>
+      </div>
+      <div class="controls-bar">
+        <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
+        <button data-big class="${state.big ? 'is-on' : ''}">🔤 Large text</button>
+        <button data-contrast class="${state.contrast ? 'is-on' : ''}">🌓 High contrast</button>
+        <select data-level aria-label="Choose pace level"><option value="all">All levels</option><option value="1">Level 1: short words</option><option value="2">Level 2: longer words</option></select>
+        <button data-reset>↺ Reset</button>
+      </div>
     </nav>
     <section class="instructions">
       <h2>How to use / طريقة الاستخدام</h2>
