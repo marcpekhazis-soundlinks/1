@@ -324,7 +324,9 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   -webkit-box-decoration-break: clone;
 }
 .arabic {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-arabic);
   font-size: 1.25rem;
   font-weight: 600;
@@ -332,7 +334,11 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   background: var(--primary-tint-100);
   padding: 5px 13px;
   border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
+.arabic .icon { width: 0.85em; height: 0.85em; flex: none; }
+.arabic:hover, .arabic:focus-visible { background: var(--primary-dark); color: #fff; }
 .hint { color: var(--ink-soft); font-size: 0.96rem; line-height: 1.5; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 9px; }
@@ -356,6 +362,28 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .actions button:last-child { background: var(--success-soft); color: var(--success-dark); }
 .actions button:last-child:hover { background: var(--success); color: #fff; }
 .actions button:last-child.is-done { background: var(--success); color: #fff; }
+
+/* English vs Arabic audio buttons carry a colored two-letter tag so a
+   learner can tell which language they're about to hear before clicking,
+   not just from the (easy to miss) button label. */
+.lang-tag {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  margin-right: 0.4em;
+}
+.lang-en .lang-tag { background: var(--primary); color: #fff; }
+.lang-ar .lang-tag { background: var(--rose); color: #fff; }
+.actions button.lang-ar { background: var(--rose-soft); color: var(--rose); }
+.actions button.lang-ar:hover { background: var(--rose); color: #fff; }
+.actions button.lang-ar:hover .lang-tag { background: #fff; color: var(--rose); }
+.contrast .actions button.lang-en .lang-tag { background: #ff0; color: #000; }
+.contrast .actions button.lang-ar { border-color: #7fd0ff; color: #7fd0ff; }
+.contrast .actions button.lang-ar .lang-tag { background: #7fd0ff; color: #000; }
+.contrast .actions button.lang-ar:hover { background: #7fd0ff; color: #000; }
 
 /* ---------- Rules ---------- */
 .rules { display: grid; gap: 18px; }
@@ -462,7 +490,8 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .pic { background: #111; border: 2px solid #ff0; }
 .contrast .hint, .contrast .group, .contrast .rule p, .contrast .ink-soft { color: #ff0; background: transparent; }
 .contrast .vowel, .contrast .ipa { color: #ff5252; background: transparent; }
-.contrast .arabic { background: transparent; color: #7fd0ff; }
+.contrast .arabic { background: transparent; color: #7fd0ff; border: 2px solid #7fd0ff; }
+.contrast .arabic:hover, .contrast .arabic:focus-visible { background: #7fd0ff; color: #000; }
 .contrast .level-dot { background: #ff0; color: #000; }
 .contrast .level-heading::after { background: #fff; }
 .contrast .instructions ol li::before { background: #ff0; color: #000; }
@@ -477,6 +506,29 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .practice-error { background: #2a1c00; color: #ffd27f; }
 .contrast .practice-listening { background: #001830; color: #7fd0ff; }
 .contrast [data-practice].is-listening, .contrast [data-practice].is-listening::after { background: #000; border-color: #ff0; color: #ff0; }
+
+/* ---------- Audio notice ---------- */
+#audio-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 12px);
+  max-width: min(92vw, 480px);
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  font-weight: 700;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#audio-notice.is-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+body.contrast #audio-notice { background: #ff0; color: #000; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
