@@ -28,14 +28,19 @@ const WORDS = [
   { word: 'sideways', arabic: 'إلى الجانب / جانبياً', hint: 'to or from the side', visual: 'arrows', level: 2 },
 ];
 
+// Each row is [pattern, ipa, note, exampleWord]. exampleWord is what actually
+// gets spoken by the "hear" button: bare grapheme fragments (e.g. "th",
+// "-tion") aren't real words and TTS mispronounces or guesses at them, and
+// both "th" rows would otherwise sound identical. Speaking a real word keeps
+// playback tied to a specific, correctly-pronounceable target.
 const RULES = [
-  { title: 'Hard C Rule', rows: [['ca, co, cu', '/k/', 'like ك in Arabic']], note: 'C is hard before a, o, u: cat, cot, cup.' },
-  { title: 'Soft C Rule', rows: [['ce, ci, cy', '/s/', 'like س in Arabic']], note: 'C is soft before e, i, y: cent, city, cycle.' },
-  { title: 'Hard G Rule', rows: [['ga, go, gu', '/ɡ/', 'voiced g as in go']], note: 'Use the back of the tongue and turn the voice on.' },
-  { title: 'Soft G Rule', rows: [['ge, gi, gy', '/dʒ/', 'like ج in many Arabic dialects']], note: 'Soft g often sounds like the first sound in judge.' },
-  { title: 'Common suffix endings', rows: [['-tion, -tian', '/ʃən/', 'shun: action, musician'], ['-tious, -cious', '/ʃəs/', 'shus: delicious'], ['-tial, -cial', '/ʃəl/', 'shul: special'], ['-sion after vowel', '/ʒən/', 'zhun: vision'], ['-sion after consonant', '/ʃən/', 'shun: tension'], ['-able, -ible', '/əbəl/', 'uh-bul'], ['-ance, -ence', '/əns/', 'uhns'], ['-ment', '/mənt/', 'muhnt'], ['-ness', '/nəs/', 'nuhs'], ['-ity', '/ɪti/', 'ih-tee'], ['-ly', '/li/', 'lee'], ['-ward', '/wərd/', 'werd'], ['-wise', '/waɪz/', 'wize']], note: 'Suffixes can change slightly by accent and stress; teach the main classroom pronunciation first.' },
-  { title: 'Voiceless consonant digraphs', rows: [['ch', '/tʃ/', 'voiceless affricate: chin'], ['sh', '/ʃ/', 'voiceless fricative: ship'], ['th', '/θ/', 'voiceless dental fricative: thin'], ['ph', '/f/', 'voiceless fricative: phone'], ['wh', '/w/ or /ʍ/', 'usually /w/ in modern English: whale']], note: 'Voiceless means the throat does not vibrate. Have students touch the throat to check.' },
-  { title: 'Voiced consonant digraphs', rows: [['th', '/ð/', 'voiced dental fricative: this'], ['ng', '/ŋ/', 'voiced nasal: sing'], ['gh', 'often silent; sometimes /f/ or /ɡ/', 'night = silent, laugh = /f/, ghost = /ɡ/']], note: 'Voiced means the throat vibrates. Arabic has ذ, but English /ð/ places the tongue lightly between the teeth.' },
+  { title: 'Hard C Rule', rows: [['ca, co, cu', '/k/', 'like ك in Arabic', 'cat']], note: 'C is hard before a, o, u: cat, cot, cup.' },
+  { title: 'Soft C Rule', rows: [['ce, ci, cy', '/s/', 'like س in Arabic', 'cent']], note: 'C is soft before e, i, y: cent, city, cycle.' },
+  { title: 'Hard G Rule', rows: [['ga, go, gu', '/ɡ/', 'voiced g as in go', 'go']], note: 'Use the back of the tongue and turn the voice on.' },
+  { title: 'Soft G Rule', rows: [['ge, gi, gy', '/dʒ/', 'like ج in many Arabic dialects', 'gem']], note: 'Soft g often sounds like the first sound in judge.' },
+  { title: 'Common suffix endings', rows: [['-tion, -tian', '/ʃən/', 'shun: action, musician', 'action'], ['-tious, -cious', '/ʃəs/', 'shus: delicious', 'delicious'], ['-tial, -cial', '/ʃəl/', 'shul: special', 'special'], ['-sion after vowel', '/ʒən/', 'zhun: vision', 'vision'], ['-sion after consonant', '/ʃən/', 'shun: tension', 'tension'], ['-able, -ible', '/əbəl/', 'uh-bul', 'capable'], ['-ance, -ence', '/əns/', 'uhns', 'distance'], ['-ment', '/mənt/', 'muhnt', 'movement'], ['-ness', '/nəs/', 'nuhs', 'kindness'], ['-ity', '/ɪti/', 'ih-tee', 'city'], ['-ly', '/li/', 'lee', 'quickly'], ['-ward', '/wərd/', 'werd', 'forward'], ['-wise', '/waɪz/', 'wize', 'otherwise']], note: 'Suffixes can change slightly by accent and stress; teach the main classroom pronunciation first.' },
+  { title: 'Voiceless consonant digraphs', rows: [['ch', '/tʃ/', 'voiceless affricate: chin', 'chin'], ['sh', '/ʃ/', 'voiceless fricative: ship', 'ship'], ['th', '/θ/', 'voiceless dental fricative: thin', 'thin'], ['ph', '/f/', 'voiceless fricative: phone', 'phone'], ['wh', '/w/ or /ʍ/', 'usually /w/ in modern English: whale', 'whale']], note: 'Voiceless means the throat does not vibrate. Have students touch the throat to check.' },
+  { title: 'Voiced consonant digraphs', rows: [['th', '/ð/', 'voiced dental fricative: this', 'this'], ['ng', '/ŋ/', 'voiced nasal: sing', 'sing'], ['gh', 'often silent; sometimes /f/ or /ɡ/', 'night = silent, laugh = /f/, ghost = /ɡ/', 'ghost']], note: 'Voiced means the throat vibrates. Arabic has ذ, but English /ð/ places the tongue lightly between the teeth.' },
 ];
 
 let state = {
@@ -45,6 +50,7 @@ let state = {
   contrast: false,
   voiceMode: localStorage.voiceMode || 'female',
   done: JSON.parse(localStorage.donePhonics || '{}'),
+  practice: {},
 };
 let voices = [];
 const $ = (selector) => document.querySelector(selector);
@@ -96,6 +102,65 @@ function toggleDone(word) {
   state.done[word] = !state.done[word];
   localStorage.donePhonics = JSON.stringify(state.done);
   render();
+}
+
+function highlightPattern(word, pattern) {
+  const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  return escapeHtml(word).replace(regex, (match) => `<span class="vowel">${match}</span>`);
+}
+
+// Speech-recognition matching: capture what the learner said, then compare
+// its PHONEMES (via PhonemeMatch, loaded from phoneme-match.js) against the
+// target word's phonemes — not a raw transcript string match — so a vowel
+// substitution like "bit" -> "beet" is caught instead of glossed over.
+//
+// Tradeoff: the Web Speech API only hands back its own best-guess transcript
+// (plus a confidence score), and that recognizer already leans toward known
+// dictionary words. A mispronunciation the recognizer "autocorrects" back to
+// the target spelling will still read as correct here. True phoneme-level
+// accuracy would need a paid pronunciation-assessment API instead of the
+// free, key-less browser API used here.
+function startPractice(item) {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    state.practice[item.word] = {
+      status: 'error',
+      message: 'Speech recognition is not supported in this browser. Try Chrome or Edge on desktop.',
+    };
+    render();
+    return;
+  }
+
+  state.practice[item.word] = { status: 'listening', message: 'Listening… say the word now.' };
+  render();
+
+  const recognition = new Recognition();
+  recognition.lang = 'en-US';
+  recognition.maxAlternatives = 3;
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
+    const best = event.results[0][0];
+    const transcript = best.transcript.trim().toLowerCase();
+    const comparison = PhonemeMatch.compare(item.word, transcript, item.targetIndex);
+    const message = PhonemeMatch.feedbackFor(item, comparison);
+    state.practice[item.word] = {
+      status: comparison.match ? 'correct' : 'incorrect',
+      transcript,
+      confidence: best.confidence,
+      message,
+    };
+    render();
+  };
+  recognition.onerror = (event) => {
+    state.practice[item.word] = {
+      status: 'error',
+      message: `Microphone error (${event.error}). Check mic permissions and try again.`,
+    };
+    render();
+  };
+  recognition.onspeechend = () => recognition.stop();
+  recognition.start();
 }
 
 function imageSvg(type, label) {
@@ -155,8 +220,45 @@ function learnTemplate() {
 function rulesTemplate() {
   return `<section class="rules">
     <h2>Pronunciation Rules from Phonetic Charts</h2>
-    ${RULES.map((rule) => `<article class="rule"><h3>${escapeHtml(rule.title)}</h3><p>${escapeHtml(rule.note)}</p><ul>${rule.rows.map((row) => `<li><strong>${escapeHtml(row[0])}</strong> → <span class="ipa">${escapeHtml(row[1])}</span> <b>${escapeHtml(row[2])}</b> <button data-say="${escapeHtml(row[0].replaceAll('-', '').split(',')[0])}" data-lang="en-US">🔊 hear</button></li>`).join('')}</ul></article>`).join('')}
+    ${RULES.map((rule) => `<article class="rule"><h3>${escapeHtml(rule.title)}</h3><p>${escapeHtml(rule.note)}</p><ul>${rule.rows.map((row) => `<li><strong>${escapeHtml(row[0])}</strong> → <span class="ipa">${escapeHtml(row[1])}</span> <b>${escapeHtml(row[2])}</b> <button data-say="${escapeHtml(row[3])}" data-lang="en-US">🔊 hear "${escapeHtml(row[3])}"</button></li>`).join('')}</ul></article>`).join('')}
   </section>`;
+}
+
+function practiceTemplate() {
+  return `<section class="grid">${PhonemeData.SOUND_PRACTICE.map((item) => {
+    const result = state.practice[item.word];
+    const status = result ? result.status : 'idle';
+    return `
+    <article class="card practice-card ${status === 'correct' ? 'done' : ''}">
+      <div>
+        <p class="group">${escapeHtml(item.category)}</p>
+        <h2>${highlightPattern(item.word, item.pattern)}</h2>
+        <p class="hint">Target sound: <span class="ipa">${escapeHtml(item.label)}</span></p>
+      </div>
+      <div class="actions">
+        <button data-say="${item.word}" data-lang="en-US">🔊 Hear it</button>
+        <button data-practice="${item.word}" ${status === 'listening' ? 'disabled' : ''}>${status === 'listening' ? '🎙️ Listening…' : '🎤 Try it'}</button>
+      </div>
+      ${result ? `<p class="practice-feedback practice-${status}">${escapeHtml(result.message)}${result.transcript ? ` <em>(heard: "${escapeHtml(result.transcript)}")</em>` : ''}</p>` : ''}
+    </article>`;
+  }).join('')}</section>`;
+}
+
+function instructionsTemplate() {
+  if (state.view === 'practice') {
+    return `<ol>
+        <li>Press "🔊 Hear it" to listen to the target word and sound.</li>
+        <li>Press "🎤 Try it", allow microphone access, and say the word clearly.</li>
+        <li>Feedback names which sound was off (the target vowel/digraph sound vs. the whole word), not just right or wrong.</li>
+        <li>Some words share a spelling but not a sound (e.g. "ea" in "bread" vs. "beach") — each card is matched to its own word, not the letter pattern.</li>
+      </ol>`;
+  }
+  return `<ol>
+        <li>Choose a level so each student can work at a comfortable pace.</li>
+        <li>Select a male or female voice, then press English or Arabic audio.</li>
+        <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red vowel team.</li>
+        <li>Use Large text or High contrast for inclusion and accessibility.</li>
+      </ol>`;
 }
 
 function render() {
@@ -174,6 +276,7 @@ function render() {
     <nav class="toolbar" aria-label="Learning controls">
       <button data-view="learn" class="${state.view === 'learn' ? 'active' : ''}">📖 Learn words</button>
       <button data-view="rules" class="${state.view === 'rules' ? 'active' : ''}">👁️ Rules</button>
+      <button data-view="practice" class="${state.view === 'practice' ? 'active' : ''}">🎤 Sound Practice</button>
       <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
       <button data-big>⚙️ Large text</button>
       <button data-contrast>⚙️ High contrast</button>
@@ -182,14 +285,9 @@ function render() {
     </nav>
     <section class="instructions">
       <h2>How to use / طريقة الاستخدام</h2>
-      <ol>
-        <li>Choose a level so each student can work at a comfortable pace.</li>
-        <li>Select a male or female voice, then press English or Arabic audio.</li>
-        <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red vowel team.</li>
-        <li>Use Large text or High contrast for inclusion and accessibility.</li>
-      </ol>
+      ${instructionsTemplate()}
     </section>
-    ${state.view === 'learn' ? learnTemplate() : rulesTemplate()}`;
+    ${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : practiceTemplate()}`;
   $('[data-level]').value = state.level;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setState('view', button.dataset.view));
@@ -200,6 +298,10 @@ function render() {
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
   document.querySelectorAll('[data-say]').forEach((button) => button.onclick = () => speak(button.dataset.say, button.dataset.lang));
   document.querySelectorAll('[data-toggle]').forEach((button) => button.onclick = () => toggleDone(button.dataset.toggle));
+  document.querySelectorAll('[data-practice]').forEach((button) => button.onclick = () => {
+    const item = PhonemeData.SOUND_PRACTICE.find((entry) => entry.word === button.dataset.practice);
+    if (item) startPractice(item);
+  });
 }
 
 render();
