@@ -48,6 +48,10 @@ h2, h3 { margin-top: 0; }
 .rule li { font-size: 1.2rem; line-height: 2; }
 .rule strong { font-size: 1.35rem; }
 .ipa { color: var(--red); font-weight: 950; }
+.practice-feedback { font-weight: 700; margin: 4px 0 0; }
+.practice-correct { color: var(--green); }
+.practice-incorrect, .practice-error { color: var(--red); }
+.practice-listening { color: var(--blue); }
 .rule b { font-size: 1rem; margin-inline: 6px; }
 .big { font-size: 125%; }
 .contrast { background: #000; color: #fff; }

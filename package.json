@@ -1,1 +1,1 @@
-{"scripts":{"start":"python3 -m http.server 5173","test":"node --check src/app.js"},"devDependencies":{},"dependencies":{}}
+{"scripts":{"start":"python3 -m http.server 5173","test":"node --check src/phonics-app.js && node --check src/phoneme-data.js && node --check src/phoneme-match.js && node --test src/phoneme-match.test.js"},"devDependencies":{},"dependencies":{}}
