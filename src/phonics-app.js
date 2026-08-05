@@ -1,31 +1,36 @@
+// audioAr points at a pre-recorded pronunciation clip for the `arabic` field
+// (see audio/ar/README.md for the format and how to source these files).
+// Browser text-to-speech isn't used for Arabic: an installed Arabic voice
+// can't be relied on across devices (Windows language-pack installs in
+// particular are known to fail), so playback needs a real audio file here.
 const WORDS = [
-  { word: 'bay', arabic: 'خليج', hint: 'a curve of ocean by land', visual: 'water', level: 1 },
-  { word: 'day', arabic: 'يوم', hint: 'sun-up time', visual: 'sun', level: 1 },
-  { word: 'hay', arabic: 'تبن', hint: 'dry grass', visual: 'hay', level: 1 },
-  { word: 'lay', arabic: 'يضع / يستلقي', hint: 'put down or rest', visual: 'bed', level: 1 },
-  { word: 'may', arabic: 'قد / شهر مايو', hint: 'might, or the month May', visual: 'calendar', level: 1 },
-  { word: 'pay', arabic: 'يدفع', hint: 'give money', visual: 'money', level: 1 },
-  { word: 'ray', arabic: 'شعاع', hint: 'a line of light', visual: 'ray', level: 1 },
-  { word: 'say', arabic: 'يقول', hint: 'speak words', visual: 'speech', level: 1 },
-  { word: 'play', arabic: 'يلعب', hint: 'have fun or join a game', visual: 'game', level: 1 },
-  { word: 'stay', arabic: 'يبقى', hint: 'remain in one place', visual: 'house', level: 1 },
-  { word: 'spray', arabic: 'يرش', hint: 'send out small drops', visual: 'spray', level: 1 },
-  { word: 'tray', arabic: 'صينية', hint: 'a flat holder for food', visual: 'tray', level: 1 },
-  { word: 'always', arabic: 'دائماً', hint: 'all the time', visual: 'infinity', level: 2 },
-  { word: 'runaway', arabic: 'هارب', hint: 'someone who escapes', visual: 'runner', level: 2 },
-  { word: 'birthday', arabic: 'يوم الميلاد', hint: 'a yearly celebration', visual: 'cake', level: 2 },
-  { word: 'causeway', arabic: 'طريق مشهود / ممر مرتفع', hint: 'a raised road over water', visual: 'road', level: 2 },
-  { word: 'claymore', arabic: 'سيف اسكتلندي / لغم مسطح', hint: 'a large old sword', visual: 'sword', level: 2 },
-  { word: 'daybreak', arabic: 'بزوغ الفجر / شروق الشمس', hint: 'first light in the morning', visual: 'sunrise', level: 2 },
-  { word: 'dayshift', arabic: 'وردية النهار', hint: 'work time during the day', visual: 'worker', level: 2 },
-  { word: 'display', arabic: 'يعرض / عرض', hint: 'show something clearly', visual: 'display', level: 2 },
-  { word: 'doorstay', arabic: 'مزلاجة الباب / دعامة الباب', hint: 'a support that holds a door', visual: 'door', level: 2 },
-  { word: 'fairplay', arabic: 'لعب نزيه / نزاهة', hint: 'playing by the rules', visual: 'handshake', level: 2 },
-  { word: 'gateway', arabic: 'بوابة / مدخل', hint: 'an entrance', visual: 'gate', level: 2 },
-  { word: 'haystack', arabic: 'كدس التبن / رزمة قش', hint: 'a pile of hay', visual: 'haystack', level: 2 },
-  { word: 'overstay', arabic: 'يبقى أكثر من المدة', hint: 'stay too long', visual: 'clock', level: 2 },
-  { word: 'playbook', arabic: 'كتاب اللعب / خطة اللعب', hint: 'a book of game plans', visual: 'book', level: 2 },
-  { word: 'sideways', arabic: 'إلى الجانب / جانبياً', hint: 'to or from the side', visual: 'arrows', level: 2 },
+  { word: 'bay', arabic: 'خليج', hint: 'a curve of ocean by land', visual: 'water', level: 1, audioAr: 'audio/ar/bay.mp3' },
+  { word: 'day', arabic: 'يوم', hint: 'sun-up time', visual: 'sun', level: 1, audioAr: 'audio/ar/day.mp3' },
+  { word: 'hay', arabic: 'تبن', hint: 'dry grass', visual: 'hay', level: 1, audioAr: 'audio/ar/hay.mp3' },
+  { word: 'lay', arabic: 'يضع / يستلقي', hint: 'put down or rest', visual: 'bed', level: 1, audioAr: 'audio/ar/lay.mp3' },
+  { word: 'may', arabic: 'قد / شهر مايو', hint: 'might, or the month May', visual: 'calendar', level: 1, audioAr: 'audio/ar/may.mp3' },
+  { word: 'pay', arabic: 'يدفع', hint: 'give money', visual: 'money', level: 1, audioAr: 'audio/ar/pay.mp3' },
+  { word: 'ray', arabic: 'شعاع', hint: 'a line of light', visual: 'ray', level: 1, audioAr: 'audio/ar/ray.mp3' },
+  { word: 'say', arabic: 'يقول', hint: 'speak words', visual: 'speech', level: 1, audioAr: 'audio/ar/say.mp3' },
+  { word: 'play', arabic: 'يلعب', hint: 'have fun or join a game', visual: 'game', level: 1, audioAr: 'audio/ar/play.mp3' },
+  { word: 'stay', arabic: 'يبقى', hint: 'remain in one place', visual: 'house', level: 1, audioAr: 'audio/ar/stay.mp3' },
+  { word: 'spray', arabic: 'يرش', hint: 'send out small drops', visual: 'spray', level: 1, audioAr: 'audio/ar/spray.mp3' },
+  { word: 'tray', arabic: 'صينية', hint: 'a flat holder for food', visual: 'tray', level: 1, audioAr: 'audio/ar/tray.mp3' },
+  { word: 'always', arabic: 'دائماً', hint: 'all the time', visual: 'infinity', level: 2, audioAr: 'audio/ar/always.mp3' },
+  { word: 'runaway', arabic: 'هارب', hint: 'someone who escapes', visual: 'runner', level: 2, audioAr: 'audio/ar/runaway.mp3' },
+  { word: 'birthday', arabic: 'يوم الميلاد', hint: 'a yearly celebration', visual: 'cake', level: 2, audioAr: 'audio/ar/birthday.mp3' },
+  { word: 'causeway', arabic: 'طريق مشهود / ممر مرتفع', hint: 'a raised road over water', visual: 'road', level: 2, audioAr: 'audio/ar/causeway.mp3' },
+  { word: 'claymore', arabic: 'سيف اسكتلندي / لغم مسطح', hint: 'a large old sword', visual: 'sword', level: 2, audioAr: 'audio/ar/claymore.mp3' },
+  { word: 'daybreak', arabic: 'بزوغ الفجر / شروق الشمس', hint: 'first light in the morning', visual: 'sunrise', level: 2, audioAr: 'audio/ar/daybreak.mp3' },
+  { word: 'dayshift', arabic: 'وردية النهار', hint: 'work time during the day', visual: 'worker', level: 2, audioAr: 'audio/ar/dayshift.mp3' },
+  { word: 'display', arabic: 'يعرض / عرض', hint: 'show something clearly', visual: 'display', level: 2, audioAr: 'audio/ar/display.mp3' },
+  { word: 'doorstay', arabic: 'مزلاجة الباب / دعامة الباب', hint: 'a support that holds a door', visual: 'door', level: 2, audioAr: 'audio/ar/doorstay.mp3' },
+  { word: 'fairplay', arabic: 'لعب نزيه / نزاهة', hint: 'playing by the rules', visual: 'handshake', level: 2, audioAr: 'audio/ar/fairplay.mp3' },
+  { word: 'gateway', arabic: 'بوابة / مدخل', hint: 'an entrance', visual: 'gate', level: 2, audioAr: 'audio/ar/gateway.mp3' },
+  { word: 'haystack', arabic: 'كدس التبن / رزمة قش', hint: 'a pile of hay', visual: 'haystack', level: 2, audioAr: 'audio/ar/haystack.mp3' },
+  { word: 'overstay', arabic: 'يبقى أكثر من المدة', hint: 'stay too long', visual: 'clock', level: 2, audioAr: 'audio/ar/overstay.mp3' },
+  { word: 'playbook', arabic: 'كتاب اللعب / خطة اللعب', hint: 'a book of game plans', visual: 'book', level: 2, audioAr: 'audio/ar/playbook.mp3' },
+  { word: 'sideways', arabic: 'إلى الجانب / جانبياً', hint: 'to or from the side', visual: 'arrows', level: 2, audioAr: 'audio/ar/sideways.mp3' },
 ];
 
 // Each row is [pattern, ipa, note, exampleWord]. exampleWord is what actually
@@ -96,11 +101,9 @@ function pickVoice(lang) {
   return languageVoices.find((voice) => preferredGender.some((term) => voice.name.toLowerCase().includes(term.replace('?', '')))) || languageVoices[0] || null;
 }
 
-// Arabic system voices are far less commonly installed than English ones, so
-// speechSynthesis.speak() can silently produce no sound at all when a device
-// has zero Arabic voices (no error is thrown; the browser just has nothing
-// to speak with). Detect that case up front and surface it instead of
-// leaving the learner clicking a button that never makes a sound.
+// Shared toast for any audio failure (English TTS erroring out, or an
+// Arabic recording being missing/unplayable) so learners get a visible
+// reason instead of a silent non-event when they click a sound button.
 let audioNoticeTimer = null;
 function showAudioNotice(message) {
   let el = document.getElementById('audio-notice');
@@ -123,14 +126,11 @@ function speak(text, lang = 'en-US', rate = 0.75) {
     return;
   }
   loadVoices();
-  const voice = pickVoice(lang);
-  if (!voice && lang.toLowerCase().startsWith('ar')) {
-    showAudioNotice('No Arabic voice is installed on this browser/device, so Arabic speech may not play. Try Chrome or Edge with an Arabic language pack, or a phone with an Arabic voice installed.');
-  }
   speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang;
   utterance.rate = rate;
+  const voice = pickVoice(lang);
   if (voice) utterance.voice = voice;
   utterance.onerror = (event) => {
     if (event.error !== 'canceled' && event.error !== 'interrupted') {
@@ -138,6 +138,24 @@ function speak(text, lang = 'en-US', rate = 0.75) {
     }
   };
   speechSynthesis.speak(utterance);
+}
+
+// Arabic pronunciation plays from a pre-recorded file rather than
+// speechSynthesis: an installed Arabic system voice can't be relied on
+// across devices (e.g. Windows Arabic language-pack installs are known to
+// fail with errors like 0x80070002), so real audio is the only playback
+// method that works consistently for every learner. See audio/ar/README.md
+// for the expected file format and how to source recordings.
+function playAudioFile(path, label) {
+  const player = new Audio(path);
+  let notified = false;
+  const notifyFailure = () => {
+    if (notified) return;
+    notified = true;
+    showAudioNotice(`Couldn't play the Arabic recording for "${label}" — expected file not found at ${path}. See audio/ar/README.md for how to add it.`);
+  };
+  player.addEventListener('error', notifyFailure);
+  player.play().catch(notifyFailure);
 }
 
 function markVowels(word) {
@@ -259,12 +277,12 @@ function wordCardTemplate(item) {
       <div class="pic">${imageSvg(item.visual, item.word)}</div>
       <div>
         <h2>${markVowels(item.word)}</h2>
-        <p class="arabic" dir="rtl" lang="ar" role="button" tabindex="0" data-say="${escapeHtml(item.arabic)}" data-lang="ar-SA" aria-label="Play Arabic pronunciation of ${escapeHtml(item.arabic)}">${escapeHtml(item.arabic)}${icon('speaker')}</p>
+        <p class="arabic" dir="rtl" lang="ar" role="button" tabindex="0" data-audio="${escapeHtml(item.audioAr)}" data-audio-label="${escapeHtml(item.arabic)}" aria-label="Play Arabic pronunciation of ${escapeHtml(item.arabic)}">${escapeHtml(item.arabic)}${icon('speaker')}</p>
         <p class="hint">${escapeHtml(item.hint)}</p>
       </div>
       <div class="actions">
         <button class="say-btn lang-en" data-say="${item.word}" data-lang="en-US"><span class="lang-tag">EN</span>${icon('speaker')}English</button>
-        <button class="say-btn lang-ar" lang="ar" data-say="${escapeHtml(item.arabic)}" data-lang="ar-SA"><span class="lang-tag">AR</span>${icon('speaker')}العربية</button>
+        <button class="say-btn lang-ar" lang="ar" data-audio="${escapeHtml(item.audioAr)}" data-audio-label="${escapeHtml(item.arabic)}"><span class="lang-tag">AR</span>${icon('speaker')}العربية</button>
         <button data-say="${item.word}. ${escapeHtml(item.hint)}" data-lang="en-US">${icon('chat')}Sentence cue</button>
         <button data-toggle="${item.word}" class="${done ? 'is-done' : ''}">${icon('check')}${done ? 'Known' : 'I know it'}</button>
       </div>
@@ -375,6 +393,18 @@ function render() {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           speak(el.dataset.say, el.dataset.lang);
+        }
+      };
+    }
+  });
+  document.querySelectorAll('[data-audio]').forEach((el) => {
+    const trigger = () => playAudioFile(el.dataset.audio, el.dataset.audioLabel);
+    el.onclick = trigger;
+    if (el.tagName !== 'BUTTON') {
+      el.onkeydown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          trigger();
         }
       };
     }
