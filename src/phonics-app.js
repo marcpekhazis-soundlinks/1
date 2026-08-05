@@ -231,7 +231,6 @@ function wordCardTemplate(item) {
       </div>
       <div class="actions">
         <button data-say="${item.word}" data-lang="en-US">${icon('speaker')}English</button>
-        <button data-say="${escapeHtml(item.arabic)}" data-lang="ar-SA">${icon('speaker')}العربية</button>
         <button data-say="${item.word}. ${escapeHtml(item.hint)}" data-lang="en-US">${icon('chat')}Sentence cue</button>
         <button data-toggle="${item.word}" class="${done ? 'is-done' : ''}">${icon('check')}${done ? 'Known' : 'I know it'}</button>
       </div>
