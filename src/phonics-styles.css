@@ -37,6 +37,21 @@
   --rose: #d93a78;
   --rose-soft: #fbe0ec;
 
+  /* Word-card illustration system: every icon draws from this same small
+     palette (all pulled from tokens above, plus two warm neutrals for
+     things like hay/wood/skin) so the whole set reads as one family. */
+  --illus-water: var(--primary);
+  --illus-leaf: var(--success);
+  --illus-sun: var(--warning);
+  --illus-sand: #f0c78a;
+  --illus-sand-dark: #c98f3e;
+  --illus-rose: var(--rose);
+  --illus-sky: var(--primary-tint-200);
+  --illus-outline: var(--primary-dark);
+  --illus-shade: rgba(6, 62, 143, 0.16);
+  --illus-shine: rgba(255, 255, 255, 0.6);
+  --illus-shadow: rgba(6, 62, 143, 0.14);
+
   --radius-lg: 28px;
   --radius-md: 20px;
   --radius-sm: 14px;
@@ -291,9 +306,32 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .pic { border-radius: var(--radius-md); overflow: hidden; background: var(--primary-tint-50); }
 .word-image { width: 100%; display: block; }
 .svgBg { fill: var(--primary-tint-50); }
+/* Legacy fallback for any icon not yet migrated to the .i-* illustration
+   system below (kept only as a safety net, e.g. the generic "display"
+   icon) — children with their own .i-* class override this via the
+   normal cascade, so migrated and not-yet-migrated icons can coexist. */
 .svgStroke { fill: none; stroke: var(--primary-dark); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
 .svgText, .svgCaption { fill: var(--ink); font: 800 28px var(--font-heading), Arial, sans-serif; }
 .svgCaption { font-size: 22px; }
+
+/* Word-card illustrations: one class per shape, drawing from the palette
+   above, so every icon in the app shares the same fills/outline/depth
+   cues. i-shade/i-shine/i-shadow are translucent overlays used on top of
+   a base shape for simple two-tone volume, a highlight, or a ground
+   shadow — the same three tricks reused everywhere for consistency. */
+.word-image .i-sand-dark { fill: var(--illus-sand-dark); stroke: none; }
+.word-image .i-water   { fill: var(--illus-water); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-leaf    { fill: var(--illus-leaf); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-sun     { fill: var(--illus-sun); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-sand    { fill: var(--illus-sand); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-rose    { fill: var(--illus-rose); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-sky     { fill: var(--illus-sky); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-white   { fill: var(--surface); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-ink     { fill: var(--illus-outline); stroke: none; }
+.word-image .i-line    { fill: none; stroke: var(--illus-outline); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-shade   { fill: var(--illus-shade); stroke: none; }
+.word-image .i-shine   { fill: var(--illus-shine); stroke: none; }
+.word-image .i-shadow  { fill: var(--illus-shadow); stroke: none; }
 
 .group {
   display: inline-block;
@@ -469,6 +507,17 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .svgBg { fill: #111; }
 .contrast .svgStroke { stroke: #ff0; }
 .contrast .svgText, .contrast .svgCaption { fill: #fff; }
+/* High contrast: collapse every illustration back to plain yellow line
+   art on black — flat colors and translucent overlays don't meet the
+   contrast/simplicity goal of this mode, so decorative fills are hidden
+   and structural shapes become stroke-only. */
+.contrast .word-image .i-water, .contrast .word-image .i-leaf, .contrast .word-image .i-sun,
+.contrast .word-image .i-sand, .contrast .word-image .i-sand-dark, .contrast .word-image .i-rose,
+.contrast .word-image .i-sky, .contrast .word-image .i-white, .contrast .word-image .i-line {
+  fill: none; stroke: #ff0; stroke-width: 6;
+}
+.contrast .word-image .i-ink, .contrast .word-image .i-shade,
+.contrast .word-image .i-shine, .contrast .word-image .i-shadow { display: none; }
 .contrast .card.done { background: #001a12; border-color: #0f0; }
 .contrast .done-badge { background: #0f0; color: #000; }
 .contrast .actions button:last-child.is-done { background: #0f0; color: #000; }
