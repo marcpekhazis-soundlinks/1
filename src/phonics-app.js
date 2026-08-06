@@ -21,6 +21,9 @@ const WORDS = [
   { word: 'sway', arabic: 'يتأرجح / يتمايل', hint: 'to rock gently from side to side', visual: 'sway', level: 1 },
   { word: 'spray', arabic: 'يرش', hint: 'send out small drops', visual: 'spray', level: 1 },
   { word: 'tray', arabic: 'صينية', hint: 'a flat holder for food', visual: 'tray', level: 1 },
+  { word: 'ace', arabic: 'بَطَلٌ', hint: 'a champion or expert', visual: 'ace', level: 1 },
+  { word: 'ape', arabic: 'قِرْدٌ', hint: 'a large tailless monkey', visual: 'ape', level: 1 },
+  { word: 'ate', arabic: 'أَكَلَ', hint: 'past tense of eat', visual: 'ate', level: 1 },
   { word: 'always', arabic: 'دائماً', hint: 'all the time', visual: 'infinity', level: 2 },
   { word: 'runaway', arabic: 'هارب', hint: 'someone who escapes', visual: 'runner', level: 2 },
   { word: 'birthday', arabic: 'يوم الميلاد', hint: 'a yearly celebration', visual: 'cake', level: 2 },
@@ -232,6 +235,9 @@ function imageSvg(type, label) {
     gray: '<path d="M75 145a42 42 0 0 1 8-82 58 58 0 0 1 112-14 46 46 0 0 1 40 92z"/>',
     pray: '<path d="M150 55v140"/><path d="M150 55c-28 12-38 50-36 95 1 22 16 38 36 45"/><path d="M150 55c28 12 38 50 36 95-1 22-16 38-36 45"/><path d="M118 110h18M118 142h18M164 110h-18M164 142h-18"/>',
     sway: '<path d="M150 200c-4-55 22-95-4-135"/><circle cx="152" cy="55" r="40"/><path d="M95 200h130"/>',
+    ace: '<ellipse class="i-shadow" cx="150" cy="205" rx="70" ry="12"/><path class="i-water" d="M118 100 L95 195 L130 175 L140 100Z"/><path class="i-water" d="M182 100 L205 195 L170 175 L160 100Z"/><circle class="i-sun" cx="150" cy="95" r="55"/><circle class="i-line" cx="150" cy="95" r="55"/><path class="i-ink" d="M150 62 L159 85 L184 85 L164 100 L172 123 L150 108 L128 123 L136 100 L116 85 L141 85Z"/><ellipse class="i-shine" cx="130" cy="76" rx="10" ry="7"/>',
+    ape: '<ellipse class="i-shadow" cx="150" cy="205" rx="75" ry="12"/><circle class="i-sand-dark" cx="90" cy="92" r="28"/><circle class="i-sand-dark" cx="210" cy="92" r="28"/><circle class="i-sand" cx="150" cy="112" r="68"/><circle class="i-line" cx="150" cy="112" r="68"/><ellipse class="i-sand-dark" cx="150" cy="142" rx="42" ry="32"/><ellipse class="i-line" cx="150" cy="142" rx="42" ry="32"/><circle class="i-ink" cx="128" cy="100" r="7"/><circle class="i-ink" cx="172" cy="100" r="7"/><circle class="i-ink" cx="140" cy="145" r="4"/><circle class="i-ink" cx="160" cy="145" r="4"/><path class="i-line" d="M122 165q28 18 56 0"/><ellipse class="i-shine" cx="122" cy="86" rx="9" ry="6"/>',
+    ate: '<ellipse class="i-shadow" cx="150" cy="205" rx="65" ry="12"/><path class="i-rose" d="M150 95c-38-30-85 5-82 50-3 45 35 75 82 75s85-30 82-75c3-45-44-80-82-50z"/><circle class="svgBg" cx="205" cy="118" r="26"/><path class="i-line" d="M150 95c-38-30-85 5-82 50-3 45 35 75 82 75s85-30 82-75c3-45-44-80-82-50z"/><path class="i-line" d="M150 95v-22"/><path class="i-leaf" d="M150 76c14-14 34-9 37 5s-14 24-37 15z"/><ellipse class="i-shine" cx="120" cy="112" rx="10" ry="14"/>',
   };
   return `<svg class="word-image" viewBox="0 0 300 230" role="img" aria-label="Picture for ${text}"><rect width="300" height="230" rx="26" class="svgBg"/><g class="svgStroke">${drawings[type] || drawings.display}</g><text x="150" y="215" text-anchor="middle" class="svgCaption">${text}</text></svg>`;
 }
