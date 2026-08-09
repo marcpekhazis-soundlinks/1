@@ -224,6 +224,13 @@ let state = {
   voiceMode: localStorage.voiceMode || 'female',
   done: JSON.parse(localStorage.donePhonics || '{}'),
   practice: {},
+  // Admin content-management mode — off by default, never persisted, so a
+  // page reload always lands back in the plain learner experience. See the
+  // "ADMIN MODE" section near the end of this file.
+  admin: false,
+  showArchived: false,
+  editingWord: null,
+  adminError: '',
 };
 let voices = [];
 const $ = (selector) => document.querySelector(selector);
@@ -246,6 +253,11 @@ const ICONS = {
   reset: '<path d="M4 5v6h6"/><path d="M5.3 15A8 8 0 1 0 6 8"/>',
   retry: '<path d="M4 12a8 8 0 0 1 13.9-5.4M20 3v6h-6"/><path d="M20 12a8 8 0 0 1-13.9 5.4M4 21v-6h6"/>',
   alert: '<path d="M12 3 2 20h20z"/><path d="M12 9.5v5"/><circle cx="12" cy="17.3" r="1" fill="currentColor" stroke="none"/>',
+  dot: '<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
+  pencil: '<path d="M4 20l1-5L16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-5 1z"/><path d="M14.5 5.5l4 4"/>',
+  trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+  undo: '<path d="M4 12a8 8 0 1 0 8-8"/><path d="M4 4v6h6"/>',
+  close: '<path d="M5 5l14 14M19 5L5 19"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -355,9 +367,10 @@ function startPractice(item) {
   recognition.start();
 }
 
-function imageSvg(type, label) {
-  const text = escapeHtml(label);
-  const drawings = {
+// Hoisted to module scope (not just local to imageSvg) so admin mode can
+// look up a word's *default* illustration markup to prefill the edit form
+// before any per-word override (item.svg) exists.
+const WORD_SVGS = {
     water: '<path d="M20 120 C60 85,95 155,140 115 S220 95,260 125"/><circle cx="204" cy="46" r="22"/>',
     bay: '<path class="i-water" d="M0 140C60 110 110 165 175 138S260 108 300 135V230H0Z"/><path class="i-leaf" d="M300 55c-70 5-115 45-100 90 15 40 65 55 100 40z"/><circle class="i-sun" cx="80" cy="65" r="32"/><path class="i-shade" d="M80 33A32 32 0 0 1 80 97A43 43 0 0 0 80 33Z"/><circle class="i-line" cx="80" cy="65" r="32"/><ellipse class="i-shine" cx="68" cy="52" rx="8" ry="6"/><path class="i-line" d="M40 175q18-14 36 0t36 0t36 0t36 0t36 0t36 0"/>',
     sun: '<circle cx="150" cy="80" r="35"/><path d="M150 20v25M150 115v25M90 80H65M235 80h-25M108 38l18 18M192 122l18 18M108 122l18-18M192 38l-18 18"/>',
@@ -555,8 +568,12 @@ function imageSvg(type, label) {
     tomato: '<ellipse class="i-shadow" cx="150" cy="212" rx="75" ry="10"/><circle class="i-rose" cx="150" cy="135" r="70"/><circle class="i-line" cx="150" cy="135" r="70" fill="none"/><ellipse class="i-leaf" cx="150" cy="58" rx="10" ry="22"/><ellipse class="i-leaf" cx="125" cy="65" rx="10" ry="22" transform="rotate(-35 125 65)"/><ellipse class="i-leaf" cx="175" cy="65" rx="10" ry="22" transform="rotate(35 175 65)"/><ellipse class="i-leaf" cx="108" cy="82" rx="9" ry="18" transform="rotate(-60 108 82)"/><ellipse class="i-leaf" cx="192" cy="82" rx="9" ry="18" transform="rotate(60 192 82)"/><ellipse class="i-shine" cx="122" cy="105" rx="14" ry="18"/>',
     update: '<ellipse class="i-shadow" cx="150" cy="212" rx="65" ry="10"/><circle class="i-water" cx="150" cy="120" r="72"/><circle class="i-line" cx="150" cy="120" r="72" fill="none"/><path class="i-line" d="M108 85a58 58 0 1 1-16 74" fill="none"/><path class="i-ink" d="M96 63l14 34-36-8z"/>',
     vibrate: '<ellipse class="i-shadow" cx="150" cy="212" rx="70" ry="10"/><rect class="i-water" x="115" y="55" width="70" height="130" rx="16"/><rect class="i-line" x="115" y="55" width="70" height="130" rx="16" fill="none"/><circle class="i-line" cx="150" cy="168" r="6" fill="none"/><path class="i-line" d="M95 90q-15 10 0 20M95 130q-15 10 0 20" fill="none"/><path class="i-line" d="M205 90q15 10 0 20M205 130q15 10 0 20" fill="none"/>',
-  };
-  return `<svg class="word-image" viewBox="0 0 300 230" role="img" aria-label="Picture for ${text}"><rect width="300" height="230" rx="26" class="svgBg"/><g class="svgStroke">${drawings[type] || drawings.display}</g><text x="150" y="215" text-anchor="middle" class="svgCaption">${text}</text></svg>`;
+};
+
+function imageSvg(type, label, customSvg) {
+  const text = escapeHtml(label);
+  const inner = customSvg || WORD_SVGS[type] || WORD_SVGS.display;
+  return `<svg class="word-image" viewBox="0 0 300 230" role="img" aria-label="Picture for ${text}"><rect width="300" height="230" rx="26" class="svgBg"/><g class="svgStroke">${inner}</g><text x="150" y="215" text-anchor="middle" class="svgCaption">${text}</text></svg>`;
 }
 
 const LEVEL_LABEL = { 1: 'Level 1 · Short ay words', 2: 'Level 2 · Longer ay words' };
@@ -566,7 +583,11 @@ function wordCardTemplate(item) {
   return `
     <article class="card ${done ? 'done' : ''}">
       ${done ? `<span class="done-badge" aria-hidden="true">${icon('check')}</span>` : ''}
-      <div class="pic">${imageSvg(item.visual, item.word)}</div>
+      ${state.admin ? `<div class="admin-card-controls">
+        <button class="admin-icon-btn" data-admin-edit="${escapeHtml(item.word)}" title="Edit word" aria-label="Edit ${escapeHtml(item.word)}">${icon('pencil')}</button>
+        <button class="admin-icon-btn admin-icon-danger" data-admin-archive="${escapeHtml(item.word)}" title="Archive word" aria-label="Archive ${escapeHtml(item.word)}">${icon('trash')}</button>
+      </div>` : ''}
+      <div class="pic">${imageSvg(item.visual, item.word, item.svg)}</div>
       <div>
         <h2>${markVowels(item.word)}</h2>
         <p class="arabic" dir="rtl">${escapeHtml(item.arabic)}</p>
@@ -581,7 +602,7 @@ function wordCardTemplate(item) {
 }
 
 function learnTemplate() {
-  const filtered = WORDS.filter((word) => state.level === 'all' || word.level == state.level);
+  const filtered = WORDS.filter((word) => !word.archived && (state.level === 'all' || word.level == state.level));
   const levels = [...new Set(filtered.map((item) => item.level))].sort((a, b) => a - b);
   return levels.map((level) => `
     <section class="level-group" data-level="${level}">
@@ -637,6 +658,186 @@ function instructionsTemplate() {
       </ol>`;
 }
 
+// ---------- ADMIN MODE ----------
+// A curriculum-author-only mode, off by default and never persisted, so a
+// learner who reloads the page (or opens it fresh) always sees the plain
+// app. Turn it on via the small dot button in the footer, or the keyboard
+// shortcut Ctrl+Alt+A.
+//
+// Edits are written straight to src/phonics-app.js on disk through the
+// local dev server's /__admin/save-word endpoint (see scripts/dev-server.js)
+// so they become real, permanent, git-diffable file changes — never
+// localStorage. If that endpoint isn't reachable (e.g. a static host like
+// GitHub Pages, or the plain `npx serve`/`python3 -m http.server` without
+// the admin dev server), every write simply fails with an on-screen error
+// and nothing is changed — admin mode is effectively read-only there.
+function adminBannerTemplate() {
+  const archivedCount = WORDS.filter((word) => word.archived).length;
+  return `
+    <div class="admin-banner">
+      <span class="admin-banner-label">${icon('pencil')}Admin mode</span>
+      <span class="admin-banner-hint">Pencil edits a word, trash archives it.</span>
+      <div class="admin-banner-actions">
+        <button data-admin-show-archived>${icon('undo')}Archived words (${archivedCount})</button>
+        <button data-admin-off>${icon('close')}Exit admin mode</button>
+      </div>
+      ${state.adminError ? `<p class="admin-error">${icon('alert')}${escapeHtml(state.adminError)}</p>` : ''}
+    </div>`;
+}
+
+function archivedPanelTemplate() {
+  const archived = WORDS.filter((word) => word.archived);
+  return `
+    <div class="modal-overlay" data-modal-overlay>
+      <div class="modal-panel" role="dialog" aria-label="Archived words">
+        <div class="modal-header">
+          <h2>Archived words</h2>
+          <button class="admin-icon-btn" data-close-panel aria-label="Close">${icon('close')}</button>
+        </div>
+        ${archived.length ? `<ul class="archived-list">${archived.map((item) => `
+          <li>
+            <span>${markVowels(item.word)}</span>
+            <button data-admin-unarchive="${escapeHtml(item.word)}">${icon('undo')}Restore</button>
+          </li>`).join('')}</ul>` : '<p class="hint">No archived words.</p>'}
+      </div>
+    </div>`;
+}
+
+function editModalTemplate() {
+  const item = WORDS.find((word) => word.word === state.editingWord);
+  if (!item) return '';
+  const svgValue = item.svg || WORD_SVGS[item.visual] || '';
+  return `
+    <div class="modal-overlay" data-modal-overlay>
+      <div class="modal-panel" role="dialog" aria-label="Edit word">
+        <div class="modal-header">
+          <h2>Edit word</h2>
+          <button class="admin-icon-btn" data-close-panel aria-label="Close">${icon('close')}</button>
+        </div>
+        <form id="admin-edit-form">
+          <label>Word text<input type="text" name="word" value="${escapeHtml(item.word)}" required></label>
+          <label>Hint<input type="text" name="hint" value="${escapeHtml(item.hint)}" required></label>
+          <label>Arabic translation<input type="text" name="arabic" dir="rtl" value="${escapeHtml(item.arabic)}" required></label>
+          <label>SVG illustration code<textarea name="svg" rows="7" spellcheck="false">${escapeHtml(svgValue)}</textarea></label>
+          <div class="modal-actions">
+            <button type="submit">${icon('check')}Save</button>
+            <button type="button" data-close-panel>Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>`;
+}
+
+async function postAdminUpdate(originalWord, updatedWord) {
+  try {
+    const response = await fetch('/__admin/save-word', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalWord, word: updatedWord }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || `save failed (HTTP ${response.status})`);
+    return true;
+  } catch (err) {
+    state.adminError = `Could not save to disk — is the admin dev server running? Run "npm run admin". (${err.message})`;
+    render();
+    return false;
+  }
+}
+
+function applyWordUpdate(originalWord, updatedWord) {
+  const index = WORDS.findIndex((word) => word.word === originalWord);
+  if (index !== -1) WORDS[index] = updatedWord;
+}
+
+async function archiveWord(word) {
+  const item = WORDS.find((entry) => entry.word === word);
+  if (!item) return;
+  const updated = { ...item, archived: true };
+  if (await postAdminUpdate(word, updated)) {
+    applyWordUpdate(word, updated);
+    state.adminError = '';
+    render();
+  }
+}
+
+async function unarchiveWord(word) {
+  const item = WORDS.find((entry) => entry.word === word);
+  if (!item) return;
+  const updated = { ...item };
+  delete updated.archived;
+  if (await postAdminUpdate(word, updated)) {
+    applyWordUpdate(word, updated);
+    state.adminError = '';
+    render();
+  }
+}
+
+async function saveWordEditForm(originalWord, formValues) {
+  const item = WORDS.find((entry) => entry.word === originalWord);
+  if (!item) return;
+  const updated = {
+    ...item,
+    word: formValues.word.trim(),
+    hint: formValues.hint.trim(),
+    arabic: formValues.arabic.trim(),
+  };
+  const svgValue = formValues.svg.trim();
+  if (svgValue) updated.svg = svgValue;
+  else delete updated.svg;
+  if (await postAdminUpdate(originalWord, updated)) {
+    applyWordUpdate(originalWord, updated);
+    state.editingWord = null;
+    state.adminError = '';
+    render();
+  }
+}
+
+function closeAdminPanels() {
+  state.showArchived = false;
+  state.editingWord = null;
+  render();
+}
+
+function wireAdminEvents() {
+  $('[data-admin-toggle]').onclick = () => { state.admin = !state.admin; state.adminError = ''; render(); };
+  if (!state.admin) return;
+  const banner = $('.admin-banner');
+  if (banner) {
+    $('[data-admin-off]').onclick = () => { state.admin = false; closeAdminPanels(); };
+    $('[data-admin-show-archived]').onclick = () => { state.showArchived = true; render(); };
+  }
+  document.querySelectorAll('[data-admin-edit]').forEach((button) => button.onclick = () => { state.editingWord = button.dataset.adminEdit; render(); });
+  document.querySelectorAll('[data-admin-archive]').forEach((button) => button.onclick = () => archiveWord(button.dataset.adminArchive));
+  document.querySelectorAll('[data-admin-unarchive]').forEach((button) => button.onclick = () => unarchiveWord(button.dataset.adminUnarchive));
+  document.querySelectorAll('[data-close-panel]').forEach((button) => button.onclick = () => closeAdminPanels());
+  document.querySelectorAll('[data-modal-overlay]').forEach((overlay) => overlay.onclick = (event) => { if (event.target === overlay) closeAdminPanels(); });
+  const form = $('#admin-edit-form');
+  if (form) {
+    form.onsubmit = (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      saveWordEditForm(state.editingWord, {
+        word: data.get('word') || '',
+        hint: data.get('hint') || '',
+        arabic: data.get('arabic') || '',
+        svg: data.get('svg') || '',
+      });
+    };
+  }
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
+    event.preventDefault();
+    state.admin = !state.admin;
+    state.adminError = '';
+    render();
+  } else if (event.key === 'Escape' && state.admin && (state.showArchived || state.editingWord)) {
+    closeAdminPanels();
+  }
+});
+
 function render() {
   const score = Object.values(state.done).filter(Boolean).length;
   const pct = WORDS.length ? Math.round((score / WORDS.length) * 100) : 0;
@@ -664,11 +865,17 @@ function render() {
         <button data-reset>${icon('reset')}Reset</button>
       </div>
     </nav>
+    ${state.admin ? adminBannerTemplate() : ''}
     <section class="instructions">
       <h2>How to use / طريقة الاستخدام</h2>
       ${instructionsTemplate()}
     </section>
-    ${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : practiceTemplate()}`;
+    ${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : practiceTemplate()}
+    <footer class="app-footer">
+      <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
+    </footer>
+    ${state.admin && state.showArchived ? archivedPanelTemplate() : ''}
+    ${state.admin && state.editingWord ? editModalTemplate() : ''}`;
   $('[data-level]').value = state.level;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setState('view', button.dataset.view));
@@ -683,6 +890,7 @@ function render() {
     const item = PhonemeData.SOUND_PRACTICE.find((entry) => entry.word === button.dataset.practice);
     if (item) startPractice(item);
   });
+  wireAdminEvents();
 }
 
 render();

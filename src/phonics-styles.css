@@ -552,3 +552,137 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
   .instructions, .rule, .card { padding: 18px; border-radius: var(--radius-md); }
   .rule ul { grid-template-columns: 1fr; }
 }
+
+/* ---------- Admin content-management mode ----------
+   Deliberately unobtrusive: a bare 6px dot in the footer is the only
+   always-present entry point, so a learner has nothing to notice or
+   stumble into. Everything else here only ever renders once admin mode
+   has been switched on. */
+.app-footer { display: flex; justify-content: flex-end; padding: 18px 4px 4px; }
+.admin-toggle-btn {
+  width: 14px; height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  opacity: 0.18;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.admin-toggle-btn::before {
+  content: '';
+  display: block;
+  width: 6px; height: 6px;
+  margin: 4px auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+.admin-toggle-btn:hover, .admin-toggle-btn:focus-visible { opacity: 0.7; }
+
+.admin-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 14px;
+  padding: 12px 18px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.88rem;
+}
+.admin-banner-label { display: inline-flex; align-items: center; font-family: var(--font-heading); font-weight: 800; letter-spacing: 0.02em; }
+.admin-banner-hint { opacity: 0.75; }
+.admin-banner-actions { display: flex; gap: 8px; margin-left: auto; }
+.admin-banner-actions button {
+  display: inline-flex; align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.admin-banner-actions button:hover { background: rgba(255, 255, 255, 0.22); }
+.admin-error { flex-basis: 100%; display: flex; align-items: center; gap: 8px; margin: 0; color: var(--warning-soft); background: rgba(217, 138, 31, 0.25); border-radius: var(--radius-sm); padding: 8px 12px; }
+
+.admin-card-controls { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px; }
+.admin-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.admin-icon-btn .icon { margin: 0; }
+.admin-icon-btn:hover { background: var(--primary-tint-100); }
+.admin-icon-btn.admin-icon-danger { color: var(--incorrect); }
+.admin-icon-btn.admin-icon-danger:hover { background: var(--incorrect-soft); }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20, 20, 25, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 20;
+}
+.modal-panel {
+  width: min(560px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-lg);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-header h2 { margin: 0; font-size: 1.2rem; }
+.modal-panel form { display: grid; gap: 12px; }
+.modal-panel label { display: grid; gap: 6px; font-weight: 700; font-size: 0.85rem; color: var(--ink-soft); }
+.modal-panel input, .modal-panel textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--primary-tint-50);
+}
+.modal-panel textarea { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.8rem; resize: vertical; }
+.modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+.modal-actions button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+}
+.modal-actions button[type="submit"] { background: var(--primary); color: #fff; }
+
+.archived-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.archived-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--primary-tint-50);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.archived-list button {
+  display: inline-flex; align-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--success-soft);
+  color: var(--success-dark);
+  padding: 7px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.archived-list button:hover { background: var(--success); color: #fff; }
