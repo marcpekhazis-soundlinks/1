@@ -247,8 +247,77 @@ const RULES = [
   { title: 'Voiced consonant digraphs', rows: [['th', '/ð/', 'voiced dental fricative: this', 'this'], ['ng', '/ŋ/', 'voiced nasal: sing', 'sing'], ['gh', 'often silent; sometimes /f/ or /ɡ/', 'night = silent, laugh = /f/, ghost = /ɡ/', 'ghost']], note: 'Voiced means the throat vibrates. Arabic has ذ, but English /ð/ places the tongue lightly between the teeth.' },
 ];
 
+// ---------- Sound groups (vowel-team tabs) ----------
+// The curriculum manuscript has one chapter per written spelling of a
+// vowel sound: plain "a" as in cake, "ai" as in rain, "ay" as in day — all
+// three spell the same Long A /eɪ/ sound. A word's chapter is derived
+// purely from how it's spelled, never stored on the word itself, so adding
+// a future sound family (Long E via "ee"/"ea", Long I via "igh"/"y", ...)
+// is just one more entry in SOUND_GROUPS plus a matching case in
+// highlightIndices() below — every tab, filter, tier grouping, and
+// progress figure updates itself automatically, no per-word data change
+// needed.
+const SOUND_GROUPS = [
+  { id: 'long-a', label: 'Long A' },
+  { id: 'ai', label: 'AI' },
+  { id: 'ay', label: 'AY' },
+];
+
+// Which sound-group tab a word belongs to, purely from its spelling.
+// Checked most-specific-pattern-first so an "ai"/"ay" word is never
+// mis-bucketed into the plain "a" chapter; anything matching neither
+// digraph falls back to "long-a" (today that's every active word, since
+// the "ai" chapter has no words yet and the "ay" chapter is archived).
+function soundGroupId(word) {
+  const lower = word.toLowerCase();
+  if (lower.includes('ay')) return 'ay';
+  if (lower.includes('ai')) return 'ai';
+  return 'long-a';
+}
+
+// Which letter index(es) inside a word carry the long-vowel sound, for the
+// red highlight on its card — e.g. just the "a" in "cake", "rain", "day",
+// not the whole "ai"/"ay" spelling. This is a deliberate approximation
+// rather than a full pronunciation model: for the "ai"/"ay" chapters it's
+// the "a" of that digraph; for the plain "a" chapter it's the "a" in a
+// silent-e syllable (cake, translate) or an open syllable (potato),
+// falling back to the last "a" in the word when neither pattern is found.
+function highlightIndices(word) {
+  const lower = word.toLowerCase();
+  const group = soundGroupId(word);
+  if (group === 'ay' || group === 'ai') {
+    const indices = [];
+    const digraph = new RegExp(group, 'g');
+    let match;
+    while ((match = digraph.exec(lower))) indices.push(match.index);
+    return indices;
+  }
+  const indices = new Set();
+  const silentE = /a(?=[bcdfghjklmnpqrstvwxyz]e)/g;
+  const openSyllable = /a(?=[bcdfghjklmnpqrstvwxyz][aeiou])/g;
+  let match;
+  while ((match = silentE.exec(lower))) indices.add(match.index);
+  while ((match = openSyllable.exec(lower))) indices.add(match.index);
+  if (!indices.size) {
+    const last = lower.lastIndexOf('a');
+    if (last !== -1) indices.add(last);
+  }
+  return [...indices].sort((a, b) => a - b);
+}
+
+function highlightWord(word) {
+  const targets = new Set(highlightIndices(word));
+  return [...word].map((char, i) => (targets.has(i) ? `<span class="vowel">${escapeHtml(char)}</span>` : escapeHtml(char))).join('');
+}
+
+// Distinct pacing levels actually present in the active (non-archived)
+// word data, in order — read from WORDS rather than hardcoded so a future
+// "Level 3" just works.
+const ACTIVE_LEVELS = [...new Set(WORDS.filter((word) => !word.archived).map((word) => word.level))].sort((a, b) => a - b);
+
 let state = {
   view: 'learn',
+  soundGroup: 'long-a',
   level: 'all',
   big: false,
   contrast: false,
@@ -321,10 +390,6 @@ function speak(text, lang = 'en-US', rate = 0.75) {
   const voice = pickVoice(lang);
   if (voice) utterance.voice = voice;
   speechSynthesis.speak(utterance);
-}
-
-function markVowels(word) {
-  return escapeHtml(word).replace(/ay/gi, '<span class="vowel">$&</span>');
 }
 
 function setState(key, value) {
@@ -638,7 +703,7 @@ function imageSvg(type, label, customSvg) {
   return `<svg class="word-image" viewBox="0 0 300 230" role="img" aria-label="Picture for ${text}"><rect width="300" height="230" rx="26" class="svgBg"/><g class="svgStroke">${inner}</g><text x="150" y="215" text-anchor="middle" class="svgCaption">${text}</text></svg>`;
 }
 
-const LEVEL_LABEL = { 1: 'Level 1 · Short ay words', 2: 'Level 2 · Longer ay words' };
+const LEVEL_LABEL = { 1: 'Level 1: short words', 2: 'Level 2: longer words' };
 
 function wordCardTemplate(item) {
   const done = !!state.done[item.word];
@@ -651,7 +716,7 @@ function wordCardTemplate(item) {
       </div>` : ''}
       <div class="pic">${imageSvg(item.visual, item.word, item.svg)}</div>
       <div>
-        <h2>${markVowels(item.word)}</h2>
+        <h2>${highlightWord(item.word)}</h2>
         <p class="arabic" dir="rtl">${escapeHtml(item.arabic)}</p>
         <p class="hint">${escapeHtml(item.hint)}</p>
       </div>
@@ -663,14 +728,70 @@ function wordCardTemplate(item) {
     </article>`;
 }
 
+// Active (non-archived) word count per sound group, used to badge tabs
+// that don't have any content yet ("soon") and to size the group progress
+// bar. Computed fresh each render since admin edits can move words between
+// groups (e.g. renaming a word to add/remove an "ay").
+function countsBySoundGroup() {
+  const counts = {};
+  WORDS.forEach((word) => {
+    if (word.archived) return;
+    const id = soundGroupId(word.word);
+    counts[id] = (counts[id] || 0) + 1;
+  });
+  return counts;
+}
+
+function soundTabsTemplate(counts) {
+  return `<div class="tabs sound-tabs" role="tablist" aria-label="Vowel sound groups">${SOUND_GROUPS.map((group) => `
+    <button data-sound-group="${group.id}" role="tab" aria-selected="${state.soundGroup === group.id}" class="${state.soundGroup === group.id ? 'active' : ''}">${escapeHtml(group.label)}${counts[group.id] ? '' : '<span class="tab-soon">soon</span>'}</button>`).join('')}</div>`;
+}
+
+function levelSelectTemplate() {
+  return `<div class="controls-bar learn-controls">
+    <label>Level <select data-level aria-label="Filter by level"><option value="all">All levels</option>${ACTIVE_LEVELS.map((level) => `<option value="${level}">${escapeHtml(LEVEL_LABEL[level] || `Level ${level}`)}</option>`).join('')}</select></label>
+  </div>`;
+}
+
+function groupProgressTemplate(group, groupWords) {
+  const known = groupWords.filter((word) => state.done[word.word]).length;
+  const total = groupWords.length;
+  const pct = total ? Math.round((known / total) * 100) : 0;
+  return `<div class="group-progress" style="--pct:${pct}">
+    <span class="group-progress-label">${escapeHtml(group.label)}</span>
+    <div class="group-progress-track"><div class="group-progress-fill"></div></div>
+    <span class="group-progress-value">${known}/${total} words known</span>
+  </div>`;
+}
+
+function emptyGroupTemplate(message) {
+  return `<div class="empty-group">${icon('book')}<p>${escapeHtml(message)}</p></div>`;
+}
+
 function learnTemplate() {
-  const filtered = WORDS.filter((word) => !word.archived && (state.level === 'all' || word.level == state.level));
-  const levels = [...new Set(filtered.map((item) => item.level))].sort((a, b) => a - b);
-  return levels.map((level) => `
-    <section class="level-group" data-level="${level}">
-      <div class="level-heading"><span class="level-dot">${level}</span><h2>${LEVEL_LABEL[level] || `Level ${level}`}</h2></div>
-      <div class="grid">${filtered.filter((item) => item.level === level).map(wordCardTemplate).join('')}</div>
-    </section>`).join('');
+  const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
+  const groupWords = WORDS.filter((word) => !word.archived && soundGroupId(word.word) === group.id);
+  const filtered = groupWords.filter((word) => state.level === 'all' || word.level == state.level);
+  const tiers = [...new Set(filtered.map((word) => word.word.length))].sort((a, b) => a - b);
+
+  let body;
+  if (!groupWords.length) {
+    body = emptyGroupTemplate(`No "${group.label}" words yet — this tab is ready for when that sound group is added.`);
+  } else if (!filtered.length) {
+    body = emptyGroupTemplate(`No "${group.label}" words at this level yet. Try "All levels".`);
+  } else {
+    body = tiers.map((length) => `
+      <section class="tier-group" data-tier="${length}">
+        <div class="tier-heading"><span class="tier-dot">${length}</span><h2>${length}-Letter Words</h2></div>
+        <div class="grid">${filtered.filter((word) => word.word.length === length).map(wordCardTemplate).join('')}</div>
+      </section>`).join('');
+  }
+
+  return `
+    ${soundTabsTemplate(countsBySoundGroup())}
+    ${levelSelectTemplate()}
+    ${groupProgressTemplate(group, groupWords)}
+    ${body}`;
 }
 
 function rulesTemplate() {
@@ -713,9 +834,10 @@ function instructionsTemplate() {
       </ol>`;
   }
   return `<ol>
+        <li>Pick a sound tab (Long A, AI, AY) to focus on one spelling pattern at a time.</li>
         <li>Choose a level so each student can work at a comfortable pace.</li>
         <li>Select a male or female voice, then press English or Arabic audio.</li>
-        <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red vowel team.</li>
+        <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red letter.</li>
         <li>Use Large text or High contrast for inclusion and accessibility.</li>
       </ol>`;
 }
@@ -758,7 +880,7 @@ function archivedPanelTemplate() {
         </div>
         ${archived.length ? `<ul class="archived-list">${archived.map((item) => `
           <li>
-            <span>${markVowels(item.word)}</span>
+            <span>${highlightWord(item.word)}</span>
             <button data-admin-unarchive="${escapeHtml(item.word)}">${icon('undo')}Restore</button>
           </li>`).join('')}</ul>` : '<p class="hint">No archived words.</p>'}
       </div>
@@ -901,8 +1023,9 @@ document.addEventListener('keydown', (event) => {
 });
 
 function render() {
-  const score = Object.values(state.done).filter(Boolean).length;
-  const pct = WORDS.length ? Math.round((score / WORDS.length) * 100) : 0;
+  const activeWords = WORDS.filter((word) => !word.archived);
+  const score = activeWords.filter((word) => state.done[word.word]).length;
+  const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
   document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''}`;
   $('#app').innerHTML = `
     <header class="hero">
@@ -911,7 +1034,7 @@ function render() {
         <h1>Interactive English Phonics for Arabic Speakers</h1>
         <p>Self-paced lessons highlight vowel teams in red, connect English sounds to Arabic cues, and let learners listen in English or Arabic, repeat, view pictures, and mark progress.</p>
       </div>
-      <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${WORDS.length}</strong><span>words done</span></div></div>
+      <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${activeWords.length}</strong><span>words done overall</span></div></div>
     </header>
     <nav class="toolbar" aria-label="Learning controls">
       <div class="tabs" role="tablist">
@@ -923,7 +1046,6 @@ function render() {
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
         <button data-big class="${state.big ? 'is-on' : ''}">${icon('textSize')}Large text</button>
         <button data-contrast class="${state.contrast ? 'is-on' : ''}">${icon('contrast')}High contrast</button>
-        <select data-level aria-label="Choose pace level"><option value="all">All levels</option><option value="1">Level 1: short words</option><option value="2">Level 2: longer words</option></select>
         <button data-reset>${icon('reset')}Reset</button>
       </div>
     </nav>
@@ -938,13 +1060,11 @@ function render() {
     </footer>
     ${state.admin && state.showArchived ? archivedPanelTemplate() : ''}
     ${state.admin && state.editingWord ? editModalTemplate() : ''}`;
-  $('[data-level]').value = state.level;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setState('view', button.dataset.view));
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
   $('[data-reset]').onclick = () => { state.done = {}; localStorage.removeItem('donePhonics'); render(); };
-  $('[data-level]').onchange = (event) => setState('level', event.target.value);
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
   document.querySelectorAll('[data-say]').forEach((button) => button.onclick = () => speak(button.dataset.say, button.dataset.lang));
   document.querySelectorAll('[data-toggle]').forEach((button) => button.onclick = () => toggleDone(button.dataset.toggle));
@@ -952,6 +1072,12 @@ function render() {
     const item = PhonemeData.SOUND_PRACTICE.find((entry) => entry.word === button.dataset.practice);
     if (item) startPractice(item);
   });
+  document.querySelectorAll('[data-sound-group]').forEach((button) => button.onclick = () => setState('soundGroup', button.dataset.soundGroup));
+  const levelSelect = $('[data-level]');
+  if (levelSelect) {
+    levelSelect.value = state.level;
+    levelSelect.onchange = (event) => setState('level', event.target.value);
+  }
   wireAdminEvents();
 }
 
