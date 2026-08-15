@@ -629,7 +629,20 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
    cream-background/gray-text swap is skipped while High contrast is also
    on (:not(.contrast) below) so that mode's black/white/red scheme still
    owns color — the two are layered, not fighting over the same pixels. */
-body.dyslexia { font-family: var(--font-dyslexia); }
+/* Redefining --font-heading/--font-body (rather than only setting
+   font-family on body) is required: many elements declare their own
+   explicit font-family: var(--font-heading/--font-body), and an
+   element's own declared value always wins over an inherited one
+   regardless of the inherited rule's specificity. Overriding the custom
+   properties themselves means every var(--font-heading)/var(--font-body)
+   reference resolves to Lexend wherever it's used, including on those
+   elements — e.g. word titles (.card h2), section headers (h1/h2/h3),
+   and toolbar/control labels. */
+body.dyslexia {
+  --font-heading: var(--font-dyslexia);
+  --font-body: var(--font-dyslexia);
+  font-family: var(--font-dyslexia);
+}
 body.dyslexia .hero p,
 body.dyslexia .instructions ol li,
 body.dyslexia .rule p,
