@@ -64,6 +64,14 @@
   --font-heading: 'Baloo 2', 'Segoe UI Rounded', Verdana, sans-serif;
   --font-body: 'Nunito', 'Segoe UI', Arial, sans-serif;
   --font-arabic: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+  --font-dyslexia: 'Lexend', 'Segoe UI', Arial, sans-serif;
+
+  /* Dyslexia-friendly mode: soft cream surfaces + dark gray (not pure
+     black) text, lower-glare than the app's default white cards. */
+  --dyslexia-bg: #faf2df;
+  --dyslexia-surface: #f6ecd4;
+  --dyslexia-ink: #3a3a3a;
+  --dyslexia-ink-soft: #55524c;
 
   color: var(--ink);
   background: var(--cream);
@@ -614,6 +622,49 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .practice-error { background: #2a1c00; color: #ffd27f; }
 .contrast .practice-listening { background: #001830; color: #7fd0ff; }
 .contrast [data-practice].is-listening, .contrast [data-practice].is-listening::after { background: #000; border-color: #fff; color: #fff; }
+
+/* ---------- Dyslexia-friendly mode ----------
+   Fully independent of Large text / High contrast and combinable with
+   either. Font, spacing, and line-height rules always apply. The
+   cream-background/gray-text swap is skipped while High contrast is also
+   on (:not(.contrast) below) so that mode's black/white/red scheme still
+   owns color — the two are layered, not fighting over the same pixels. */
+body.dyslexia { font-family: var(--font-dyslexia); }
+body.dyslexia .hero p,
+body.dyslexia .instructions ol li,
+body.dyslexia .rule p,
+body.dyslexia .rule li,
+body.dyslexia .hint,
+body.dyslexia .card h2 {
+  letter-spacing: 0.02em;
+  word-spacing: 0.12em;
+}
+/* Arabic script is cursive/connected — added letter-spacing distorts it. */
+body.dyslexia .arabic { letter-spacing: normal; word-spacing: normal; }
+body.dyslexia .hint { line-height: 1.9; }
+body.dyslexia .instructions ol { line-height: 2.15; }
+body.dyslexia .rule p, body.dyslexia .rule li { line-height: 1.8; }
+
+body.dyslexia:not(.contrast) { background-color: var(--dyslexia-bg); }
+body.dyslexia:not(.contrast) .instructions,
+body.dyslexia:not(.contrast) .card,
+body.dyslexia:not(.contrast) .rule {
+  background: var(--dyslexia-surface);
+  color: var(--dyslexia-ink);
+}
+body.dyslexia:not(.contrast) .card h2,
+body.dyslexia:not(.contrast) .instructions h2,
+body.dyslexia:not(.contrast) .tier-heading h2,
+body.dyslexia:not(.contrast) .rule h3,
+body.dyslexia:not(.contrast) .rule strong {
+  color: var(--dyslexia-ink);
+}
+body.dyslexia:not(.contrast) .hint,
+body.dyslexia:not(.contrast) .rule p,
+body.dyslexia:not(.contrast) .ink-soft,
+body.dyslexia:not(.contrast) .instructions ol {
+  color: var(--dyslexia-ink-soft);
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {

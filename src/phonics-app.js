@@ -321,6 +321,7 @@ let state = {
   level: 'all',
   big: false,
   contrast: false,
+  dyslexia: false,
   voiceMode: localStorage.voiceMode || 'female',
   done: JSON.parse(localStorage.donePhonics || '{}'),
   practice: {},
@@ -350,6 +351,7 @@ const ICONS = {
   check: '<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/>',
   textSize: '<text x="1" y="17" font-size="11" font-weight="800" fill="currentColor" stroke="none" font-family="inherit">A</text><text x="11" y="20" font-size="17" font-weight="800" fill="currentColor" stroke="none" font-family="inherit">A</text>',
   contrast: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+  dyslexia: '<text x="1" y="16" font-size="13" font-weight="800" fill="currentColor" stroke="none" font-family="inherit">A</text><path d="M11 12h3" stroke-dasharray="2 2"/><text x="15" y="16" font-size="13" font-weight="800" fill="currentColor" stroke="none" font-family="inherit">a</text>',
   reset: '<path d="M4 5v6h6"/><path d="M5.3 15A8 8 0 1 0 6 8"/>',
   retry: '<path d="M4 12a8 8 0 0 1 13.9-5.4M20 3v6h-6"/><path d="M20 12a8 8 0 0 1-13.9 5.4M4 21v-6h6"/>',
   alert: '<path d="M12 3 2 20h20z"/><path d="M12 9.5v5"/><circle cx="12" cy="17.3" r="1" fill="currentColor" stroke="none"/>',
@@ -838,7 +840,7 @@ function instructionsTemplate() {
         <li>Choose a level so each student can work at a comfortable pace.</li>
         <li>Select a male or female voice, then press English or Arabic audio.</li>
         <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red letter.</li>
-        <li>Use Large text or High contrast for inclusion and accessibility.</li>
+        <li>Use Large text, High contrast, or Dyslexia-friendly mode for inclusion and accessibility — combine them freely.</li>
       </ol>`;
 }
 
@@ -1026,7 +1028,7 @@ function render() {
   const activeWords = WORDS.filter((word) => !word.archived);
   const score = activeWords.filter((word) => state.done[word.word]).length;
   const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
-  document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''}`;
+  document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''} ${state.dyslexia ? 'dyslexia' : ''}`;
   $('#app').innerHTML = `
     <header class="hero">
       <div>
@@ -1046,6 +1048,7 @@ function render() {
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
         <button data-big class="${state.big ? 'is-on' : ''}">${icon('textSize')}Large text</button>
         <button data-contrast class="${state.contrast ? 'is-on' : ''}">${icon('contrast')}High contrast</button>
+        <button data-dyslexia class="${state.dyslexia ? 'is-on' : ''}">${icon('dyslexia')}Dyslexia-friendly mode</button>
         <button data-reset>${icon('reset')}Reset</button>
       </div>
     </nav>
@@ -1064,6 +1067,7 @@ function render() {
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setState('view', button.dataset.view));
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
+  $('[data-dyslexia]').onclick = () => setState('dyslexia', !state.dyslexia);
   $('[data-reset]').onclick = () => { state.done = {}; localStorage.removeItem('donePhonics'); render(); };
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
   document.querySelectorAll('[data-say]').forEach((button) => button.onclick = () => speak(button.dataset.say, button.dataset.lang));
