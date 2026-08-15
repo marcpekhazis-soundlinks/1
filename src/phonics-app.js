@@ -310,15 +310,50 @@ function highlightWord(word) {
   return [...word].map((char, i) => (targets.has(i) ? `<span class="vowel">${escapeHtml(char)}</span>` : escapeHtml(char))).join('');
 }
 
-// Distinct pacing levels actually present in the active (non-archived)
-// word data, in order — read from WORDS rather than hardcoded so a future
-// "Level 3" just works.
-const ACTIVE_LEVELS = [...new Set(WORDS.filter((word) => !word.archived).map((word) => word.level))].sort((a, b) => a - b);
+// Distinct pacing levels actually present in a sound group's active
+// (non-archived) words, in order — read from WORDS rather than hardcoded
+// so a future "Level 3" (or a brand-new sound group) just works with no
+// change to the locking logic below.
+function groupLevels(groupId) {
+  return [...new Set(WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId).map((word) => word.level))].sort((a, b) => a - b);
+}
+
+function wordsForGroupLevel(groupId, level) {
+  return WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId && word.level === level);
+}
+
+// A level unlocks once every word in the level directly before it (within
+// the same sound group) is marked "known" via the existing done/known
+// mechanism. The first level of any group is always unlocked. Admin mode
+// bypasses this entirely — locking is a learner-facing pacing device, not
+// a restriction on admin content access, so admin edits/views reach every
+// level regardless of completion.
+function isLevelUnlocked(groupId, level) {
+  if (state.admin) return true;
+  const levels = groupLevels(groupId);
+  const index = levels.indexOf(level);
+  if (index <= 0) return true;
+  const previousWords = wordsForGroupLevel(groupId, levels[index - 1]);
+  return previousWords.length > 0 && previousWords.every((word) => state.done[word.word]);
+}
+
+// Words-known count/total/percent for one level, for the sidebar's
+// per-level progress indicator.
+function levelProgress(groupId, level) {
+  const words = wordsForGroupLevel(groupId, level);
+  const known = words.filter((word) => state.done[word.word]).length;
+  const total = words.length;
+  return { known, total, pct: total ? Math.round((known / total) * 100) : 0 };
+}
 
 let state = {
   view: 'learn',
-  soundGroup: 'long-a',
-  level: 'all',
+  soundGroup: SOUND_GROUPS[0].id,
+  level: groupLevels(SOUND_GROUPS[0].id)[0] || 1,
+  // Sidebar group expand/collapse, keyed by group id. A group not present
+  // here defaults to expanded only while it's the active soundGroup — see
+  // isGroupExpanded().
+  expandedGroups: {},
   big: false,
   contrast: false,
   dyslexia: false,
@@ -360,6 +395,8 @@ const ICONS = {
   trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
   undo: '<path d="M4 12a8 8 0 1 0 8-8"/><path d="M4 4v6h6"/>',
   close: '<path d="M5 5l14 14M19 5L5 19"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  chevron: '<path d="M6 9l6 6 6-6"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -730,29 +767,62 @@ function wordCardTemplate(item) {
     </article>`;
 }
 
-// Active (non-archived) word count per sound group, used to badge tabs
-// that don't have any content yet ("soon") and to size the group progress
-// bar. Computed fresh each render since admin edits can move words between
-// groups (e.g. renaming a word to add/remove an "ay").
-function countsBySoundGroup() {
-  const counts = {};
-  WORDS.forEach((word) => {
-    if (word.archived) return;
-    const id = soundGroupId(word.word);
-    counts[id] = (counts[id] || 0) + 1;
-  });
-  return counts;
+// A sidebar group is expanded (its levels visible) when explicitly toggled
+// that way, or — with no explicit toggle yet — when it's the group whose
+// level is currently on screen. This keeps the tree data-driven: nothing
+// here names a specific group.
+function isGroupExpanded(groupId) {
+  if (groupId in state.expandedGroups) return state.expandedGroups[groupId];
+  return groupId === state.soundGroup;
 }
 
-function soundTabsTemplate(counts) {
-  return `<div class="tabs sound-tabs" role="tablist" aria-label="Vowel sound groups">${SOUND_GROUPS.map((group) => `
-    <button data-sound-group="${group.id}" role="tab" aria-selected="${state.soundGroup === group.id}" class="${state.soundGroup === group.id ? 'active' : ''}">${escapeHtml(group.label)}${counts[group.id] ? '' : '<span class="tab-soon">soon</span>'}</button>`).join('')}</div>`;
+// Renders one sound group's nested, individually-clickable level list —
+// each level shows its own known/total progress and, once locked, a lock
+// icon in place of a checkmark-able state. A level is locked purely from
+// data (whether every word in the previous level is marked known), so a
+// new sound group or a new Level N slots in automatically the moment
+// WORDS contains words for it — nothing here is specific to any one group.
+function sidebarLevelsTemplate(group) {
+  const levels = groupLevels(group.id);
+  if (!levels.length) return '';
+  const expanded = isGroupExpanded(group.id);
+  return `<ul class="sidebar-levels" ${expanded ? '' : 'hidden'}>${levels.map((level) => {
+    const { known, total, pct } = levelProgress(group.id, level);
+    const unlocked = isLevelUnlocked(group.id, level);
+    const active = state.soundGroup === group.id && state.level === level;
+    const label = LEVEL_LABEL[level] || `Level ${level}`;
+    return `<li>
+      <button class="sidebar-level ${active ? 'active' : ''} ${unlocked ? '' : 'is-locked'}" data-sidebar-level="${group.id}::${level}" ${unlocked ? '' : 'disabled aria-disabled="true"'} aria-current="${active}">
+        ${unlocked ? '' : `<span class="sidebar-level-lock" aria-hidden="true">${icon('lock')}</span>`}
+        <span class="sidebar-level-name">${escapeHtml(label)}</span>
+        <span class="sidebar-level-progress" style="--pct:${pct}">
+          <span class="sidebar-level-track"><span class="sidebar-level-fill"></span></span>
+          <span class="sidebar-level-count">${known}/${total} · ${pct}%</span>
+        </span>
+      </button>
+    </li>`;
+  }).join('')}</ul>`;
 }
 
-function levelSelectTemplate() {
-  return `<div class="controls-bar learn-controls">
-    <label>Level <select data-level aria-label="Filter by level"><option value="all">All levels</option>${ACTIVE_LEVELS.map((level) => `<option value="${level}">${escapeHtml(LEVEL_LABEL[level] || `Level ${level}`)}</option>`).join('')}</select></label>
-  </div>`;
+// Left-hand sidebar: one entry per SOUND_GROUPS entry, each expanding to
+// its own level list. A group with no active words yet (AI, AY today)
+// renders as a disabled "soon" placeholder with no expand arrow — adding
+// its first word to WORDS is all it takes for it to become a real,
+// expandable branch here.
+function sidebarTemplate() {
+  return `<aside class="sidebar" aria-label="Sound groups and levels">
+    <nav class="sidebar-tree">${SOUND_GROUPS.map((group) => {
+      const hasContent = groupLevels(group.id).length > 0;
+      const expanded = isGroupExpanded(group.id);
+      return `<div class="sidebar-group ${hasContent ? '' : 'is-soon'}">
+        <button class="sidebar-group-header" data-sidebar-group-toggle="${group.id}" ${hasContent ? `aria-expanded="${expanded}"` : 'disabled'}>
+          ${icon('book')}<span class="sidebar-group-name">${escapeHtml(group.label)}</span>
+          ${hasContent ? `<span class="sidebar-group-caret ${expanded ? 'is-open' : ''}" aria-hidden="true">${icon('chevron')}</span>` : '<span class="tab-soon">soon</span>'}
+        </button>
+        ${sidebarLevelsTemplate(group)}
+      </div>`;
+    }).join('')}</nav>
+  </aside>`;
 }
 
 function groupProgressTemplate(group, groupWords) {
@@ -773,14 +843,16 @@ function emptyGroupTemplate(message) {
 function learnTemplate() {
   const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
   const groupWords = WORDS.filter((word) => !word.archived && soundGroupId(word.word) === group.id);
-  const filtered = groupWords.filter((word) => state.level === 'all' || word.level == state.level);
+  const filtered = groupWords.filter((word) => word.level === state.level);
   const tiers = [...new Set(filtered.map((word) => word.word.length))].sort((a, b) => a - b);
+  const levelLabel = LEVEL_LABEL[state.level] || `Level ${state.level}`;
+  const { known, total, pct: levelPct } = levelProgress(group.id, state.level);
 
   let body;
   if (!groupWords.length) {
-    body = emptyGroupTemplate(`No "${group.label}" words yet — this tab is ready for when that sound group is added.`);
+    body = emptyGroupTemplate(`No "${group.label}" words yet — this sound group is ready for when it's added.`);
   } else if (!filtered.length) {
-    body = emptyGroupTemplate(`No "${group.label}" words at this level yet. Try "All levels".`);
+    body = emptyGroupTemplate(`No "${group.label}" words at this level yet.`);
   } else {
     body = tiers.map((length) => `
       <section class="tier-group" data-tier="${length}">
@@ -790,9 +862,11 @@ function learnTemplate() {
   }
 
   return `
-    ${soundTabsTemplate(countsBySoundGroup())}
-    ${levelSelectTemplate()}
     ${groupProgressTemplate(group, groupWords)}
+    <div class="level-heading">
+      <h2>${escapeHtml(group.label)} <span class="level-heading-sep">·</span> ${escapeHtml(levelLabel)}</h2>
+      <span class="level-heading-progress">${known}/${total} words known (${levelPct}%)</span>
+    </div>
     ${body}`;
 }
 
@@ -836,8 +910,8 @@ function instructionsTemplate() {
       </ol>`;
   }
   return `<ol>
-        <li>Pick a sound tab (Long A, AI, AY) to focus on one spelling pattern at a time.</li>
-        <li>Choose a level so each student can work at a comfortable pace.</li>
+        <li>Use the sidebar to pick a sound group (Long A, AI, AY) and one of its levels to focus on.</li>
+        <li>Each level unlocks once every word in the level before it is marked known, so pacing builds up naturally.</li>
         <li>Select a male or female voice, then press English or Arabic audio.</li>
         <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red letter.</li>
         <li>Use Large text, High contrast, or Dyslexia-friendly mode for inclusion and accessibility — combine them freely.</li>
@@ -1024,7 +1098,33 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+// Keeps state.soundGroup/state.level pointing at something real and, for
+// non-admins, actually unlocked — run at the top of every render() so
+// toggling a word's known status (which can lock/unlock levels on the
+// fly) never leaves the learner stranded on a level they can no longer
+// see. Falls through to the first group/level with content, entirely by
+// reading SOUND_GROUPS/WORDS rather than naming a group.
+function normalizeSelection() {
+  let levels = groupLevels(state.soundGroup);
+  if (!levels.length) {
+    const fallback = SOUND_GROUPS.find((entry) => groupLevels(entry.id).length > 0);
+    if (fallback) state.soundGroup = fallback.id;
+    levels = groupLevels(state.soundGroup);
+  }
+  if (!levels.length) return;
+  if (!levels.includes(state.level)) state.level = levels[0];
+  if (!isLevelUnlocked(state.soundGroup, state.level)) {
+    let lastUnlocked = levels[0];
+    for (const level of levels) {
+      if (!isLevelUnlocked(state.soundGroup, level)) break;
+      lastUnlocked = level;
+    }
+    state.level = lastUnlocked;
+  }
+}
+
 function render() {
+  normalizeSelection();
   const activeWords = WORDS.filter((word) => !word.archived);
   const score = activeWords.filter((word) => state.done[word.word]).length;
   const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
@@ -1057,7 +1157,10 @@ function render() {
       <h2>How to use / طريقة الاستخدام</h2>
       ${instructionsTemplate()}
     </section>
-    ${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : practiceTemplate()}
+    <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
+      ${state.view === 'learn' ? sidebarTemplate() : ''}
+      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : practiceTemplate()}</div>
+    </div>
     <footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
     </footer>
@@ -1076,12 +1179,20 @@ function render() {
     const item = PhonemeData.SOUND_PRACTICE.find((entry) => entry.word === button.dataset.practice);
     if (item) startPractice(item);
   });
-  document.querySelectorAll('[data-sound-group]').forEach((button) => button.onclick = () => setState('soundGroup', button.dataset.soundGroup));
-  const levelSelect = $('[data-level]');
-  if (levelSelect) {
-    levelSelect.value = state.level;
-    levelSelect.onchange = (event) => setState('level', event.target.value);
-  }
+  document.querySelectorAll('[data-sidebar-group-toggle]').forEach((button) => button.onclick = () => {
+    const id = button.dataset.sidebarGroupToggle;
+    state.expandedGroups[id] = !isGroupExpanded(id);
+    render();
+  });
+  document.querySelectorAll('[data-sidebar-level]').forEach((button) => button.onclick = () => {
+    const [groupId, levelStr] = button.dataset.sidebarLevel.split('::');
+    const level = Number(levelStr);
+    if (!isLevelUnlocked(groupId, level)) return;
+    state.soundGroup = groupId;
+    state.level = level;
+    state.expandedGroups[groupId] = true;
+    render();
+  });
   wireAdminEvents();
 }
 
