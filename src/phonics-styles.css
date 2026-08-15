@@ -545,11 +545,27 @@ body.big .group { font-size: 0.82rem; }
 body.big .arabic { font-size: 1.45rem; }
 body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 
-/* ---------- High contrast ---------- */
+/* ---------- High contrast ----------
+   Pure black/white throughout, per WCAG AA+. The ONLY accent color in this
+   mode is the bright red used for the target long-vowel letter (.vowel) —
+   every other element (borders, icons, labels, buttons) is white or light
+   gray on black so that one highlight is the sole thing that "pops". */
 .contrast { background: #000; color: #fff; background-image: none; }
 .contrast .hero { background: #000; box-shadow: none; border: 3px solid #fff; }
 .contrast .hero::before, .contrast .hero::after { display: none; }
-.contrast .eyebrow { background: #ff0; color: #000; }
+.contrast .eyebrow { background: #fff; color: #000; }
+.contrast h1, .contrast .instructions h2, .contrast .tier-heading h2,
+.contrast .card h2, .contrast .rules > h2, .contrast .rule h3, .contrast .rule strong {
+  color: #fff;
+}
+.contrast .hero p:last-child, .contrast .rule b { color: #ccc; }
+.contrast .toolbar { background: #000; }
+.contrast .controls-bar label { background: #000; color: #fff; border-color: #fff; }
+.contrast .controls-bar label select { color: #fff; }
+.contrast .instructions ol { color: #ccc; }
+.contrast .rules > h2::after { background: #fff; }
+.contrast .rule li { background: #111; }
+.contrast .tabs button:not(.active) .tab-soon { background: #fff; color: #000; }
 .contrast .instructions, .contrast .card, .contrast .rule,
 .contrast .tabs, .contrast .controls-bar button, .contrast .controls-bar select,
 .contrast .actions button, .contrast .rule button {
@@ -557,35 +573,36 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 }
 .contrast .tabs { border: 2px solid #fff; }
 .contrast .tabs button { color: #fff; background: transparent; }
-.contrast .tabs button.active { background: #ff0; color: #000; box-shadow: none; }
-.contrast .controls-bar button.is-on { background: #ff0; color: #000; border-color: #ff0; }
+.contrast .tabs button.active { background: #fff; color: #000; box-shadow: none; }
+.contrast .controls-bar button.is-on { background: #fff; color: #000; border-color: #fff; }
 .contrast .progress { background: #000; box-shadow: none; border: 2px solid #fff; }
 .contrast .progress::before { background: #000; }
 .contrast .progress strong, .contrast .progress span { color: #fff; }
-.contrast .pic { background: #111; border: 2px solid #ff0; }
-.contrast .hint, .contrast .group, .contrast .rule p, .contrast .ink-soft { color: #ff0; background: transparent; }
-.contrast .vowel, .contrast .ipa { color: #ff5252; background: transparent; }
-.contrast .arabic { background: transparent; color: #7fd0ff; }
-.contrast .tier-dot { background: #ff0; color: #000; }
+.contrast .pic { background: #111; border: 2px solid #fff; }
+.contrast .hint, .contrast .group, .contrast .rule p, .contrast .ink-soft { color: #ccc; background: transparent; }
+.contrast .ipa { color: #fff; background: transparent; }
+.contrast .vowel { color: #ff5252; background: transparent; }
+.contrast .arabic { background: transparent; color: #fff; }
+.contrast .tier-dot { background: #fff; color: #000; }
 .contrast .tier-heading::after { background: #fff; }
-.contrast .instructions ol li::before { background: #ff0; color: #000; }
+.contrast .instructions ol li::before { background: #fff; color: #000; }
 .contrast .group-progress, .contrast .empty-group { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
-.contrast .group-progress-label { color: #ff0; }
+.contrast .group-progress-label { color: #ccc; }
 .contrast .group-progress-value { color: #fff; }
-.contrast .group-progress-track { background: #222; }
-.contrast .group-progress-fill { background: #ff0; }
-.contrast .tab-soon { background: #ff0; color: #000; }
+.contrast .group-progress-track { background: #333; }
+.contrast .group-progress-fill { background: #fff; }
+.contrast .tab-soon { background: #fff; color: #000; }
 .contrast .svgBg { fill: #111; }
-.contrast .svgStroke { stroke: #ff0; }
+.contrast .svgStroke { stroke: #fff; }
 .contrast .svgText, .contrast .svgCaption { fill: #fff; }
-/* High contrast: collapse every illustration back to plain yellow line
+/* High contrast: collapse every illustration back to plain white line
    art on black — flat colors and translucent overlays don't meet the
    contrast/simplicity goal of this mode, so decorative fills are hidden
    and structural shapes become stroke-only. */
 .contrast .word-image .i-water, .contrast .word-image .i-leaf, .contrast .word-image .i-sun,
 .contrast .word-image .i-sand, .contrast .word-image .i-sand-dark, .contrast .word-image .i-rose,
 .contrast .word-image .i-sky, .contrast .word-image .i-white, .contrast .word-image .i-line {
-  fill: none; stroke: #ff0; stroke-width: 6;
+  fill: none; stroke: #fff; stroke-width: 6;
 }
 .contrast .word-image .i-ink, .contrast .word-image .i-shade,
 .contrast .word-image .i-shine, .contrast .word-image .i-shadow { display: none; }
@@ -596,7 +613,7 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .practice-incorrect { background: #2a0000; color: #ff8a80; }
 .contrast .practice-error { background: #2a1c00; color: #ffd27f; }
 .contrast .practice-listening { background: #001830; color: #7fd0ff; }
-.contrast [data-practice].is-listening, .contrast [data-practice].is-listening::after { background: #000; border-color: #ff0; color: #ff0; }
+.contrast [data-practice].is-listening, .contrast [data-practice].is-listening::after { background: #000; border-color: #fff; color: #fff; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
