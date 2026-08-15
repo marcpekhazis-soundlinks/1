@@ -23,13 +23,16 @@ const WORDS = [
   { word: "tray", arabic: "صِينِيَّةٌ", hint: "a flat holder for food", visual: "tray", level: 1, archived: true },
   { word: "ace", arabic: "بَطَلٌ", hint: "a champion or expert", visual: "ace", level: 1 },
   { word: 'ape', arabic: 'قِرْدٌ', hint: 'a large tailless monkey', visual: 'ape', level: 1 },
-  { word: 'ate', arabic: 'أَكَلَ', hint: 'past tense of eat', visual: 'ate', level: 1 },
+  // say: 'eight' — TTS reads bare "ate" with a short vowel (like "at"); the
+  // homophone spelling forces the correct long-a /eɪt/ without touching the
+  // word's own spelling/highlighting.
+  { word: 'ate', arabic: 'أَكَلَ', hint: 'past tense of eat', visual: 'ate', level: 1, say: 'eight' },
   { word: 'babe', arabic: 'طِفْلٌ رَضِيعٌ', hint: 'a baby, or a term for a dear one', visual: 'babe', level: 1 },
   { word: 'bade', arabic: 'أَمَرَ / طَلَبَ', hint: 'old word for asked or ordered (past tense of bid)', visual: 'bade', level: 1 },
   { word: 'bake', arabic: 'يَخْبِزُ', hint: 'to cook food in an oven', visual: 'bake', level: 1 },
   { word: 'bale', arabic: 'حُزْمَةٌ كَبِيرَةٌ', hint: 'a large bundle tied together, like hay', visual: 'bale', level: 1 },
   { word: 'bane', arabic: 'مَصْدَرُ أَذًى', hint: 'something that causes trouble or ruin', visual: 'bane', level: 1 },
-  { word: 'bare', arabic: 'عَارٍ / مَكْشُوفٌ', hint: 'empty or without covering', visual: 'bare', level: 1 },
+  { word: 'bare', arabic: 'عَارٍ / مَكْشُوفٌ', hint: 'empty or without covering', visual: 'bare', level: 1, archived: true },
   { word: 'base', arabic: 'قَاعِدَةٌ', hint: 'the bottom part that supports something', visual: 'base', level: 1 },
   { word: 'bate', arabic: 'يُخَفِّفُ / يُقَلِّلُ', hint: 'to make something weaker or less', visual: 'bate', level: 1 },
   { word: 'cage', arabic: 'قَفَصٌ', hint: 'a barred box that holds an animal', visual: 'cage', level: 1 },
@@ -37,7 +40,7 @@ const WORDS = [
   { word: 'came', arabic: 'أَتَى / جَاءَ', hint: 'past tense of come; arrived', visual: 'came', level: 1 },
   { word: 'cane', arabic: 'عَصًا', hint: 'a stick used for walking, or the sugar plant', visual: 'cane', level: 1 },
   { word: 'cape', arabic: 'عَبَاءَةٌ / رِدَاءٌ', hint: 'a cloak worn over the shoulders', visual: 'cape', level: 1 },
-  { word: 'care', arabic: 'يَهْتَمُّ / رِعَايَةٌ', hint: 'to feel concern for someone', visual: 'care', level: 1 },
+  { word: 'care', arabic: 'يَهْتَمُّ / رِعَايَةٌ', hint: 'to feel concern for someone', visual: 'care', level: 1, archived: true },
   { word: 'case', arabic: 'حَقِيبَةٌ / حَالَةٌ', hint: 'a box or container, or a situation', visual: 'case', level: 1 },
   { word: 'cate', arabic: 'طَعَامٌ شَهِيٌّ', hint: 'a tasty treat (an old word for food)', visual: 'cate', level: 1 },
   { word: 'cave', arabic: 'كَهْفٌ', hint: 'a hollow space inside a hill or rock', visual: 'cave', level: 1 },
@@ -50,7 +53,7 @@ const WORDS = [
   { word: 'fake', arabic: 'مُزَيَّفٌ', hint: 'not real; a copy', visual: 'fake', level: 1 },
   { word: 'fame', arabic: 'شُهْرَةٌ', hint: 'being known and admired by many people', visual: 'fame', level: 1 },
   { word: 'fane', arabic: 'مَعْبَدٌ', hint: 'an old, poetic word for a temple', visual: 'fane', level: 1 },
-  { word: 'fare', arabic: 'أُجْرَةُ السَّفَرِ', hint: 'the money paid to travel', visual: 'fare', level: 1 },
+  { word: 'fare', arabic: 'أُجْرَةُ السَّفَرِ', hint: 'the money paid to travel', visual: 'fare', level: 1, archived: true },
   { word: 'fate', arabic: 'قَدَرٌ / مَصِيرٌ', hint: 'what will happen to someone; destiny', visual: 'fate', level: 1 },
   { word: 'fave', arabic: 'الْمُفَضَّلُ', hint: 'a short way to say favorite', visual: 'fave', level: 1 },
   { word: 'faze', arabic: 'يُقْلِقُ / يُرْبِكُ', hint: 'to disturb or upset someone', visual: 'faze', level: 1 },
@@ -65,7 +68,7 @@ const WORDS = [
   { word: 'hake', arabic: 'سَمَكُ النَّازِلِيِّ', hint: 'a type of edible sea fish', visual: 'hake', level: 1 },
   { word: 'hale', arabic: 'قَوِيٌّ وَبِصِحَّةٍ جَيِّدَةٍ', hint: "healthy and strong, as in 'hale and hearty'", visual: 'hale', level: 1 },
   { word: "hame", arabic: "الْمَنْزِلُ (كَلِمَةٌ اسْكُتْلَنْدِيَّةٌ قَدِيمَةٌ)", hint: "an old Scots dialect word for home", visual: "hame", level: 1, archived: true },
-  { word: 'hare', arabic: 'أَرْنَبٌ بَرِّيٌّ', hint: 'a fast animal like a big rabbit with long ears', visual: 'hare', level: 1 },
+  { word: 'hare', arabic: 'أَرْنَبٌ بَرِّيٌّ', hint: 'a fast animal like a big rabbit with long ears', visual: 'hare', level: 1, archived: true },
   { word: 'hate', arabic: 'يَكْرَهُ', hint: 'to dislike something very much', visual: 'hate', level: 1 },
   { word: 'haze', arabic: 'ضَبَابٌ خَفِيفٌ', hint: 'a light mist that makes things look unclear', visual: 'haze', level: 1 },
   { word: 'jade', arabic: 'الْيَشَمُ', hint: 'a green gemstone', visual: 'jade', level: 1 },
@@ -87,7 +90,7 @@ const WORDS = [
   { word: 'make', arabic: 'يَصْنَعُ', hint: 'to create or build something', visual: 'make', level: 1 },
   { word: 'male', arabic: 'ذَكَرٌ', hint: 'a man or boy; not female', visual: 'male', level: 1 },
   { word: 'mane', arabic: 'عُرْفُ الْحِصَانِ', hint: "the long hair on a horse's or lion's neck", visual: 'mane', level: 1 },
-  { word: 'mare', arabic: 'فَرَسٌ', hint: 'a female horse', visual: 'mare', level: 1 },
+  { word: 'mare', arabic: 'فَرَسٌ', hint: 'a female horse', visual: 'mare', level: 1, archived: true },
   { word: 'mate', arabic: 'رَفِيقٌ / زَمِيلٌ', hint: 'a friend or partner', visual: 'mate', level: 1 },
   { word: 'maze', arabic: 'مَتَاهَةٌ', hint: 'a puzzle of winding, connected paths', visual: 'maze', level: 1 },
   { word: 'nabe', arabic: 'حَيٌّ سَكَنِيٌّ (عَامِّيَّةٌ)', hint: 'informal, old slang word for a neighborhood', visual: 'nabe', level: 1 },
@@ -98,18 +101,20 @@ const WORDS = [
   { word: 'pale', arabic: 'شَاحِبٌ', hint: 'light in color; having little color in the face', visual: 'pale', level: 1 },
   { word: 'page', arabic: 'صَفْحَةٌ', hint: 'one side of a sheet in a book', visual: 'page', level: 1 },
   { word: 'pane', arabic: 'لَوْحٌ زُجَاجِيٌّ', hint: 'a sheet of glass in a window', visual: 'pane', level: 1 },
-  { word: 'pare', arabic: 'يُقَشِّرُ', hint: 'to cut away the outer layer, like peeling fruit', visual: 'pare', level: 1 },
+  { word: 'pare', arabic: 'يُقَشِّرُ', hint: 'to cut away the outer layer, like peeling fruit', visual: 'pare', level: 1, archived: true },
   { word: 'pave', arabic: 'يُعَبِّدُ', hint: 'to cover a road with a hard, flat surface', visual: 'pave', level: 1 },
   { word: 'race', arabic: 'سِبَاقٌ', hint: 'a contest to see who is fastest', visual: 'race', level: 1 },
   { word: 'rage', arabic: 'غَضَبٌ شَدِيدٌ', hint: 'very strong, wild anger', visual: 'rage', level: 1 },
   { word: 'rake', arabic: 'مِجْرَفَةٌ', hint: 'a garden tool with teeth for gathering leaves', visual: 'rake', level: 1 },
-  { word: 'rare', arabic: 'نَادِرٌ', hint: 'not common; unusual', visual: 'rare', level: 1 },
+  { word: 'rare', arabic: 'نَادِرٌ', hint: 'not common; unusual', visual: 'rare', level: 1, archived: true },
   { word: 'rate', arabic: 'مُعَدَّلٌ / سِعْرٌ', hint: 'how fast something happens, or its price', visual: 'rate', level: 1 },
   { word: 'rave', arabic: 'يَتَحَدَّثُ بِحَمَاسٍ', hint: 'to talk about something with wild excitement', visual: 'rave', level: 1 },
   { word: 'raze', arabic: 'يَهْدِمُ بِالْكَامِلِ', hint: 'to knock a building down completely', visual: 'raze', level: 1 },
   { word: 'safe', arabic: 'آمِنٌ', hint: 'free from danger or harm', visual: 'safe', level: 1 },
   { word: 'sage', arabic: 'حَكِيمٌ / نَبْتَةُ الْمَرْيَمِيَّةِ', hint: 'a wise person, or an herb used in cooking', visual: 'sage', level: 1 },
-  { word: 'sake', arabic: 'مَصْلَحَةٌ / غَايَةٌ', hint: "a purpose or benefit, as in 'for your sake'", visual: 'sake', level: 1 },
+  // say: 'sayk' — TTS defaults "sake" to the Japanese drink reading; the
+  // respelling forces the plain /seɪk/ that rhymes with "cake".
+  { word: 'sake', arabic: 'مَصْلَحَةٌ / غَايَةٌ', hint: "a purpose or benefit, as in 'for your sake'", visual: 'sake', level: 1, say: 'sayk' },
   { word: 'sale', arabic: 'تَخْفِيضَاتٌ / بَيْعٌ', hint: 'selling goods, often at a lower price', visual: 'sale', level: 1 },
   { word: 'same', arabic: 'نَفْسُهُ / مُمَاثِلٌ', hint: 'exactly alike, not different', visual: 'same', level: 1 },
   { word: 'sane', arabic: 'عَاقِلٌ', hint: 'having a clear, healthy mind', visual: 'sane', level: 1 },
@@ -119,16 +124,17 @@ const WORDS = [
   { word: 'tale', arabic: 'حِكَايَةٌ', hint: 'a story, often about imagined people or events', visual: 'tale', level: 1 },
   { word: 'tame', arabic: 'أَلِيفٌ / يُرَوِّضُ', hint: 'gentle and not wild, or to train an animal to be gentle', visual: 'tame', level: 1 },
   { word: 'tape', arabic: 'شَرِيطٌ لَاصِقٌ', hint: 'a sticky strip used to join or stick things together', visual: 'tape', level: 1 },
-  { word: 'tare', arabic: 'وَزْنُ الْعُبُوَّةِ الْفَارِغَةِ', hint: 'the weight of an empty container, used to find what is inside', visual: 'tare', level: 1 },
+  { word: 'tare', arabic: 'وَزْنُ الْعُبُوَّةِ الْفَارِغَةِ', hint: 'the weight of an empty container, used to find what is inside', visual: 'tare', level: 1, archived: true },
   { word: 'tase', arabic: 'يَصْعَقُ بِصَاعِقَةٍ كَهْرَبَائِيَّةٍ', hint: 'to shock someone with a jolt of electricity', visual: 'tase', level: 1 },
   { word: 'vane', arabic: 'دَفَّةُ اتِّجَاهِ الرِّيحِ', hint: 'a spinning arrow on a roof that shows which way the wind blows', visual: 'vane', level: 1 },
-  { word: 'vase', arabic: 'مَزْهَرِيَّةٌ', hint: 'a container used to hold flowers', visual: 'vase', level: 1 },
-  { word: 'vare', arabic: 'عَصًا رَفِيعَةٌ (كَلِمَةٌ قَدِيمَةٌ)', hint: 'an old dialect word for a thin rod or wand', visual: 'vare', level: 1 },
+  // say: 'vaze' — TTS defaults "vase" to the British /vɑːz/ reading; the
+  // respelling (same rime as gaze/haze/maze/raze) forces American /veɪz/.
+  { word: 'vase', arabic: 'مَزْهَرِيَّةٌ', hint: 'a container used to hold flowers', visual: 'vase', level: 1, say: 'vaze' },
   { word: 'wade', arabic: 'يَخُوضُ الْمَاءَ', hint: 'to walk slowly through water or mud', visual: 'wade', level: 1 },
   { word: 'wage', arabic: 'أَجْرٌ', hint: 'money paid to someone for the work they do', visual: 'wage', level: 1 },
   { word: 'wale', arabic: 'خَطٌّ بَارِزٌ فِي النَّسِيجِ', hint: 'a raised ridge, like the lines in corduroy fabric', visual: 'wale', level: 1 },
   { word: 'wane', arabic: 'يَتَضَاءَلُ / يَخْبُو', hint: 'to slowly get smaller, like the moon losing its light', visual: 'wane', level: 1 },
-  { word: 'ware', arabic: 'سِلْعَةٌ / بِضَاعَةٌ', hint: 'goods that are made to be sold', visual: 'ware', level: 1 },
+  { word: 'ware', arabic: 'سِلْعَةٌ / بِضَاعَةٌ', hint: 'goods that are made to be sold', visual: 'ware', level: 1, archived: true },
   { word: 'wave', arabic: 'مَوْجَةٌ / يُلَوِّحُ', hint: 'a moving ridge of water, or to move your hand in greeting', visual: 'wave', level: 1 },
   { word: "always", arabic: "دَائِمًا", hint: "all the time", visual: "infinity", level: 2, archived: true },
   { word: "runaway", arabic: "هَارِبٌ", hint: "someone who escapes", visual: "runner", level: 2, archived: true },
@@ -151,7 +157,7 @@ const WORDS = [
   { word: 'chase', arabic: 'يُطَارِدُ', hint: 'to run after someone to catch them', visual: 'chase', level: 1 },
   { word: 'crane', arabic: 'رَافِعَةٌ / طَائِرُ مَالِكِ الْحَزِينِ', hint: 'a tall machine for lifting heavy things', visual: 'crane', level: 1 },
   { word: 'flame', arabic: 'لَهَبٌ', hint: 'the bright, hot part of a fire', visual: 'flame', level: 1 },
-  { word: 'flare', arabic: 'وَهَجٌ / شُعْلَةٌ مُضِيئَةٌ', hint: 'a sudden bright burst of light', visual: 'flare', level: 1 },
+  { word: 'flare', arabic: 'وَهَجٌ / شُعْلَةٌ مُضِيئَةٌ', hint: 'a sudden bright burst of light', visual: 'flare', level: 1, archived: true },
   { word: 'frame', arabic: 'إِطَارٌ', hint: 'a border that holds a picture', visual: 'frame', level: 1 },
   { word: 'glaze', arabic: 'طِلَاءٌ لَامِعٌ', hint: 'a shiny coating on food or pottery', visual: 'glaze', level: 1 },
   { word: 'grace', arabic: 'رَشَاقَةٌ / نِعْمَةٌ', hint: 'smooth and elegant movement', visual: 'grace', level: 1 },
@@ -162,16 +168,19 @@ const WORDS = [
   { word: 'phase', arabic: 'مَرْحَلَةٌ', hint: 'a stage in a process of change', visual: 'phase', level: 1 },
   { word: 'plane', arabic: 'طَائِرَةٌ / مُسْتَوٍ', hint: 'a flying machine, or a flat surface', visual: 'plane', level: 1 },
   { word: 'plate', arabic: 'طَبَقٌ', hint: 'a flat dish you eat food from', visual: 'plate', level: 1 },
-  { word: 'scare', arabic: 'يُخِيفُ', hint: 'to make someone feel afraid', visual: 'scare', level: 1 },
+  { word: 'scare', arabic: 'يُخِيفُ', hint: 'to make someone feel afraid', visual: 'scare', level: 1, archived: true },
   { word: 'shade', arabic: 'ظِلٌّ', hint: 'a shadowed area sheltered from light', visual: 'shade', level: 1 },
   { word: 'shame', arabic: 'خَجَلٌ / عَارٌ', hint: 'a bad feeling from doing something wrong', visual: 'shame', level: 1 },
   { word: 'skate', arabic: 'يَتَزَلَّجُ', hint: 'to glide smoothly on skates or a board', visual: 'skate', level: 1 },
   { word: 'slate', arabic: 'لَوْحٌ إِرْدْوَازِيٌّ', hint: 'a flat, gray rock used for roofs or writing boards', visual: 'slate', level: 1 },
   { word: 'space', arabic: 'فَضَاءٌ / مَسَاحَةٌ', hint: 'the area beyond Earth, or empty room', visual: 'space', level: 1 },
   { word: 'spade', arabic: 'مِجْرَفَةٌ', hint: 'a tool used for digging', visual: 'spade', level: 1 },
-  { word: 'stare', arabic: 'يُحَدِّقُ', hint: 'to look at something for a long time', visual: 'stare', level: 1 },
+  { word: 'stare', arabic: 'يُحَدِّقُ', hint: 'to look at something for a long time', visual: 'stare', level: 1, archived: true },
   { word: 'trade', arabic: 'تِجَارَةٌ / يَتَبَادَلُ', hint: 'to exchange one thing for another', visual: 'trade', level: 1 },
-  { word: 'abate', arabic: 'يَخِفُّ / يَهْدَأُ', hint: 'to slowly become less strong, like a storm calming down', visual: 'abate', level: 1 },
+  // longAIndices: [2] — only the second "a" (-bate) is genuinely long; the
+  // first is an unstressed schwa, but the open-syllable guess (a-b-a) would
+  // wrongly flag it too. Found while auditing the "graduate" highlight bug.
+  { word: 'abate', arabic: 'يَخِفُّ / يَهْدَأُ', hint: 'to slowly become less strong, like a storm calming down', visual: 'abate', level: 1, longAIndices: [2] },
   { word: 'aviator', arabic: 'طَيَّارٌ', hint: 'someone who flies an airplane', visual: 'aviator', level: 1 },
   { word: 'create', arabic: 'يَبْتَكِرُ / يَخْلُقُ', hint: 'to make something new', visual: 'create', level: 1 },
   { word: 'debate', arabic: 'مُنَاظَرَةٌ / نِقَاشٌ', hint: 'a discussion where people argue different views', visual: 'debate', level: 1 },
@@ -188,15 +197,21 @@ const WORDS = [
   { word: 'nitrate', arabic: 'نِتْرَاتٌ', hint: 'a chemical compound often used in fertilizer', visual: 'nitrate', level: 1 },
   { word: 'operate', arabic: 'يُشَغِّلُ', hint: 'to run or work a machine', visual: 'operate', level: 1 },
   { word: 'ornate', arabic: 'مُزَخْرَفٌ', hint: 'covered with many fancy, decorative details', visual: 'ornate', level: 1 },
-  { word: 'placate', arabic: 'يُهَدِّئُ / يُرْضِي', hint: 'to calm down someone who is upset', visual: 'placate', level: 1 },
-  { word: 'potato', arabic: 'بَطَاطَا', hint: 'a round vegetable that grows underground', visual: 'potato', level: 1 },
+  // say: 'playkate' — TTS reduces the first "a" to a schwa; the respelling
+  // (play + kate) forces long-a /eɪ/ on both syllables: /ˈpleɪkeɪt/.
+  { word: 'placate', arabic: 'يُهَدِّئُ / يُرْضِي', hint: 'to calm down someone who is upset', visual: 'placate', level: 1, say: 'playkate' },
+  // say: 'potayto' — same British/American split as "tomato"; forces the
+  // American long-a /pəˈteɪtoʊ/ syllable. Found in the broader long-a pass.
+  { word: 'potato', arabic: 'بَطَاطَا', hint: 'a round vegetable that grows underground', visual: 'potato', level: 1, say: 'potayto' },
   { word: 'predate', arabic: 'يَفْتَرِسُ', hint: 'when an animal hunts and eats another animal', visual: 'predate', level: 1 },
   { word: 'radiate', arabic: 'يُشِعُّ', hint: 'to send out light or heat from a center', visual: 'radiate', level: 1 },
   { word: 'rebate', arabic: 'اِسْتِرْدَادُ مَبْلَغٍ', hint: 'an amount of money given back to you after a purchase', visual: 'rebate', level: 1 },
   { word: 'relate', arabic: 'يَرْتَبِطُ / يَتَعَلَّقُ بِـ', hint: 'to be connected to or similar to something else', visual: 'relate', level: 1 },
   { word: 'rotate', arabic: 'يَدُورُ', hint: 'to turn around and around a central point', visual: 'rotate', level: 1 },
   { word: 'sedate', arabic: 'هَادِئٌ', hint: 'calm and unexcited, or to give medicine that makes someone calm and sleepy', visual: 'sedate', level: 1 },
-  { word: 'tomato', arabic: 'طَمَاطِمُ', hint: 'a round, red fruit used like a vegetable in cooking', visual: 'tomato', level: 1 },
+  // say: 'tomayto' — TTS defaults to the British /təˈmɑːtoʊ/ reading; the
+  // respelling forces the American long-a /təˈmeɪtoʊ/ syllable.
+  { word: 'tomato', arabic: 'طَمَاطِمُ', hint: 'a round, red fruit used like a vegetable in cooking', visual: 'tomato', level: 1, say: 'tomayto' },
   { word: 'update', arabic: 'يُحَدِّثُ', hint: 'to add the newest information and make something current', visual: 'update', level: 1 },
   { word: 'vibrate', arabic: 'يَهْتَزُّ', hint: 'to shake quickly back and forth', visual: 'vibrate', level: 1 },
   { word: 'activate', arabic: 'يُنَشِّطُ / يُفَعِّلُ', hint: 'to make something start working', visual: 'activate', level: 1 },
@@ -207,10 +222,20 @@ const WORDS = [
   { word: 'dominate', arabic: 'يُهَيْمِنُ / يُسَيْطِرُ', hint: 'to have the most power or control over something', visual: 'dominate', level: 1 },
   { word: 'elongate', arabic: 'يُطِيلُ / يُمَدِّدُ', hint: 'to make something longer', visual: 'elongate', level: 1 },
   { word: 'emigrate', arabic: 'يُهَاجِرُ (يُغَادِرُ بَلَدَهُ)', hint: 'to leave your own country to live in another', visual: 'emigrate', level: 1 },
-  { word: 'estimate', arabic: 'يُقَدِّرُ', hint: 'to guess a number or amount closely, without counting exactly', visual: 'estimate', level: 1 },
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1 },
+  // say: 'estimayt' — same noun/verb heteronym issue as "moderate": TTS
+  // defaults to the noun's schwa ending; forces the verb's long-a /eɪt/.
+  // Found in the broader long-a pass.
+  { word: 'estimate', arabic: 'يُقَدِّرُ', hint: 'to guess a number or amount closely, without counting exactly', visual: 'estimate', level: 1, say: 'estimayt' },
+  // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
+  // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
+  // flags it too.
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, longAIndices: [5] },
   { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1 },
-  { word: 'moderate', arabic: 'مُعْتَدِلٌ / يُعَدِّلُ', hint: 'in the middle; not too much and not too little', visual: 'moderate', level: 1 },
+  // Arabic hint corrected to the verb sense used here ("moderate a
+  // debate"), not the adjective sense ("in the middle").
+  // say: 'moderayt' — TTS defaults the isolated word to the adjective's
+  // schwa ending; the respelling forces the verb's long-a /ˈmɒdəreɪt/.
+  { word: 'moderate', arabic: 'يُدِيرُ (نِقَاشًا) / يَتَرَأَّسُ', hint: 'to lead and keep control of a discussion, like a debate', visual: 'moderate', level: 1, say: 'moderayt' },
   { word: 'motivate', arabic: 'يُحَفِّزُ', hint: 'to give someone a reason to do something', visual: 'motivate', level: 1 },
   { word: 'narrate', arabic: 'يَرْوِي (قِصَّةً)', hint: 'to tell a story out loud', visual: 'narrate', level: 1 },
   { word: 'obligate', arabic: 'يُلْزِمُ', hint: 'to make someone required to do something', visual: 'obligate', level: 1 },
@@ -268,10 +293,18 @@ const SOUND_GROUPS = [
 // mis-bucketed into the plain "a" chapter; anything matching neither
 // digraph falls back to "long-a" (today that's every active word, since
 // the "ai" chapter has no words yet and the "ay" chapter is archived).
+//
+// A word ending "-are" (bare, care, scare, ...) is R-controlled — the "r"
+// changes the vowel sound entirely (/ɛər/), so it never carries the true
+// long-a /eɪ/ and doesn't belong in the long-a chapter at all. These are
+// bucketed into their own "r-controlled-a" group and, until that group has
+// its own dedicated section, kept archived so they're excluded from every
+// long-a count/tier/completion figure (see WORDS).
 function soundGroupId(word) {
   const lower = word.toLowerCase();
   if (lower.includes('ay')) return 'ay';
   if (lower.includes('ai')) return 'ai';
+  if (lower.endsWith('are')) return 'r-controlled-a';
   return 'long-a';
 }
 
@@ -282,7 +315,14 @@ function soundGroupId(word) {
 // the "a" of that digraph; for the plain "a" chapter it's the "a" in a
 // silent-e syllable (cake, translate) or an open syllable (potato),
 // falling back to the last "a" in the word when neither pattern is found.
-function highlightIndices(word) {
+//
+// The open-syllable guess can't distinguish a genuinely long, stressed "a"
+// (radiate, aviator) from an unstressed one that merely happens to match
+// the same spelling shape (graduate, abate) — spelling alone doesn't carry
+// stress. Words where the guess gets that wrong pass an explicit
+// `longAIndices` override on their WORDS entry instead.
+function highlightIndices(word, override) {
+  if (override) return override;
   const lower = word.toLowerCase();
   const group = soundGroupId(word);
   if (group === 'ay' || group === 'ai') {
@@ -305,9 +345,9 @@ function highlightIndices(word) {
   return [...indices].sort((a, b) => a - b);
 }
 
-function highlightWord(word) {
-  const targets = new Set(highlightIndices(word));
-  return [...word].map((char, i) => (targets.has(i) ? `<span class="vowel">${escapeHtml(char)}</span>` : escapeHtml(char))).join('');
+function highlightWord(item) {
+  const targets = new Set(highlightIndices(item.word, item.longAIndices));
+  return [...item.word].map((char, i) => (targets.has(i) ? `<span class="vowel">${escapeHtml(char)}</span>` : escapeHtml(char))).join('');
 }
 
 // Pacing levels are derived from word length, not the raw word.level field
@@ -779,13 +819,13 @@ function wordCardTemplate(item) {
       </div>` : ''}
       <div class="pic">${imageSvg(item.visual, item.word, item.svg)}</div>
       <div>
-        <h2>${highlightWord(item.word)}</h2>
+        <h2>${highlightWord(item)}</h2>
         <p class="arabic" dir="rtl">${escapeHtml(item.arabic)}</p>
         <p class="hint">${escapeHtml(item.hint)}</p>
       </div>
       <div class="actions">
-        <button data-say="${item.word}" data-lang="en-US">${icon('speaker')}English</button>
-        <button data-say="${item.word}. ${escapeHtml(item.hint)}" data-lang="en-US">${icon('chat')}Sentence cue</button>
+        <button data-say="${escapeHtml(item.say || item.word)}" data-lang="en-US">${icon('speaker')}English</button>
+        <button data-say="${escapeHtml(item.say || item.word)}. ${escapeHtml(item.hint)}" data-lang="en-US">${icon('chat')}Sentence cue</button>
         <button data-toggle="${item.word}" class="${done ? 'is-done' : ''}">${icon('check')}${done ? 'Known' : 'I know it'}</button>
       </div>
     </article>`;
@@ -1004,7 +1044,7 @@ function archivedPanelTemplate() {
         </div>
         ${archived.length ? `<ul class="archived-list">${archived.map((item) => `
           <li>
-            <span>${highlightWord(item.word)}</span>
+            <span>${highlightWord(item)}</span>
             <button data-admin-unarchive="${escapeHtml(item.word)}">${icon('undo')}Restore</button>
           </li>`).join('')}</ul>` : '<p class="hint">No archived words.</p>'}
       </div>

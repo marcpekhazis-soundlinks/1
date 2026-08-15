@@ -475,7 +475,10 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .tier-heading h2 { font-size: 1.15rem; color: var(--ink); margin: 0; }
 .tier-heading::after { content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, var(--primary-tint-200), transparent); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
+/* auto-fill (not auto-fit): a tier with a single card — e.g. "participate",
+   alone in its own 11-letter tier — must not have its lone column track
+   collapse away and let that one card stretch to fill the whole row. */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
 
 /* ---------- Cards ---------- */
 .card {
