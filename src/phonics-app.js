@@ -405,6 +405,93 @@ function levelProgress(groupId, level) {
   return { known, total, pct: total ? Math.round((known / total) * 100) : 0 };
 }
 
+// A sound group is fully complete once every one of its levels is fully
+// known. Reads purely off groupLevels()/levelProgress(), so it applies to
+// any group with no per-group logic.
+function isGroupComplete(groupId) {
+  const levels = groupLevels(groupId);
+  if (!levels.length) return false;
+  return levels.every((level) => {
+    const { known, total } = levelProgress(groupId, level);
+    return total > 0 && known === total;
+  });
+}
+
+// ---------- Badges ----------
+// One badge per (sound group, level), keyed entirely off the level's
+// position within its group — never off a group's id or a word's spelling
+// — so a brand-new sound group, or a new tier added to an existing one,
+// gets a correctly-escalating badge automatically with no change here.
+//
+// Affirmations grow in weight with level (simple praise for the easy early
+// levels, bigger praise for the long-word levels later in a group). The
+// list is longer than any group currently has levels for so it has room to
+// grow; a group with more levels than this list holds just keeps repeating
+// the final, strongest affirmation.
+const BADGE_AFFIRMATIONS = ['Good!', 'Nice work!', 'Great job!', 'Well done!', 'Excellent!', 'Fantastic!', 'Outstanding!', 'Amazing!', 'You did it!', 'Incredible!', 'Phenomenal!', 'Legendary!'];
+
+function badgeAffirmation(level) {
+  return BADGE_AFFIRMATIONS[Math.min(level - 1, BADGE_AFFIRMATIONS.length - 1)];
+}
+
+// Badge color escalates on a cool-to-hot hue sweep — blue at Level 1
+// through to red at a group's hardest level — the same "cool means easy,
+// hot means hard" convention as a difficulty meter, with saturation and
+// lightness deepening alongside it so later badges read as more "charged".
+// Driven purely by a level's position out of its group's total level
+// count, so it scales cleanly to a group with 3 levels or one with 30.
+function badgeColor(level, totalLevels) {
+  const t = totalLevels > 1 ? (level - 1) / (totalLevels - 1) : 0;
+  const hue = Math.round(210 - 210 * t);
+  const saturation = 70 + Math.round(18 * t);
+  const lightness = 52 - Math.round(9 * t);
+  return { base: `hsl(${hue} ${saturation}% ${lightness}%)`, light: `hsl(${hue} ${saturation}% ${Math.min(lightness + 24, 92)}%)` };
+}
+
+function badgeId(groupId, level) {
+  return `${groupId}::${level}`;
+}
+
+function badgeForLevel(groupId, level) {
+  const colors = badgeColor(level, groupLevels(groupId).length);
+  return {
+    id: badgeId(groupId, level),
+    groupId,
+    level,
+    label: levelLabel(groupId, level),
+    affirmation: badgeAffirmation(level),
+    color: colors.base,
+    colorLight: colors.light,
+  };
+}
+
+function allBadgesForGroup(groupId) {
+  return groupLevels(groupId).map((level) => badgeForLevel(groupId, level));
+}
+
+// Which sound group/level a word's badge belongs to, derived the same way
+// wordsForGroupLevel() buckets words — by matching its length against the
+// group's tier lengths — so a word never needs its level hand-stamped.
+function levelForWord(item) {
+  const groupId = soundGroupId(item.word);
+  const level = groupLevels(groupId).find((lvl) => tierLengthForLevel(groupId, lvl) === item.word.length);
+  return { groupId, level };
+}
+
+// Awards the level's badge the moment every word in it is known, and only
+// once — a second call after the level is already complete (e.g. toggling
+// an already-known word off and back on) is a no-op. Returns the newly
+// earned badge, or null when nothing changed.
+function awardBadgeIfLevelComplete(groupId, level) {
+  const { known, total } = levelProgress(groupId, level);
+  if (!total || known < total) return null;
+  const id = badgeId(groupId, level);
+  if (state.badges[id]) return null;
+  state.badges[id] = { earnedAt: Date.now() };
+  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  return badgeForLevel(groupId, level);
+}
+
 let state = {
   view: 'learn',
   soundGroup: SOUND_GROUPS[0].id,
@@ -418,6 +505,18 @@ let state = {
   dyslexia: false,
   voiceMode: localStorage.voiceMode || 'female',
   done: JSON.parse(localStorage.donePhonics || '{}'),
+  // Earned badges, keyed by badgeId ("<groupId>::<level>"). Persisted the
+  // same way `done` is — a plain JSON blob in localStorage — so it needs no
+  // storage mechanism of its own. See awardBadgeIfLevelComplete().
+  badges: JSON.parse(localStorage.badgesPhonics || '{}'),
+  // Transient celebration UI, never persisted: `celebration` is the brief
+  // per-level toast (cleared by its own timeout in toggleDone()),
+  // `groupCelebration` is the bigger full-screen moment shown once a whole
+  // sound group is finished, and `badgeShelfOpen` toggles the badge-shelf
+  // modal.
+  celebration: null,
+  groupCelebration: null,
+  badgeShelfOpen: false,
   practice: {},
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
@@ -456,6 +555,8 @@ const ICONS = {
   close: '<path d="M5 5l14 14M19 5L5 19"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   chevron: '<path d="M6 9l6 6 6-6"/>',
+  bolt: '<path d="M13 2 5 14h5l-1 8 8-12h-5z" fill="currentColor" stroke="none"/>',
+  medal: '<path d="M8.5 3h7l-2.6 7.4h-1.8z"/><circle cx="12" cy="15" r="6"/><path d="M12 12.2l1.1 2.3 2.5.4-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.4z" fill="currentColor" stroke="none"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -507,9 +608,43 @@ function setState(key, value) {
   render();
 }
 
+let celebrationTimer = null;
+
+function dismissCelebration() {
+  clearTimeout(celebrationTimer);
+  state.celebration = null;
+  render();
+}
+
+function dismissGroupCelebration() {
+  state.groupCelebration = null;
+  render();
+}
+
+// Marking a word known can complete its level (awarding that level's
+// badge and showing a brief celebration toast) and, if that was the last
+// level in its sound group, also complete the whole group — in which case
+// the toast hands off to the bigger full-screen celebration once it times
+// out, so the two moments never fight for the screen at once.
 function toggleDone(word) {
+  const item = WORDS.find((entry) => entry.word === word);
   state.done[word] = !state.done[word];
   localStorage.donePhonics = JSON.stringify(state.done);
+  if (state.done[word] && item) {
+    const { groupId, level } = levelForWord(item);
+    const badge = level !== undefined ? awardBadgeIfLevelComplete(groupId, level) : null;
+    if (badge) {
+      const group = SOUND_GROUPS.find((entry) => entry.id === groupId);
+      const groupJustCompleted = isGroupComplete(groupId);
+      clearTimeout(celebrationTimer);
+      state.celebration = badge;
+      celebrationTimer = setTimeout(() => {
+        state.celebration = null;
+        if (groupJustCompleted) state.groupCelebration = { group, badge };
+        render();
+      }, 2200);
+    }
+  }
   render();
 }
 
@@ -1194,6 +1329,13 @@ document.addEventListener('keydown', (event) => {
     render();
   } else if (event.key === 'Escape' && state.admin && (state.showArchived || state.editingWord)) {
     closeAdminPanels();
+  } else if (event.key === 'Escape' && state.badgeShelfOpen) {
+    state.badgeShelfOpen = false;
+    render();
+  } else if (event.key === 'Escape' && state.groupCelebration) {
+    dismissGroupCelebration();
+  } else if (event.key === 'Escape' && state.celebration) {
+    dismissCelebration();
   }
 });
 
@@ -1222,6 +1364,89 @@ function normalizeSelection() {
   }
 }
 
+function badgeMedalTemplate(badge, { size = 'md', earned = true } = {}) {
+  return `<div class="badge-medal badge-medal-${size} ${earned ? '' : 'is-locked'}" style="--badge-color:${badge.color};--badge-color-light:${badge.colorLight}">
+    <span class="badge-medal-icon" aria-hidden="true">${icon(earned ? 'bolt' : 'lock')}</span>
+  </div>`;
+}
+
+// Small persistent corner widget — always rendered, on every view — that
+// shows the running total of earned badges and opens the badge shelf.
+function badgeShelfWidgetTemplate() {
+  const total = Object.keys(state.badges).length;
+  return `<button class="badge-shelf-toggle" data-badge-shelf-open aria-label="Badge shelf — ${total} badge${total === 1 ? '' : 's'} earned">
+    ${icon('medal')}<span class="badge-shelf-toggle-count">${total}</span>
+  </button>`;
+}
+
+// The brief per-level celebration: icon + affirmation, shown as a small
+// corner toast (never a full-screen takeover) and cleared automatically by
+// the timer started in toggleDone().
+function celebrationTemplate() {
+  if (!state.celebration) return '';
+  const badge = state.celebration;
+  return `<div class="celebration-toast" data-dismiss-celebration role="status" aria-live="polite">
+    ${badgeMedalTemplate(badge, { size: 'sm' })}
+    <div class="celebration-toast-text">
+      <strong>${escapeHtml(badge.affirmation)}</strong>
+      <span>${escapeHtml(badge.label)} badge earned</span>
+    </div>
+  </div>`;
+}
+
+// The bigger, full-screen moment for finishing every level in a sound
+// group — deliberately more elaborate than the per-level toast so it reads
+// as a distinct, larger milestone.
+function groupCelebrationTemplate() {
+  if (!state.groupCelebration) return '';
+  const { group, badge } = state.groupCelebration;
+  const badgeCount = allBadgesForGroup(group.id).length;
+  const confetti = Array.from({ length: 16 }, (_, i) => `<span class="confetti-piece" style="--i:${i}"></span>`).join('');
+  return `<div class="group-celebration-overlay" data-dismiss-group-celebration role="dialog" aria-label="${escapeHtml(group.label)} complete">
+    <div class="group-celebration-confetti" aria-hidden="true">${confetti}</div>
+    <div class="group-celebration-panel">
+      ${badgeMedalTemplate(badge, { size: 'lg' })}
+      <h2>${escapeHtml(group.label)} complete!</h2>
+      <p>${escapeHtml(badge.affirmation)} You've earned all ${badgeCount} badge${badgeCount === 1 ? '' : 's'} in ${escapeHtml(group.label)}.</p>
+      <button class="group-celebration-continue" data-dismiss-group-celebration>${icon('check')}Keep learning</button>
+    </div>
+  </div>`;
+}
+
+// One sound group's row of level badges for the badge shelf — earned ones
+// in full color, not-yet-earned ones shown locked. Purely data-driven off
+// groupLevels(), so a group with no words yet is simply skipped upstream.
+function badgeShelfGroupTemplate(group) {
+  return `<section class="badge-shelf-group">
+    <h3>${escapeHtml(group.label)}</h3>
+    <div class="badge-shelf-grid">
+      ${allBadgesForGroup(group.id).map((badge) => {
+        const earned = !!state.badges[badge.id];
+        return `<div class="badge-shelf-item ${earned ? '' : 'is-locked'}">
+          ${badgeMedalTemplate(badge, { size: 'md', earned })}
+          <span class="badge-shelf-item-label">${escapeHtml(badge.label)}</span>
+          <span class="badge-shelf-item-affirmation">${earned ? escapeHtml(badge.affirmation) : 'Not yet earned'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+function badgeShelfTemplate() {
+  if (!state.badgeShelfOpen) return '';
+  const total = Object.keys(state.badges).length;
+  const groups = SOUND_GROUPS.filter((group) => groupLevels(group.id).length > 0);
+  return `<div class="modal-overlay" data-badge-shelf-overlay>
+    <div class="modal-panel badge-shelf-panel" role="dialog" aria-label="Badge shelf">
+      <div class="modal-header">
+        <h2>${icon('medal')}Badge shelf <span class="badge-shelf-total">${total} earned</span></h2>
+        <button class="admin-icon-btn" data-close-badge-shelf aria-label="Close">${icon('close')}</button>
+      </div>
+      ${groups.length ? groups.map(badgeShelfGroupTemplate).join('') : '<p class="hint">No badges yet — complete a level to earn your first one.</p>'}
+    </div>
+  </div>`;
+}
+
 function render() {
   normalizeSelection();
   const activeWords = WORDS.filter((word) => !word.archived);
@@ -1229,6 +1454,7 @@ function render() {
   const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
   document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''} ${state.dyslexia ? 'dyslexia' : ''}`;
   $('#app').innerHTML = `
+    ${badgeShelfWidgetTemplate()}
     <header class="hero">
       <div>
         <p class="eyebrow">SoundLinks / روابط الأصوات</p>
@@ -1264,13 +1490,22 @@ function render() {
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
     </footer>
     ${state.admin && state.showArchived ? archivedPanelTemplate() : ''}
-    ${state.admin && state.editingWord ? editModalTemplate() : ''}`;
+    ${state.admin && state.editingWord ? editModalTemplate() : ''}
+    ${celebrationTemplate()}
+    ${groupCelebrationTemplate()}
+    ${badgeShelfTemplate()}`;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setState('view', button.dataset.view));
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
   $('[data-dyslexia]').onclick = () => setState('dyslexia', !state.dyslexia);
-  $('[data-reset]').onclick = () => { state.done = {}; localStorage.removeItem('donePhonics'); render(); };
+  $('[data-reset]').onclick = () => {
+    state.done = {};
+    state.badges = {};
+    localStorage.removeItem('donePhonics');
+    localStorage.removeItem('badgesPhonics');
+    render();
+  };
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
   document.querySelectorAll('[data-say]').forEach((button) => button.onclick = () => speak(button.dataset.say, button.dataset.lang));
   document.querySelectorAll('[data-toggle]').forEach((button) => button.onclick = () => toggleDone(button.dataset.toggle));
@@ -1292,6 +1527,12 @@ function render() {
     state.expandedGroups[groupId] = true;
     render();
   });
+  $('[data-badge-shelf-open]').onclick = () => { state.badgeShelfOpen = true; render(); };
+  document.querySelectorAll('[data-close-badge-shelf]').forEach((button) => button.onclick = () => { state.badgeShelfOpen = false; render(); });
+  document.querySelectorAll('[data-badge-shelf-overlay]').forEach((overlay) => overlay.onclick = (event) => { if (event.target === overlay) { state.badgeShelfOpen = false; render(); } });
+  const celebrationToast = $('[data-dismiss-celebration]');
+  if (celebrationToast) celebrationToast.onclick = () => dismissCelebration();
+  document.querySelectorAll('[data-dismiss-group-celebration]').forEach((el) => el.onclick = () => dismissGroupCelebration());
   wireAdminEvents();
 }
 
