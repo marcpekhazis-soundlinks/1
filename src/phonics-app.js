@@ -282,10 +282,15 @@ const RULES = [
 // highlightIndices() below — every tab, filter, tier grouping, and
 // progress figure updates itself automatically, no per-word data change
 // needed.
+// `includeArchived`/`singleLevel` only apply to the Exceptions group today
+// (see the comments on wordsInSoundGroup()/isSingleLevelGroup() below) —
+// every other group leaves them unset and gets the default paced,
+// archived-excluding behavior.
 const SOUND_GROUPS = [
   { id: 'long-a', label: 'Long A' },
   { id: 'ai', label: 'AI' },
   { id: 'ay', label: 'AY' },
+  { id: 'r-controlled-a', label: 'Exceptions', includeArchived: true, singleLevel: true },
 ];
 
 // Which sound-group tab a word belongs to, purely from its spelling.
@@ -297,15 +302,42 @@ const SOUND_GROUPS = [
 // A word ending "-are" (bare, care, scare, ...) is R-controlled — the "r"
 // changes the vowel sound entirely (/ɛər/), so it never carries the true
 // long-a /eɪ/ and doesn't belong in the long-a chapter at all. These are
-// bucketed into their own "r-controlled-a" group and, until that group has
-// its own dedicated section, kept archived so they're excluded from every
-// long-a count/tier/completion figure (see WORDS).
+// bucketed into their own "r-controlled-a" group, which the "Exceptions"
+// sidebar entry (SOUND_GROUPS above) renders — see wordsInSoundGroup().
 function soundGroupId(word) {
   const lower = word.toLowerCase();
   if (lower.includes('ay')) return 'ay';
   if (lower.includes('ai')) return 'ai';
   if (lower.endsWith('are')) return 'r-controlled-a';
   return 'long-a';
+}
+
+// Whether a sound group presents as one flat, always-unlocked list instead
+// of being paced into locked, word-length tiers. Used for the Exceptions
+// group: 12 r-controlled words are too small and too special-case a list
+// to gate behind level-locking, so the whole group is just one accessible
+// level (still sub-headed by word length inside learnTemplate(), same as
+// every other level's card grid).
+function isSingleLevelGroup(groupId) {
+  const group = SOUND_GROUPS.find((entry) => entry.id === groupId);
+  return !!(group && group.singleLevel);
+}
+
+// Words belonging to one sound-group tab, for display. Every group except
+// Exceptions also excludes `archived` words — archived there means "not
+// released for this group yet" (the unlaunched AI/AY chapters, the level-2
+// word lists). The r-controlled words behind Exceptions are archived too,
+// but for an unrelated reason: they were pulled out of Long A by giving
+// them `archived: true` in WORDS, which was how they got excluded from
+// every long-a count/tier/badge without deleting them or touching
+// soundGroupId() (see the comment above it). Exceptions is the one group
+// where that `archived` flag isn't "hide me" — it's how these words are
+// already tagged as belonging here — so it reads them straight off
+// soundGroupId() via `includeArchived`, with no data changes needed.
+function wordsInSoundGroup(groupId) {
+  const group = SOUND_GROUPS.find((entry) => entry.id === groupId);
+  const words = WORDS.filter((word) => soundGroupId(word.word) === groupId);
+  return group && group.includeArchived ? words : words.filter((word) => !word.archived);
 }
 
 // Which letter index(es) inside a word carry the long-vowel sound, for the
@@ -362,7 +394,9 @@ function highlightWord(item) {
 // correctly-locked level with no change to this function or the locking
 // logic below.
 function groupTierLengths(groupId) {
-  return [...new Set(WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId).map((word) => word.word.length))].sort((a, b) => a - b);
+  const words = wordsInSoundGroup(groupId);
+  if (isSingleLevelGroup(groupId)) return words.length ? [null] : [];
+  return [...new Set(words.map((word) => word.word.length))].sort((a, b) => a - b);
 }
 
 function groupLevels(groupId) {
@@ -377,8 +411,10 @@ function tierLengthForLevel(groupId, level) {
 }
 
 function wordsForGroupLevel(groupId, level) {
+  const words = wordsInSoundGroup(groupId);
+  if (isSingleLevelGroup(groupId)) return words;
   const length = tierLengthForLevel(groupId, level);
-  return WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId && word.word.length === length);
+  return words.filter((word) => word.word.length === length);
 }
 
 // A level unlocks once every word in the level directly before it (within
@@ -471,10 +507,14 @@ function allBadgesForGroup(groupId) {
 
 // Which sound group/level a word's badge belongs to, derived the same way
 // wordsForGroupLevel() buckets words — by matching its length against the
-// group's tier lengths — so a word never needs its level hand-stamped.
+// group's tier lengths — so a word never needs its level hand-stamped. A
+// single-level group (Exceptions) has no length tiers to match against, so
+// every one of its words is simply that group's one level.
 function levelForWord(item) {
   const groupId = soundGroupId(item.word);
-  const level = groupLevels(groupId).find((lvl) => tierLengthForLevel(groupId, lvl) === item.word.length);
+  const level = isSingleLevelGroup(groupId)
+    ? groupLevels(groupId)[0]
+    : groupLevels(groupId).find((lvl) => tierLengthForLevel(groupId, lvl) === item.word.length);
   return { groupId, level };
 }
 
@@ -948,8 +988,11 @@ function imageSvg(type, label, customSvg) {
 }
 
 // Label for a level, derived purely from its tier length so it never needs
-// updating as new tiers/levels are added.
+// updating as new tiers/levels are added. Exceptions' single level isn't a
+// word-length tier at all, so it gets its own plain label instead of a
+// "Level 1" that would misleadingly imply more levels are coming.
 function levelLabel(groupId, level) {
+  if (isSingleLevelGroup(groupId)) return 'All words';
   const length = tierLengthForLevel(groupId, level);
   return length ? `Level ${level}: ${length}-Letter Words` : `Level ${level}`;
 }
@@ -1063,8 +1106,9 @@ function levelCompleteTemplate(group, level) {
   const levels = groupLevels(group.id);
   const nextLevel = levels[levels.indexOf(level) + 1];
   if (nextLevel === undefined) {
+    const prefix = isSingleLevelGroup(group.id) ? '' : `Level ${level} complete — `;
     return `<div class="level-complete-banner">
-      ${icon('check')}<span>Level ${level} complete — every word in ${escapeHtml(group.label)} is known!</span>
+      ${icon('check')}<span>${prefix}Every word in ${escapeHtml(group.label)} is known!</span>
     </div>`;
   }
   return `<div class="level-complete-banner">
@@ -1075,7 +1119,7 @@ function levelCompleteTemplate(group, level) {
 
 function learnTemplate() {
   const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
-  const groupWords = WORDS.filter((word) => !word.archived && soundGroupId(word.word) === group.id);
+  const groupWords = wordsInSoundGroup(group.id);
   const filtered = wordsForGroupLevel(group.id, state.level);
   const tiers = [...new Set(filtered.map((word) => word.word.length))].sort((a, b) => a - b);
   const levelLabelText = levelLabel(group.id, state.level);
@@ -1144,7 +1188,7 @@ function instructionsTemplate() {
       </ol>`;
   }
   return `<ol>
-        <li>Use the sidebar to pick a sound group (Long A, AI, AY) and one of its levels to focus on.</li>
+        <li>Use the sidebar to pick a sound group (Long A, AI, AY, Exceptions) and one of its levels to focus on.</li>
         <li>Each level unlocks once every word in the level before it is marked known, so pacing builds up naturally.</li>
         <li>Select a male or female voice, then press English or Arabic audio.</li>
         <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red letter.</li>
