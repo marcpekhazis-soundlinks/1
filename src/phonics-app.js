@@ -469,9 +469,20 @@ if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = loadVoices;
 }
 
+// Every "hear it" button passes lang="en-US" because this app teaches
+// American long-a sounds specifically, but the old filter only matched the
+// 2-letter "en" prefix — accepting en-GB/en-AU/en-IN voices too — and its
+// default preferred-name list even named "Google UK English Female"
+// explicitly. On browsers where that voice sorted before a US one, every
+// word played in a British accent, which is only audible on words like
+// "vase" and "tomato" where the two accents genuinely diverge. Now the
+// full region tag (en-US) is preferred, falling back to any same-language
+// voice only if the browser has no exact regional match.
 function pickVoice(lang) {
-  const languageVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
-  const preferredGender = state.voiceMode === 'male' ? ['male', 'david', 'mark', 'george', 'microsoft zira?'] : ['female', 'zira', 'samantha', 'susan', 'victoria', 'google uk english female'];
+  const target = lang.toLowerCase();
+  const regionVoices = voices.filter((voice) => voice.lang.toLowerCase().replace('_', '-') === target);
+  const languageVoices = regionVoices.length ? regionVoices : voices.filter((voice) => voice.lang.toLowerCase().startsWith(target.slice(0, 2)));
+  const preferredGender = state.voiceMode === 'male' ? ['male', 'david', 'mark', 'george', 'microsoft zira?'] : ['female', 'zira', 'samantha', 'susan', 'victoria'];
   return languageVoices.find((voice) => preferredGender.some((term) => voice.name.toLowerCase().includes(term.replace('?', '')))) || languageVoices[0] || null;
 }
 
