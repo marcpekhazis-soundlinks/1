@@ -373,16 +373,54 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 }
 .sidebar-level-lock { display: inline-flex; flex: none; color: var(--ink-soft); }
 .sidebar-level-lock .icon { width: 0.95em; height: 0.95em; margin: 0; }
+.sidebar-level-done { display: inline-flex; flex: none; color: var(--success); }
+.sidebar-level-done .icon { width: 1em; height: 1em; margin: 0; }
+.sidebar-level.active .sidebar-level-done { color: #fff; }
 .sidebar-level-name { flex: 1 1 auto; font-family: var(--font-heading); font-weight: 800; font-size: 0.88rem; }
 .sidebar-level-progress { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; }
 .sidebar-level-track { flex: 1 1 auto; height: 6px; min-width: 40px; border-radius: var(--radius-pill); background: var(--primary-tint-200); overflow: hidden; }
 .sidebar-level-fill { display: block; height: 100%; width: calc(var(--pct, 0) * 1%); background: var(--primary); border-radius: inherit; transition: width 0.25s ease; }
+.sidebar-level.is-complete:not(.active) .sidebar-level-fill { background: var(--success); }
 .sidebar-level-count { font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
 
 .level-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; margin: 0 0 18px; }
 .level-heading h2 { font-size: 1.15rem; color: var(--ink); margin: 0; }
 .level-heading-sep { color: var(--primary-tint-300); }
 .level-heading-progress { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+
+.level-complete-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 0 0 22px;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--success-soft);
+  border: 2px solid rgba(23, 166, 114, 0.3);
+  color: var(--success-dark);
+  font-weight: 700;
+}
+.level-complete-banner .icon { flex: none; width: 1.2em; height: 1.2em; }
+.level-complete-banner span { flex: 1 1 auto; }
+.level-complete-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+  color: #fff;
+  padding: 8px 16px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.level-complete-action:hover { background: var(--success-dark); }
+.level-complete-action .icon { width: 0.9em; height: 0.9em; transform: rotate(-90deg); }
 
 /* ---------- Shared surfaces ---------- */
 .instructions, .rule, .card {
@@ -700,9 +738,15 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .sidebar-level-track { background: #333; }
 .contrast .sidebar-level-fill { background: #fff; }
 .contrast .sidebar-level-count { color: #ccc; }
+.contrast .sidebar-level-done { color: #fff; }
+.contrast .sidebar-level.active .sidebar-level-done { color: #000; }
+.contrast .sidebar-level.is-complete:not(.active) .sidebar-level-fill { background: #fff; }
 .contrast .level-heading h2 { color: #fff; }
 .contrast .level-heading-sep { color: #666; }
 .contrast .level-heading-progress { color: #ccc; }
+.contrast .level-complete-banner { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .level-complete-action { background: #fff; color: #000; }
+.contrast .level-complete-action:hover { background: #ccc; }
 .contrast .svgBg { fill: #111; }
 .contrast .svgStroke { stroke: #fff; }
 .contrast .svgText, .contrast .svgCaption { fill: #fff; }

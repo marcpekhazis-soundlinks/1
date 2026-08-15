@@ -310,16 +310,35 @@ function highlightWord(word) {
   return [...word].map((char, i) => (targets.has(i) ? `<span class="vowel">${escapeHtml(char)}</span>` : escapeHtml(char))).join('');
 }
 
-// Distinct pacing levels actually present in a sound group's active
-// (non-archived) words, in order — read from WORDS rather than hardcoded
-// so a future "Level 3" (or a brand-new sound group) just works with no
-// change to the locking logic below.
+// Pacing levels are derived from word length, not the raw word.level field
+// stored on each word (that field predates this tiering and is left as-is
+// in WORDS for now — see PR description for how its old values map onto
+// this scheme). Every distinct letter-count already used for a sound
+// group's "N-Letter Words" tier headings becomes its own level, in
+// ascending order: the shortest tier is Level 1, the next-shortest Level 2,
+// and so on. Reading tiers straight off WORDS (rather than hardcoding
+// letter counts here) means a brand-new sound group — or a new tier added
+// to an existing one — automatically gets its own correctly-numbered,
+// correctly-locked level with no change to this function or the locking
+// logic below.
+function groupTierLengths(groupId) {
+  return [...new Set(WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId).map((word) => word.word.length))].sort((a, b) => a - b);
+}
+
 function groupLevels(groupId) {
-  return [...new Set(WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId).map((word) => word.level))].sort((a, b) => a - b);
+  return groupTierLengths(groupId).map((_, index) => index + 1);
+}
+
+// The letter-count tier a given level number stands for, within one sound
+// group — e.g. Level 1 in a group whose shortest active words are 3
+// letters returns 3.
+function tierLengthForLevel(groupId, level) {
+  return groupTierLengths(groupId)[level - 1];
 }
 
 function wordsForGroupLevel(groupId, level) {
-  return WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId && word.level === level);
+  const length = tierLengthForLevel(groupId, level);
+  return WORDS.filter((word) => !word.archived && soundGroupId(word.word) === groupId && word.word.length === length);
 }
 
 // A level unlocks once every word in the level directly before it (within
@@ -742,7 +761,12 @@ function imageSvg(type, label, customSvg) {
   return `<svg class="word-image" viewBox="0 0 300 230" role="img" aria-label="Picture for ${text}"><rect width="300" height="230" rx="26" class="svgBg"/><g class="svgStroke">${inner}</g><text x="150" y="215" text-anchor="middle" class="svgCaption">${text}</text></svg>`;
 }
 
-const LEVEL_LABEL = { 1: 'Level 1: short words', 2: 'Level 2: longer words' };
+// Label for a level, derived purely from its tier length so it never needs
+// updating as new tiers/levels are added.
+function levelLabel(groupId, level) {
+  const length = tierLengthForLevel(groupId, level);
+  return length ? `Level ${level}: ${length}-Letter Words` : `Level ${level}`;
+}
 
 function wordCardTemplate(item) {
   const done = !!state.done[item.word];
@@ -790,10 +814,12 @@ function sidebarLevelsTemplate(group) {
     const { known, total, pct } = levelProgress(group.id, level);
     const unlocked = isLevelUnlocked(group.id, level);
     const active = state.soundGroup === group.id && state.level === level;
-    const label = LEVEL_LABEL[level] || `Level ${level}`;
+    const complete = total > 0 && known === total;
+    const label = levelLabel(group.id, level);
     return `<li>
-      <button class="sidebar-level ${active ? 'active' : ''} ${unlocked ? '' : 'is-locked'}" data-sidebar-level="${group.id}::${level}" ${unlocked ? '' : 'disabled aria-disabled="true"'} aria-current="${active}">
+      <button class="sidebar-level ${active ? 'active' : ''} ${unlocked ? '' : 'is-locked'} ${complete ? 'is-complete' : ''}" data-sidebar-level="${group.id}::${level}" ${unlocked ? '' : 'disabled aria-disabled="true"'} aria-current="${active}">
         ${unlocked ? '' : `<span class="sidebar-level-lock" aria-hidden="true">${icon('lock')}</span>`}
+        ${complete ? `<span class="sidebar-level-done" aria-hidden="true">${icon('check')}</span>` : ''}
         <span class="sidebar-level-name">${escapeHtml(label)}</span>
         <span class="sidebar-level-progress" style="--pct:${pct}">
           <span class="sidebar-level-track"><span class="sidebar-level-fill"></span></span>
@@ -840,12 +866,33 @@ function emptyGroupTemplate(message) {
   return `<div class="empty-group">${icon('book')}<p>${escapeHtml(message)}</p></div>`;
 }
 
+// Shown under the level heading once every word in the current level is
+// known — a clear, explicit call-to-action rather than relying on the
+// learner to notice the sidebar row changed. Purely data-driven: it just
+// asks groupLevels() what comes after the current level, so it works for
+// any group/level without naming one.
+function levelCompleteTemplate(group, level) {
+  const { known, total } = levelProgress(group.id, level);
+  if (!total || known < total) return '';
+  const levels = groupLevels(group.id);
+  const nextLevel = levels[levels.indexOf(level) + 1];
+  if (nextLevel === undefined) {
+    return `<div class="level-complete-banner">
+      ${icon('check')}<span>Level ${level} complete — every word in ${escapeHtml(group.label)} is known!</span>
+    </div>`;
+  }
+  return `<div class="level-complete-banner">
+    ${icon('check')}<span>Level ${level} complete — ${escapeHtml(levelLabel(group.id, nextLevel))} is unlocked.</span>
+    <button class="level-complete-action" data-sidebar-level="${group.id}::${nextLevel}">Unlock next level${icon('chevron')}</button>
+  </div>`;
+}
+
 function learnTemplate() {
   const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
   const groupWords = WORDS.filter((word) => !word.archived && soundGroupId(word.word) === group.id);
-  const filtered = groupWords.filter((word) => word.level === state.level);
+  const filtered = wordsForGroupLevel(group.id, state.level);
   const tiers = [...new Set(filtered.map((word) => word.word.length))].sort((a, b) => a - b);
-  const levelLabel = LEVEL_LABEL[state.level] || `Level ${state.level}`;
+  const levelLabelText = levelLabel(group.id, state.level);
   const { known, total, pct: levelPct } = levelProgress(group.id, state.level);
 
   let body;
@@ -864,9 +911,10 @@ function learnTemplate() {
   return `
     ${groupProgressTemplate(group, groupWords)}
     <div class="level-heading">
-      <h2>${escapeHtml(group.label)} <span class="level-heading-sep">·</span> ${escapeHtml(levelLabel)}</h2>
+      <h2>${escapeHtml(group.label)} <span class="level-heading-sep">·</span> ${escapeHtml(levelLabelText)}</h2>
       <span class="level-heading-progress">${known}/${total} words known (${levelPct}%)</span>
     </div>
+    ${filtered.length ? levelCompleteTemplate(group, state.level) : ''}
     ${body}`;
 }
 
