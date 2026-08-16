@@ -576,7 +576,7 @@ let state = {
   // per-session UI.
   readingHighlightStyle: localStorage.readingHighlightStyle || 'sweep', // 'sweep' | 'ball'
   readingLineFocus: localStorage.readingLineFocus !== 'off',
-  readingSpeed: localStorage.readingSpeed === 'slow' ? 'slow' : 'normal', // 'normal' | 'slow'
+  readingSpeed: ['normal', 'slow', 'veryslow'].includes(localStorage.readingSpeed) ? localStorage.readingSpeed : 'normal', // 'normal' | 'slow' | 'veryslow'
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file.
@@ -699,14 +699,22 @@ function speechTextFor(item) {
   return item.sentence.replace(pattern, item.say);
 }
 
-// Reading Activity speed control. "normal" matches the rate the rest of
-// the app's TTS ("hear it"/"sentence cue" buttons) already uses; "slow" is
-// a meaningfully slower, more deliberate pace for learners — including
-// those with dyslexia or other language-processing needs — who need more
-// time per word than the app's default rate gives them. Kept a clear
-// 0.15 apart (not e.g. 0.75/0.7) so the difference is unmistakable rather
-// than marginal, per the reported "Slow doesn't sound different" bug.
-const READING_RATES = { normal: 0.75, slow: 0.6 };
+// Reading Activity speed control. Deliberately spaced far apart — each
+// step is close to half the previous rate — so every step reads as
+// unmistakably different by ear, not a marginal adjustment: 0.6 vs 0.75
+// (the previous values) was reported as too subtle to reliably notice on
+// a short one-line sentence.
+// "normal" is the TTS engine's own full natural rate (1.0) — note this no
+// longer matches the 0.75 the word-card "hear it"/"sentence cue" buttons
+// use; those are untouched, this is Reading Activity's own scale now.
+// "slow" (0.5, clearly half-speed) and "veryslow" (0.4) are for learners —
+// including those with dyslexia or other language-processing needs — who
+// need progressively more time per word than natural speech gives them.
+const READING_RATES = { normal: 1, slow: 0.5, veryslow: 0.4 };
+// Display labels + button order for the speed toggle, driven off the same
+// READING_RATES keys so a future speed step only needs adding in one
+// place — this list, not a second hardcoded button set in the template.
+const READING_SPEED_LABELS = { normal: 'Normal', slow: 'Slow', veryslow: 'Very Slow' };
 function readingPlaybackRate() {
   return READING_RATES[state.readingSpeed] || READING_RATES.normal;
 }
@@ -1455,7 +1463,6 @@ function readingActivityTemplate(group, levelWords) {
   const activeIndex = state.reading.activeWordIndex;
   const playing = state.reading.playing;
   const styleBall = state.readingHighlightStyle === 'ball';
-  const speedSlow = state.readingSpeed === 'slow';
 
   return `
     <div class="reading-activity">
@@ -1493,8 +1500,10 @@ function readingActivityTemplate(group, levelWords) {
           </div>
           <span class="reading-options-label">Speed</span>
           <div class="reading-style-toggle" role="radiogroup" aria-label="Reading speed">
-            <button data-reading-speed="normal" class="${!speedSlow ? 'active' : ''}" aria-pressed="${!speedSlow}">Normal</button>
-            <button data-reading-speed="slow" class="${speedSlow ? 'active' : ''}" aria-pressed="${speedSlow}">Slow</button>
+            ${Object.keys(READING_RATES).map((speedKey) => {
+              const active = state.readingSpeed === speedKey;
+              return `<button data-reading-speed="${speedKey}" class="${active ? 'active' : ''}" aria-pressed="${active}">${escapeHtml(READING_SPEED_LABELS[speedKey] || speedKey)}</button>`;
+            }).join('')}
           </div>
           <button class="reading-line-focus-toggle ${state.readingLineFocus ? 'is-on' : ''}" data-reading-line-focus aria-pressed="${state.readingLineFocus}">${icon('eye')}Line focus</button>
         </div>
