@@ -1,260 +1,260 @@
 const WORDS = [
-  { word: "bay", arabic: "خَلِيجٌ", hint: "a curve of ocean by land", visual: "bay", level: 1, archived: true },
-  { word: "day", arabic: "يَوْمٌ", hint: "sun-up time", visual: "day", level: 1, archived: true },
-  { word: "hay", arabic: "تِبْنٌ", hint: "dry grass", visual: "hay", level: 1, archived: true },
-  { word: "jay", arabic: "طَائِرُ القَيْقِ", hint: "a colorful, noisy bird", visual: "jay", level: 1, archived: true },
-  { word: "lay", arabic: "يَضَعُ / يَسْتَلْقِي", hint: "put down or rest", visual: "bed", level: 1, archived: true },
-  { word: "may", arabic: "قَدْ / شَهْرُ مَايُو", hint: "might, or the month May", visual: "calendar", level: 1, archived: true },
-  { word: "pay", arabic: "يَدْفَعُ", hint: "give money", visual: "pay", level: 1, archived: true },
-  { word: "ray", arabic: "شُعَاعٌ", hint: "a line of light", visual: "ray", level: 1, archived: true },
-  { word: "say", arabic: "يَقُولُ", hint: "speak words", visual: "speech", level: 1, archived: true },
-  { word: "way", arabic: "طَرِيقٌ / أُسْلُوبٌ", hint: "a path, or how something is done", visual: "road", level: 1, archived: true },
-  { word: "away", arabic: "بَعِيدًا / ذَهَبَ", hint: "gone, or not in this place", visual: "arrows", level: 1, archived: true },
-  { word: "bray", arabic: "نَهِيقُ الْحِمَارِ", hint: "the loud, harsh cry a donkey makes", visual: "bray", level: 1, archived: true },
-  { word: "clay", arabic: "طِينٌ", hint: "soft, wet earth used for pottery", visual: "clay", level: 1, archived: true },
-  { word: "fray", arabic: "مُشَاجَرَةٌ / يَتَهَرَّأُ", hint: "a scuffle, or threads wearing loose at an edge", visual: "fray", level: 1, archived: true },
-  { word: "gray", arabic: "رَمَادِيٌّ", hint: "the color between black and white", visual: "gray", level: 1, archived: true },
-  { word: "play", arabic: "يَلْعَبُ", hint: "have fun or join a game", visual: "game", level: 1, archived: true },
-  { word: "pray", arabic: "يُصَلِّي / يَدْعُو", hint: "to speak to God", visual: "pray", level: 1, archived: true },
-  { word: "slay", arabic: "يَقْتُلُ / يَذْبَحُ", hint: "to kill with a weapon", visual: "sword", level: 1, archived: true },
-  { word: "stay", arabic: "يَبْقَى", hint: "remain in one place", visual: "house", level: 1, archived: true },
-  { word: "sway", arabic: "يَتَأَرْجَحُ / يَتَمَايَلُ", hint: "to rock gently from side to side", visual: "sway", level: 1, archived: true },
-  { word: "spray", arabic: "يَرُشُّ", hint: "send out small drops", visual: "spray", level: 1, archived: true },
-  { word: "tray", arabic: "صِينِيَّةٌ", hint: "a flat holder for food", visual: "tray", level: 1, archived: true },
-  { word: "ace", arabic: "بَطَلٌ", hint: "a champion or expert", visual: "ace", level: 1 },
-  { word: 'ape', arabic: 'قِرْدٌ', hint: 'a large tailless monkey', visual: 'ape', level: 1 },
+  { word: "bay", arabic: "خَلِيجٌ", hint: "a curve of ocean by land", visual: "bay", level: 1, archived: true, sentence: "The boats sat quietly in the bay." },
+  { word: "day", arabic: "يَوْمٌ", hint: "sun-up time", visual: "day", level: 1, archived: true, sentence: "Today is a sunny day." },
+  { word: "hay", arabic: "تِبْنٌ", hint: "dry grass", visual: "hay", level: 1, archived: true, sentence: "The horse ate some hay." },
+  { word: "jay", arabic: "طَائِرُ القَيْقِ", hint: "a colorful, noisy bird", visual: "jay", level: 1, archived: true, sentence: "A blue jay landed on the fence." },
+  { word: "lay", arabic: "يَضَعُ / يَسْتَلْقِي", hint: "put down or rest", visual: "bed", level: 1, archived: true, sentence: "Please lay the book on the table." },
+  { word: "may", arabic: "قَدْ / شَهْرُ مَايُو", hint: "might, or the month May", visual: "calendar", level: 1, archived: true, sentence: "You may go outside and play." },
+  { word: "pay", arabic: "يَدْفَعُ", hint: "give money", visual: "pay", level: 1, archived: true, sentence: "I will pay for the food." },
+  { word: "ray", arabic: "شُعَاعٌ", hint: "a line of light", visual: "ray", level: 1, archived: true, sentence: "A ray of sunlight came through the window." },
+  { word: "say", arabic: "يَقُولُ", hint: "speak words", visual: "speech", level: 1, archived: true, sentence: "What did you say to her?" },
+  { word: "way", arabic: "طَرِيقٌ / أُسْلُوبٌ", hint: "a path, or how something is done", visual: "road", level: 1, archived: true, sentence: "This is the way to the park." },
+  { word: "away", arabic: "بَعِيدًا / ذَهَبَ", hint: "gone, or not in this place", visual: "arrows", level: 1, archived: true, sentence: "The cat ran away from the dog." },
+  { word: "bray", arabic: "نَهِيقُ الْحِمَارِ", hint: "the loud, harsh cry a donkey makes", visual: "bray", level: 1, archived: true, sentence: "The donkey let out a loud bray." },
+  { word: "clay", arabic: "طِينٌ", hint: "soft, wet earth used for pottery", visual: "clay", level: 1, archived: true, sentence: "She made a pot out of clay." },
+  { word: "fray", arabic: "مُشَاجَرَةٌ / يَتَهَرَّأُ", hint: "a scuffle, or threads wearing loose at an edge", visual: "fray", level: 1, archived: true, sentence: "The rope began to fray at the end." },
+  { word: "gray", arabic: "رَمَادِيٌّ", hint: "the color between black and white", visual: "gray", level: 1, archived: true, sentence: "The sky turned gray before the storm." },
+  { word: "play", arabic: "يَلْعَبُ", hint: "have fun or join a game", visual: "game", level: 1, archived: true, sentence: "The children love to play outside." },
+  { word: "pray", arabic: "يُصَلِّي / يَدْعُو", hint: "to speak to God", visual: "pray", level: 1, archived: true, sentence: "They pray together every morning." },
+  { word: "slay", arabic: "يَقْتُلُ / يَذْبَحُ", hint: "to kill with a weapon", visual: "sword", level: 1, archived: true, sentence: "The knight will slay the dragon in the story." },
+  { word: "stay", arabic: "يَبْقَى", hint: "remain in one place", visual: "house", level: 1, archived: true, sentence: "Please stay here until I return." },
+  { word: "sway", arabic: "يَتَأَرْجَحُ / يَتَمَايَلُ", hint: "to rock gently from side to side", visual: "sway", level: 1, archived: true, sentence: "The trees sway gently in the wind." },
+  { word: "spray", arabic: "يَرُشُّ", hint: "send out small drops", visual: "spray", level: 1, archived: true, sentence: "She used a spray to clean the window." },
+  { word: "tray", arabic: "صِينِيَّةٌ", hint: "a flat holder for food", visual: "tray", level: 1, archived: true, sentence: "He carried the cups on a tray." },
+  { word: "ace", arabic: "بَطَلٌ", hint: "a champion or expert", visual: "ace", level: 1, sentence: "She is an ace at chess." },
+  { word: 'ape', arabic: 'قِرْدٌ', hint: 'a large tailless monkey', visual: 'ape', level: 1, sentence: "The ape swung from branch to branch." },
   // say: 'eight' — TTS reads bare "ate" with a short vowel (like "at"); the
   // homophone spelling forces the correct long-a /eɪt/ without touching the
   // word's own spelling/highlighting.
-  { word: 'ate', arabic: 'أَكَلَ', hint: 'past tense of eat', visual: 'ate', level: 1, say: 'eight' },
-  { word: 'babe', arabic: 'طِفْلٌ رَضِيعٌ', hint: 'a baby, or a term for a dear one', visual: 'babe', level: 1 },
-  { word: 'bade', arabic: 'أَمَرَ / طَلَبَ', hint: 'old word for asked or ordered (past tense of bid)', visual: 'bade', level: 1 },
-  { word: 'bake', arabic: 'يَخْبِزُ', hint: 'to cook food in an oven', visual: 'bake', level: 1 },
-  { word: 'bale', arabic: 'حُزْمَةٌ كَبِيرَةٌ', hint: 'a large bundle tied together, like hay', visual: 'bale', level: 1 },
-  { word: 'bane', arabic: 'مَصْدَرُ أَذًى', hint: 'something that causes trouble or ruin', visual: 'bane', level: 1 },
-  { word: 'bare', arabic: 'عَارٍ / مَكْشُوفٌ', hint: 'empty or without covering', visual: 'bare', level: 1, archived: true },
-  { word: 'base', arabic: 'قَاعِدَةٌ', hint: 'the bottom part that supports something', visual: 'base', level: 1 },
-  { word: 'bate', arabic: 'يُخَفِّفُ / يُقَلِّلُ', hint: 'to make something weaker or less', visual: 'bate', level: 1 },
-  { word: 'cage', arabic: 'قَفَصٌ', hint: 'a barred box that holds an animal', visual: 'cage', level: 1 },
-  { word: 'cake', arabic: 'كَعْكَةٌ', hint: 'a sweet baked dessert', visual: 'cake', level: 1 },
-  { word: 'came', arabic: 'أَتَى / جَاءَ', hint: 'past tense of come; arrived', visual: 'came', level: 1 },
-  { word: 'cane', arabic: 'عَصًا', hint: 'a stick used for walking, or the sugar plant', visual: 'cane', level: 1 },
-  { word: 'cape', arabic: 'عَبَاءَةٌ / رِدَاءٌ', hint: 'a cloak worn over the shoulders', visual: 'cape', level: 1 },
-  { word: 'care', arabic: 'يَهْتَمُّ / رِعَايَةٌ', hint: 'to feel concern for someone', visual: 'care', level: 1, archived: true },
-  { word: 'case', arabic: 'حَقِيبَةٌ / حَالَةٌ', hint: 'a box or container, or a situation', visual: 'case', level: 1 },
-  { word: 'cate', arabic: 'طَعَامٌ شَهِيٌّ', hint: 'a tasty treat (an old word for food)', visual: 'cate', level: 1 },
-  { word: 'cave', arabic: 'كَهْفٌ', hint: 'a hollow space inside a hill or rock', visual: 'cave', level: 1 },
-  { word: 'dale', arabic: 'وَادٍ', hint: 'a valley between hills', visual: 'dale', level: 1 },
-  { word: "dame", arabic: "سَيِّدَةٌ", hint: "a woman (polite)", visual: "dame", level: 1, svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"210\" rx=\"70\" ry=\"10\"/><path class=\"i-sand\" d=\"M100 190c5-35 25-55 50-55s45 20 50 55z\"/><path class=\"i-line\" d=\"M100 190c5-35 25-55 50-55s45 20 50 55z\" fill=\"none\"/><circle class=\"i-sand\" cx=\"150\" cy=\"120\" r=\"45\"/><circle class=\"i-line\" cx=\"150\" cy=\"120\" r=\"45\" fill=\"none\"/><path class=\"i-water\" d=\"M95 105c5-30 30-45 55-45s50 15 55 45c-15-10-35-15-55-15s-40 5-55 15z\"/><path class=\"i-line\" d=\"M95 105c5-30 30-45 55-45s50 15 55 45c-15-10-35-15-55-15s-40 5-55 15z\" fill=\"none\"/><circle class=\"i-ink\" cx=\"132\" cy=\"118\" r=\"5\"/><circle class=\"i-ink\" cx=\"168\" cy=\"118\" r=\"5\"/>" },
-  { word: "dane", arabic: "كَلْبٌ كَبِيرُ الْحَجْمِ / دَنْمَارْكِيٌّ", hint: "a large dog breed, the Great Dane or  a person who lives in Denmark", visual: "dane", level: 1, svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"210\" rx=\"75\" ry=\"10\"/><path class=\"i-sand-dark\" d=\"M100 100c-25-10-35 20-15 45z\"/><path class=\"i-sand-dark\" d=\"M200 100c25-10 35 20 15 45z\"/><path class=\"i-line\" d=\"M100 100c-25-10-35 20-15 45z\" fill=\"none\"/><path class=\"i-line\" d=\"M200 100c25-10 35 20 15 45z\" fill=\"none\"/><circle class=\"i-sand\" cx=\"150\" cy=\"130\" r=\"55\"/><circle class=\"i-line\" cx=\"150\" cy=\"130\" r=\"55\" fill=\"none\"/><circle class=\"i-ink\" cx=\"130\" cy=\"125\" r=\"6\"/><circle class=\"i-ink\" cx=\"170\" cy=\"125\" r=\"6\"/><ellipse class=\"i-ink\" cx=\"150\" cy=\"150\" rx=\"8\" ry=\"6\"/>" },
-  { word: 'daze', arabic: 'ذُهُولٌ / دُوَارٌ', hint: 'a stunned, confused feeling', visual: 'daze', level: 1 },
-  { word: 'face', arabic: 'وَجْهٌ', hint: 'the front part of your head', visual: 'face', level: 1 },
-  { word: 'fade', arabic: 'يَتَلَاشَى', hint: 'to slowly become less clear or bright', visual: 'fade', level: 1 },
-  { word: 'fake', arabic: 'مُزَيَّفٌ', hint: 'not real; a copy', visual: 'fake', level: 1 },
-  { word: 'fame', arabic: 'شُهْرَةٌ', hint: 'being known and admired by many people', visual: 'fame', level: 1 },
-  { word: 'fane', arabic: 'مَعْبَدٌ', hint: 'an old, poetic word for a temple', visual: 'fane', level: 1 },
-  { word: 'fare', arabic: 'أُجْرَةُ السَّفَرِ', hint: 'the money paid to travel', visual: 'fare', level: 1, archived: true },
-  { word: 'fate', arabic: 'قَدَرٌ / مَصِيرٌ', hint: 'what will happen to someone; destiny', visual: 'fate', level: 1 },
-  { word: 'fave', arabic: 'الْمُفَضَّلُ', hint: 'a short way to say favorite', visual: 'fave', level: 1 },
-  { word: 'faze', arabic: 'يُقْلِقُ / يُرْبِكُ', hint: 'to disturb or upset someone', visual: 'faze', level: 1 },
-  { word: 'gate', arabic: 'بَوَّابَةٌ', hint: 'a barrier that opens to let you through', visual: 'gate', level: 1 },
-  { word: 'gave', arabic: 'أَعْطَى', hint: 'past tense of give', visual: 'gave', level: 1 },
-  { word: "gade", arabic: "ذَهَبَ (كَلِمَةٌ قَدِيمَةٌ)", hint: "an old dialect word for went, past tense of go", visual: "gade", level: 1, archived: true },
-  { word: "gage", arabic: "رَهْنٌ / تَعَهُّدٌ", hint: "something given as a promise or pledge", visual: "gage", level: 1, archived: true },
-  { word: 'gale', arabic: 'عَاصِفَةٌ قَوِيَّةٌ', hint: 'a very strong wind', visual: 'gale', level: 1 },
-  { word: 'game', arabic: 'لُعْبَةٌ', hint: 'a fun activity with rules', visual: 'game', level: 1 },
-  { word: 'gape', arabic: 'يُحَدِّقُ بِذُهُولٍ', hint: 'to stare with your mouth wide open', visual: 'gape', level: 1 },
-  { word: 'gaze', arabic: 'يُحَدِّقُ / يَنْظُرُ طَوِيلًا', hint: 'to look at something for a long time', visual: 'gaze', level: 1 },
-  { word: 'hake', arabic: 'سَمَكُ النَّازِلِيِّ', hint: 'a type of edible sea fish', visual: 'hake', level: 1 },
-  { word: 'hale', arabic: 'قَوِيٌّ وَبِصِحَّةٍ جَيِّدَةٍ', hint: "healthy and strong, as in 'hale and hearty'", visual: 'hale', level: 1 },
-  { word: "hame", arabic: "الْمَنْزِلُ (كَلِمَةٌ اسْكُتْلَنْدِيَّةٌ قَدِيمَةٌ)", hint: "an old Scots dialect word for home", visual: "hame", level: 1, archived: true },
-  { word: 'hare', arabic: 'أَرْنَبٌ بَرِّيٌّ', hint: 'a fast animal like a big rabbit with long ears', visual: 'hare', level: 1, archived: true },
-  { word: 'hate', arabic: 'يَكْرَهُ', hint: 'to dislike something very much', visual: 'hate', level: 1 },
-  { word: 'haze', arabic: 'ضَبَابٌ خَفِيفٌ', hint: 'a light mist that makes things look unclear', visual: 'haze', level: 1 },
-  { word: 'jade', arabic: 'الْيَشَمُ', hint: 'a green gemstone', visual: 'jade', level: 1 },
-  { word: 'jake', arabic: 'بِخَيْرٍ / عَلَى مَا يُرَامُ (تَعْبِيرٌ قَدِيمٌ)', hint: 'old slang meaning fine or all right', visual: 'jake', level: 1 },
-  { word: 'jape', arabic: 'مَزْحَةٌ / مَقْلَبٌ', hint: 'a joke or playful trick', visual: 'jape', level: 1 },
-  { word: 'kale', arabic: 'كُرُنْبٌ مُجَعَّدٌ', hint: 'a leafy green vegetable', visual: 'kale', level: 1 },
-  { word: 'kame', arabic: 'تَلٌّ رَمْلِيٌّ جَلِيدِيٌّ', hint: 'a small hill of sand left by a melting glacier', visual: 'kame', level: 1 },
-  { word: 'lace', arabic: 'دَانْتِيلٌ / رِبَاطُ الْحِذَاءِ', hint: 'delicate patterned fabric, or a shoe string', visual: 'lace', level: 1 },
-  { word: 'lade', arabic: 'يُحَمِّلُ (سَفِينَةً)', hint: 'to load a ship with cargo', visual: 'lade', level: 1 },
-  { word: 'lake', arabic: 'بُحَيْرَةٌ', hint: 'a large body of water surrounded by land', visual: 'lake', level: 1 },
-  { word: 'lame', arabic: 'أَعْرَجُ', hint: 'having an injured leg that makes walking hard', visual: 'lame', level: 1 },
-  { word: 'lane', arabic: 'مَمَرٌّ / حَارَةٌ', hint: 'a narrow road or path', visual: 'lane', level: 1 },
-  { word: 'late', arabic: 'مُتَأَخِّرٌ', hint: 'after the right or expected time', visual: 'late', level: 1 },
-  { word: 'lase', arabic: 'يُصْدِرُ شُعَاعَ لَيْزَرٍ', hint: 'to give off a beam of laser light', visual: 'lase', level: 1 },
-  { word: 'lave', arabic: 'يَغْسِلُ (كَلِمَةٌ أَدَبِيَّةٌ)', hint: 'an old, poetic word meaning to wash or bathe', visual: 'lave', level: 1 },
-  { word: 'laze', arabic: 'يَتَكَاسَلُ / يَسْتَرْخِي', hint: 'to relax and do very little', visual: 'laze', level: 1 },
-  { word: 'mace', arabic: 'دَبُّوسٌ حَرْبِيٌّ', hint: 'an old weapon with a heavy, spiked head', visual: 'mace', level: 1 },
-  { word: 'made', arabic: 'صَنَعَ', hint: 'past tense of make; created something', visual: 'made', level: 1 },
-  { word: 'make', arabic: 'يَصْنَعُ', hint: 'to create or build something', visual: 'make', level: 1 },
-  { word: 'male', arabic: 'ذَكَرٌ', hint: 'a man or boy; not female', visual: 'male', level: 1 },
-  { word: 'mane', arabic: 'عُرْفُ الْحِصَانِ', hint: "the long hair on a horse's or lion's neck", visual: 'mane', level: 1 },
-  { word: 'mare', arabic: 'فَرَسٌ', hint: 'a female horse', visual: 'mare', level: 1, archived: true },
-  { word: 'mate', arabic: 'رَفِيقٌ / زَمِيلٌ', hint: 'a friend or partner', visual: 'mate', level: 1 },
-  { word: 'maze', arabic: 'مَتَاهَةٌ', hint: 'a puzzle of winding, connected paths', visual: 'maze', level: 1 },
-  { word: 'nabe', arabic: 'حَيٌّ سَكَنِيٌّ (عَامِّيَّةٌ)', hint: 'informal, old slang word for a neighborhood', visual: 'nabe', level: 1 },
-  { word: 'name', arabic: 'اِسْمٌ', hint: 'what a person or thing is called', visual: 'name', level: 1 },
-  { word: 'nape', arabic: 'مُؤَخِّرَةُ الرَّقَبَةِ', hint: 'the back of the neck', visual: 'nape', level: 1 },
-  { word: 'nave', arabic: 'صَحْنُ الْكَنِيسَةِ', hint: 'the long main hall of a church', visual: 'nave', level: 1 },
-  { word: 'pace', arabic: 'خَطْوَةٌ / سُرْعَةٌ', hint: 'the speed of walking or moving', visual: 'pace', level: 1 },
-  { word: 'pale', arabic: 'شَاحِبٌ', hint: 'light in color; having little color in the face', visual: 'pale', level: 1 },
-  { word: 'page', arabic: 'صَفْحَةٌ', hint: 'one side of a sheet in a book', visual: 'page', level: 1 },
-  { word: 'pane', arabic: 'لَوْحٌ زُجَاجِيٌّ', hint: 'a sheet of glass in a window', visual: 'pane', level: 1 },
-  { word: 'pare', arabic: 'يُقَشِّرُ', hint: 'to cut away the outer layer, like peeling fruit', visual: 'pare', level: 1, archived: true },
-  { word: 'pave', arabic: 'يُعَبِّدُ', hint: 'to cover a road with a hard, flat surface', visual: 'pave', level: 1 },
-  { word: 'race', arabic: 'سِبَاقٌ', hint: 'a contest to see who is fastest', visual: 'race', level: 1 },
-  { word: 'rage', arabic: 'غَضَبٌ شَدِيدٌ', hint: 'very strong, wild anger', visual: 'rage', level: 1 },
-  { word: 'rake', arabic: 'مِجْرَفَةٌ', hint: 'a garden tool with teeth for gathering leaves', visual: 'rake', level: 1 },
-  { word: 'rare', arabic: 'نَادِرٌ', hint: 'not common; unusual', visual: 'rare', level: 1, archived: true },
-  { word: 'rate', arabic: 'مُعَدَّلٌ / سِعْرٌ', hint: 'how fast something happens, or its price', visual: 'rate', level: 1 },
-  { word: 'rave', arabic: 'يَتَحَدَّثُ بِحَمَاسٍ', hint: 'to talk about something with wild excitement', visual: 'rave', level: 1 },
-  { word: 'raze', arabic: 'يَهْدِمُ بِالْكَامِلِ', hint: 'to knock a building down completely', visual: 'raze', level: 1 },
-  { word: 'safe', arabic: 'آمِنٌ', hint: 'free from danger or harm', visual: 'safe', level: 1 },
-  { word: 'sage', arabic: 'حَكِيمٌ / نَبْتَةُ الْمَرْيَمِيَّةِ', hint: 'a wise person, or an herb used in cooking', visual: 'sage', level: 1 },
+  { word: 'ate', arabic: 'أَكَلَ', hint: 'past tense of eat', visual: 'ate', level: 1, say: 'eight', sentence: "I ate my breakfast this morning." },
+  { word: 'babe', arabic: 'طِفْلٌ رَضِيعٌ', hint: 'a baby, or a term for a dear one', visual: 'babe', level: 1, sentence: "The babe slept quietly in her crib." },
+  { word: 'bade', arabic: 'أَمَرَ / طَلَبَ', hint: 'old word for asked or ordered (past tense of bid)', visual: 'bade', level: 1, sentence: "He bade his friends farewell." },
+  { word: 'bake', arabic: 'يَخْبِزُ', hint: 'to cook food in an oven', visual: 'bake', level: 1, sentence: "We will bake cookies this afternoon." },
+  { word: 'bale', arabic: 'حُزْمَةٌ كَبِيرَةٌ', hint: 'a large bundle tied together, like hay', visual: 'bale', level: 1, sentence: "The farmer lifted a bale of hay." },
+  { word: 'bane', arabic: 'مَصْدَرُ أَذًى', hint: 'something that causes trouble or ruin', visual: 'bane', level: 1, sentence: "Traffic is the bane of my morning." },
+  { word: 'bare', arabic: 'عَارٍ / مَكْشُوفٌ', hint: 'empty or without covering', visual: 'bare', level: 1, archived: true, sentence: "The walls were bare and empty." },
+  { word: 'base', arabic: 'قَاعِدَةٌ', hint: 'the bottom part that supports something', visual: 'base', level: 1, sentence: "The lamp stands on a wooden base." },
+  { word: 'bate', arabic: 'يُخَفِّفُ / يُقَلِّلُ', hint: 'to make something weaker or less', visual: 'bate', level: 1, sentence: "The medicine helped bate his fever." },
+  { word: 'cage', arabic: 'قَفَصٌ', hint: 'a barred box that holds an animal', visual: 'cage', level: 1, sentence: "The bird sat inside its cage." },
+  { word: 'cake', arabic: 'كَعْكَةٌ', hint: 'a sweet baked dessert', visual: 'cake', level: 1, sentence: "Mom baked a chocolate cake for my birthday." },
+  { word: 'came', arabic: 'أَتَى / جَاءَ', hint: 'past tense of come; arrived', visual: 'came', level: 1, sentence: "She came home late last night." },
+  { word: 'cane', arabic: 'عَصًا', hint: 'a stick used for walking, or the sugar plant', visual: 'cane', level: 1, sentence: "The old man walked with a cane." },
+  { word: 'cape', arabic: 'عَبَاءَةٌ / رِدَاءٌ', hint: 'a cloak worn over the shoulders', visual: 'cape', level: 1, sentence: "The hero wore a red cape." },
+  { word: 'care', arabic: 'يَهْتَمُّ / رِعَايَةٌ', hint: 'to feel concern for someone', visual: 'care', level: 1, archived: true, sentence: "I care about my friends." },
+  { word: 'case', arabic: 'حَقِيبَةٌ / حَالَةٌ', hint: 'a box or container, or a situation', visual: 'case', level: 1, sentence: "He packed his clothes in a case." },
+  { word: 'cate', arabic: 'طَعَامٌ شَهِيٌّ', hint: 'a tasty treat (an old word for food)', visual: 'cate', level: 1, sentence: "The feast was full of tasty cates." },
+  { word: 'cave', arabic: 'كَهْفٌ', hint: 'a hollow space inside a hill or rock', visual: 'cave', level: 1, sentence: "The bear slept inside a dark cave." },
+  { word: 'dale', arabic: 'وَادٍ', hint: 'a valley between hills', visual: 'dale', level: 1, sentence: "The village sits in a quiet dale." },
+  { word: "dame", arabic: "سَيِّدَةٌ", hint: "a woman (polite)", visual: "dame", level: 1, svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"210\" rx=\"70\" ry=\"10\"/><path class=\"i-sand\" d=\"M100 190c5-35 25-55 50-55s45 20 50 55z\"/><path class=\"i-line\" d=\"M100 190c5-35 25-55 50-55s45 20 50 55z\" fill=\"none\"/><circle class=\"i-sand\" cx=\"150\" cy=\"120\" r=\"45\"/><circle class=\"i-line\" cx=\"150\" cy=\"120\" r=\"45\" fill=\"none\"/><path class=\"i-water\" d=\"M95 105c5-30 30-45 55-45s50 15 55 45c-15-10-35-15-55-15s-40 5-55 15z\"/><path class=\"i-line\" d=\"M95 105c5-30 30-45 55-45s50 15 55 45c-15-10-35-15-55-15s-40 5-55 15z\" fill=\"none\"/><circle class=\"i-ink\" cx=\"132\" cy=\"118\" r=\"5\"/><circle class=\"i-ink\" cx=\"168\" cy=\"118\" r=\"5\"/>", sentence: "The dame greeted us with a smile." },
+  { word: "dane", arabic: "كَلْبٌ كَبِيرُ الْحَجْمِ / دَنْمَارْكِيٌّ", hint: "a large dog breed, the Great Dane or  a person who lives in Denmark", visual: "dane", level: 1, svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"210\" rx=\"75\" ry=\"10\"/><path class=\"i-sand-dark\" d=\"M100 100c-25-10-35 20-15 45z\"/><path class=\"i-sand-dark\" d=\"M200 100c25-10 35 20 15 45z\"/><path class=\"i-line\" d=\"M100 100c-25-10-35 20-15 45z\" fill=\"none\"/><path class=\"i-line\" d=\"M200 100c25-10 35 20 15 45z\" fill=\"none\"/><circle class=\"i-sand\" cx=\"150\" cy=\"130\" r=\"55\"/><circle class=\"i-line\" cx=\"150\" cy=\"130\" r=\"55\" fill=\"none\"/><circle class=\"i-ink\" cx=\"130\" cy=\"125\" r=\"6\"/><circle class=\"i-ink\" cx=\"170\" cy=\"125\" r=\"6\"/><ellipse class=\"i-ink\" cx=\"150\" cy=\"150\" rx=\"8\" ry=\"6\"/>", sentence: "Our neighbor has a big, friendly Dane." },
+  { word: 'daze', arabic: 'ذُهُولٌ / دُوَارٌ', hint: 'a stunned, confused feeling', visual: 'daze', level: 1, sentence: "The loud noise left me in a daze." },
+  { word: 'face', arabic: 'وَجْهٌ', hint: 'the front part of your head', visual: 'face', level: 1, sentence: "She washed her face this morning." },
+  { word: 'fade', arabic: 'يَتَلَاشَى', hint: 'to slowly become less clear or bright', visual: 'fade', level: 1, sentence: "The colors will fade in the sun." },
+  { word: 'fake', arabic: 'مُزَيَّفٌ', hint: 'not real; a copy', visual: 'fake', level: 1, sentence: "That watch is a fake, not the real one." },
+  { word: 'fame', arabic: 'شُهْرَةٌ', hint: 'being known and admired by many people', visual: 'fame', level: 1, sentence: "The singer found fame after her first song." },
+  { word: 'fane', arabic: 'مَعْبَدٌ', hint: 'an old, poetic word for a temple', visual: 'fane', level: 1, sentence: "The old fane stood on the hill." },
+  { word: 'fare', arabic: 'أُجْرَةُ السَّفَرِ', hint: 'the money paid to travel', visual: 'fare', level: 1, archived: true, sentence: "The bus fare is two dollars." },
+  { word: 'fate', arabic: 'قَدَرٌ / مَصِيرٌ', hint: 'what will happen to someone; destiny', visual: 'fate', level: 1, sentence: "It was fate that brought them together." },
+  { word: 'fave', arabic: 'الْمُفَضَّلُ', hint: 'a short way to say favorite', visual: 'fave', level: 1, sentence: "Pizza is my fave food." },
+  { word: 'faze', arabic: 'يُقْلِقُ / يُرْبِكُ', hint: 'to disturb or upset someone', visual: 'faze', level: 1, sentence: "Nothing seems to faze him." },
+  { word: 'gate', arabic: 'بَوَّابَةٌ', hint: 'a barrier that opens to let you through', visual: 'gate', level: 1, sentence: "Close the gate behind you." },
+  { word: 'gave', arabic: 'أَعْطَى', hint: 'past tense of give', visual: 'gave', level: 1, sentence: "She gave me a gift for my birthday." },
+  { word: "gade", arabic: "ذَهَبَ (كَلِمَةٌ قَدِيمَةٌ)", hint: "an old dialect word for went, past tense of go", visual: "gade", level: 1, archived: true, sentence: "In the old tale, he gade to the market." },
+  { word: "gage", arabic: "رَهْنٌ / تَعَهُّدٌ", hint: "something given as a promise or pledge", visual: "gage", level: 1, archived: true, sentence: "He left his watch as a gage." },
+  { word: 'gale', arabic: 'عَاصِفَةٌ قَوِيَّةٌ', hint: 'a very strong wind', visual: 'gale', level: 1, sentence: "A strong gale blew the tent over." },
+  { word: 'game', arabic: 'لُعْبَةٌ', hint: 'a fun activity with rules', visual: 'game', level: 1, sentence: "Let's play a game after school." },
+  { word: 'gape', arabic: 'يُحَدِّقُ بِذُهُولٍ', hint: 'to stare with your mouth wide open', visual: 'gape', level: 1, sentence: "The kids gape at the tall building." },
+  { word: 'gaze', arabic: 'يُحَدِّقُ / يَنْظُرُ طَوِيلًا', hint: 'to look at something for a long time', visual: 'gaze', level: 1, sentence: "She would gaze at the stars every night." },
+  { word: 'hake', arabic: 'سَمَكُ النَّازِلِيِّ', hint: 'a type of edible sea fish', visual: 'hake', level: 1, sentence: "The chef cooked fresh hake for dinner." },
+  { word: 'hale', arabic: 'قَوِيٌّ وَبِصِحَّةٍ جَيِّدَةٍ', hint: "healthy and strong, as in 'hale and hearty'", visual: 'hale', level: 1, sentence: "My grandfather is still hale at ninety." },
+  { word: "hame", arabic: "الْمَنْزِلُ (كَلِمَةٌ اسْكُتْلَنْدِيَّةٌ قَدِيمَةٌ)", hint: "an old Scots dialect word for home", visual: "hame", level: 1, archived: true, sentence: "He longed to go hame after the trip." },
+  { word: 'hare', arabic: 'أَرْنَبٌ بَرِّيٌّ', hint: 'a fast animal like a big rabbit with long ears', visual: 'hare', level: 1, archived: true, sentence: "The hare ran fast across the field." },
+  { word: 'hate', arabic: 'يَكْرَهُ', hint: 'to dislike something very much', visual: 'hate', level: 1, sentence: "I hate waiting in long lines." },
+  { word: 'haze', arabic: 'ضَبَابٌ خَفِيفٌ', hint: 'a light mist that makes things look unclear', visual: 'haze', level: 1, sentence: "A gray haze covered the city this morning." },
+  { word: 'jade', arabic: 'الْيَشَمُ', hint: 'a green gemstone', visual: 'jade', level: 1, sentence: "She wore a necklace made of jade." },
+  { word: 'jake', arabic: 'بِخَيْرٍ / عَلَى مَا يُرَامُ (تَعْبِيرٌ قَدِيمٌ)', hint: 'old slang meaning fine or all right', visual: 'jake', level: 1, sentence: "Don't worry, everything is jake." },
+  { word: 'jape', arabic: 'مَزْحَةٌ / مَقْلَبٌ', hint: 'a joke or playful trick', visual: 'jape', level: 1, sentence: "He played a small jape on his brother." },
+  { word: 'kale', arabic: 'كُرُنْبٌ مُجَعَّدٌ', hint: 'a leafy green vegetable', visual: 'kale', level: 1, sentence: "I add kale to my salad." },
+  { word: 'kame', arabic: 'تَلٌّ رَمْلِيٌّ جَلِيدِيٌّ', hint: 'a small hill of sand left by a melting glacier', visual: 'kame', level: 1, sentence: "The hikers climbed over a small kame." },
+  { word: 'lace', arabic: 'دَانْتِيلٌ / رِبَاطُ الْحِذَاءِ', hint: 'delicate patterned fabric, or a shoe string', visual: 'lace', level: 1, sentence: "Her dress was trimmed with lace." },
+  { word: 'lade', arabic: 'يُحَمِّلُ (سَفِينَةً)', hint: 'to load a ship with cargo', visual: 'lade', level: 1, sentence: "Workers began to lade the ship with boxes." },
+  { word: 'lake', arabic: 'بُحَيْرَةٌ', hint: 'a large body of water surrounded by land', visual: 'lake', level: 1, sentence: "We swam in the lake all afternoon." },
+  { word: 'lame', arabic: 'أَعْرَجُ', hint: 'having an injured leg that makes walking hard', visual: 'lame', level: 1, sentence: "He walked with a limp because his leg was lame." },
+  { word: 'lane', arabic: 'مَمَرٌّ / حَارَةٌ', hint: 'a narrow road or path', visual: 'lane', level: 1, sentence: "Stay in your lane while driving." },
+  { word: 'late', arabic: 'مُتَأَخِّرٌ', hint: 'after the right or expected time', visual: 'late', level: 1, sentence: "I was late for school this morning." },
+  { word: 'lase', arabic: 'يُصْدِرُ شُعَاعَ لَيْزَرٍ', hint: 'to give off a beam of laser light', visual: 'lase', level: 1, sentence: "The device can lase a bright red beam." },
+  { word: 'lave', arabic: 'يَغْسِلُ (كَلِمَةٌ أَدَبِيَّةٌ)', hint: 'an old, poetic word meaning to wash or bathe', visual: 'lave', level: 1, sentence: "The gentle waves would lave the shore." },
+  { word: 'laze', arabic: 'يَتَكَاسَلُ / يَسْتَرْخِي', hint: 'to relax and do very little', visual: 'laze', level: 1, sentence: "On Sundays, I like to laze around at home." },
+  { word: 'mace', arabic: 'دَبُّوسٌ حَرْبِيٌّ', hint: 'an old weapon with a heavy, spiked head', visual: 'mace', level: 1, sentence: "The knight carried a heavy mace." },
+  { word: 'made', arabic: 'صَنَعَ', hint: 'past tense of make; created something', visual: 'made', level: 1, sentence: "She made a sandwich for lunch." },
+  { word: 'make', arabic: 'يَصْنَعُ', hint: 'to create or build something', visual: 'make', level: 1, sentence: "Let's make a plan for the trip." },
+  { word: 'male', arabic: 'ذَكَرٌ', hint: 'a man or boy; not female', visual: 'male', level: 1, sentence: "The male lion has a thick mane." },
+  { word: 'mane', arabic: 'عُرْفُ الْحِصَانِ', hint: "the long hair on a horse's or lion's neck", visual: 'mane', level: 1, sentence: "The horse shook its long mane." },
+  { word: 'mare', arabic: 'فَرَسٌ', hint: 'a female horse', visual: 'mare', level: 1, archived: true, sentence: "The mare galloped across the field." },
+  { word: 'mate', arabic: 'رَفِيقٌ / زَمِيلٌ', hint: 'a friend or partner', visual: 'mate', level: 1, sentence: "He is my best mate from school." },
+  { word: 'maze', arabic: 'مَتَاهَةٌ', hint: 'a puzzle of winding, connected paths', visual: 'maze', level: 1, sentence: "The children got lost in the maze." },
+  { word: 'nabe', arabic: 'حَيٌّ سَكَنِيٌّ (عَامِّيَّةٌ)', hint: 'informal, old slang word for a neighborhood', visual: 'nabe', level: 1, sentence: "They grew up together in the same nabe." },
+  { word: 'name', arabic: 'اِسْمٌ', hint: 'what a person or thing is called', visual: 'name', level: 1, sentence: "What is your name?" },
+  { word: 'nape', arabic: 'مُؤَخِّرَةُ الرَّقَبَةِ', hint: 'the back of the neck', visual: 'nape', level: 1, sentence: "The sun burned the nape of his neck." },
+  { word: 'nave', arabic: 'صَحْنُ الْكَنِيسَةِ', hint: 'the long main hall of a church', visual: 'nave', level: 1, sentence: "Visitors walked slowly down the church nave." },
+  { word: 'pace', arabic: 'خَطْوَةٌ / سُرْعَةٌ', hint: 'the speed of walking or moving', visual: 'pace', level: 1, sentence: "She jogs at a steady pace every morning." },
+  { word: 'pale', arabic: 'شَاحِبٌ', hint: 'light in color; having little color in the face', visual: 'pale', level: 1, sentence: "His face looked pale after the long trip." },
+  { word: 'page', arabic: 'صَفْحَةٌ', hint: 'one side of a sheet in a book', visual: 'page', level: 1, sentence: "Turn to the next page in the book." },
+  { word: 'pane', arabic: 'لَوْحٌ زُجَاجِيٌّ', hint: 'a sheet of glass in a window', visual: 'pane', level: 1, sentence: "A ball cracked the window pane." },
+  { word: 'pare', arabic: 'يُقَشِّرُ', hint: 'to cut away the outer layer, like peeling fruit', visual: 'pare', level: 1, archived: true, sentence: "She began to pare the apple with a knife." },
+  { word: 'pave', arabic: 'يُعَبِّدُ', hint: 'to cover a road with a hard, flat surface', visual: 'pave', level: 1, sentence: "Workers will pave the new road next week." },
+  { word: 'race', arabic: 'سِبَاقٌ', hint: 'a contest to see who is fastest', visual: 'race', level: 1, sentence: "The two runners started the race together." },
+  { word: 'rage', arabic: 'غَضَبٌ شَدِيدٌ', hint: 'very strong, wild anger', visual: 'rage', level: 1, sentence: "He shouted in a fit of rage." },
+  { word: 'rake', arabic: 'مِجْرَفَةٌ', hint: 'a garden tool with teeth for gathering leaves', visual: 'rake', level: 1, sentence: "Use the rake to gather the leaves." },
+  { word: 'rare', arabic: 'نَادِرٌ', hint: 'not common; unusual', visual: 'rare', level: 1, archived: true, sentence: "A blue diamond is very rare." },
+  { word: 'rate', arabic: 'مُعَدَّلٌ / سِعْرٌ', hint: 'how fast something happens, or its price', visual: 'rate', level: 1, sentence: "The rate of growth surprised everyone." },
+  { word: 'rave', arabic: 'يَتَحَدَّثُ بِحَمَاسٍ', hint: 'to talk about something with wild excitement', visual: 'rave', level: 1, sentence: "Fans rave about the new movie." },
+  { word: 'raze', arabic: 'يَهْدِمُ بِالْكَامِلِ', hint: 'to knock a building down completely', visual: 'raze', level: 1, sentence: "They plan to raze the old building." },
+  { word: 'safe', arabic: 'آمِنٌ', hint: 'free from danger or harm', visual: 'safe', level: 1, sentence: "Keep your money in a safe place." },
+  { word: 'sage', arabic: 'حَكِيمٌ / نَبْتَةُ الْمَرْيَمِيَّةِ', hint: 'a wise person, or an herb used in cooking', visual: 'sage', level: 1, sentence: "The old sage gave wise advice." },
   // say: 'sayk' — TTS defaults "sake" to the Japanese drink reading; the
   // respelling forces the plain /seɪk/ that rhymes with "cake".
-  { word: 'sake', arabic: 'مَصْلَحَةٌ / غَايَةٌ', hint: "a purpose or benefit, as in 'for your sake'", visual: 'sake', level: 1, say: 'sayk' },
-  { word: 'sale', arabic: 'تَخْفِيضَاتٌ / بَيْعٌ', hint: 'selling goods, often at a lower price', visual: 'sale', level: 1 },
-  { word: 'same', arabic: 'نَفْسُهُ / مُمَاثِلٌ', hint: 'exactly alike, not different', visual: 'same', level: 1 },
-  { word: 'sane', arabic: 'عَاقِلٌ', hint: 'having a clear, healthy mind', visual: 'sane', level: 1 },
-  { word: 'sate', arabic: 'يُشْبِعُ', hint: 'to satisfy a need completely, like hunger', visual: 'sate', level: 1 },
-  { word: 'save', arabic: 'يُنْقِذُ / يُوَفِّرُ', hint: 'to keep something safe from harm, or keep money for later', visual: 'save', level: 1 },
-  { word: 'take', arabic: 'يَأْخُذُ', hint: 'to get hold of something and carry it away', visual: 'take', level: 1 },
-  { word: 'tale', arabic: 'حِكَايَةٌ', hint: 'a story, often about imagined people or events', visual: 'tale', level: 1 },
-  { word: 'tame', arabic: 'أَلِيفٌ / يُرَوِّضُ', hint: 'gentle and not wild, or to train an animal to be gentle', visual: 'tame', level: 1 },
-  { word: 'tape', arabic: 'شَرِيطٌ لَاصِقٌ', hint: 'a sticky strip used to join or stick things together', visual: 'tape', level: 1 },
-  { word: 'tare', arabic: 'وَزْنُ الْعُبُوَّةِ الْفَارِغَةِ', hint: 'the weight of an empty container, used to find what is inside', visual: 'tare', level: 1, archived: true },
-  { word: 'tase', arabic: 'يَصْعَقُ بِصَاعِقَةٍ كَهْرَبَائِيَّةٍ', hint: 'to shock someone with a jolt of electricity', visual: 'tase', level: 1 },
-  { word: 'vane', arabic: 'دَفَّةُ اتِّجَاهِ الرِّيحِ', hint: 'a spinning arrow on a roof that shows which way the wind blows', visual: 'vane', level: 1 },
+  { word: 'sake', arabic: 'مَصْلَحَةٌ / غَايَةٌ', hint: "a purpose or benefit, as in 'for your sake'", visual: 'sake', level: 1, say: 'sayk', sentence: "I stayed quiet for her sake." },
+  { word: 'sale', arabic: 'تَخْفِيضَاتٌ / بَيْعٌ', hint: 'selling goods, often at a lower price', visual: 'sale', level: 1, sentence: "The store is having a big sale today." },
+  { word: 'same', arabic: 'نَفْسُهُ / مُمَاثِلٌ', hint: 'exactly alike, not different', visual: 'same', level: 1, sentence: "We wore the same shirt by accident." },
+  { word: 'sane', arabic: 'عَاقِلٌ', hint: 'having a clear, healthy mind', visual: 'sane', level: 1, sentence: "After a good sleep, I feel sane again." },
+  { word: 'sate', arabic: 'يُشْبِعُ', hint: 'to satisfy a need completely, like hunger', visual: 'sate', level: 1, sentence: "A big meal will sate your hunger." },
+  { word: 'save', arabic: 'يُنْقِذُ / يُوَفِّرُ', hint: 'to keep something safe from harm, or keep money for later', visual: 'save', level: 1, sentence: "I save part of my pay every month." },
+  { word: 'take', arabic: 'يَأْخُذُ', hint: 'to get hold of something and carry it away', visual: 'take', level: 1, sentence: "Please take a seat over there." },
+  { word: 'tale', arabic: 'حِكَايَةٌ', hint: 'a story, often about imagined people or events', visual: 'tale', level: 1, sentence: "Grandma told us a tale before bed." },
+  { word: 'tame', arabic: 'أَلِيفٌ / يُرَوِّضُ', hint: 'gentle and not wild, or to train an animal to be gentle', visual: 'tame', level: 1, sentence: "The zoo has a tame little rabbit." },
+  { word: 'tape', arabic: 'شَرِيطٌ لَاصِقٌ', hint: 'a sticky strip used to join or stick things together', visual: 'tape', level: 1, sentence: "Use tape to close the box." },
+  { word: 'tare', arabic: 'وَزْنُ الْعُبُوَّةِ الْفَارِغَةِ', hint: 'the weight of an empty container, used to find what is inside', visual: 'tare', level: 1, archived: true, sentence: "The scale must be reset to remove the tare." },
+  { word: 'tase', arabic: 'يَصْعَقُ بِصَاعِقَةٍ كَهْرَبَائِيَّةٍ', hint: 'to shock someone with a jolt of electricity', visual: 'tase', level: 1, sentence: "The officer used a device to tase the suspect." },
+  { word: 'vane', arabic: 'دَفَّةُ اتِّجَاهِ الرِّيحِ', hint: 'a spinning arrow on a roof that shows which way the wind blows', visual: 'vane', level: 1, sentence: "The weather vane spun in the wind." },
   // say: 'vaze' — TTS defaults "vase" to the British /vɑːz/ reading; the
   // respelling (same rime as gaze/haze/maze/raze) forces American /veɪz/.
-  { word: 'vase', arabic: 'مَزْهَرِيَّةٌ', hint: 'a container used to hold flowers', visual: 'vase', level: 1, say: 'vaze' },
-  { word: 'wade', arabic: 'يَخُوضُ الْمَاءَ', hint: 'to walk slowly through water or mud', visual: 'wade', level: 1 },
-  { word: 'wage', arabic: 'أَجْرٌ', hint: 'money paid to someone for the work they do', visual: 'wage', level: 1 },
-  { word: 'wale', arabic: 'خَطٌّ بَارِزٌ فِي النَّسِيجِ', hint: 'a raised ridge, like the lines in corduroy fabric', visual: 'wale', level: 1 },
-  { word: 'wane', arabic: 'يَتَضَاءَلُ / يَخْبُو', hint: 'to slowly get smaller, like the moon losing its light', visual: 'wane', level: 1 },
-  { word: 'ware', arabic: 'سِلْعَةٌ / بِضَاعَةٌ', hint: 'goods that are made to be sold', visual: 'ware', level: 1, archived: true },
-  { word: 'wave', arabic: 'مَوْجَةٌ / يُلَوِّحُ', hint: 'a moving ridge of water, or to move your hand in greeting', visual: 'wave', level: 1 },
-  { word: "always", arabic: "دَائِمًا", hint: "all the time", visual: "infinity", level: 2, archived: true },
-  { word: "runaway", arabic: "هَارِبٌ", hint: "someone who escapes", visual: "runner", level: 2, archived: true },
-  { word: "birthday", arabic: "يَوْمُ الْمِيلَادِ", hint: "a yearly celebration", visual: "cake", level: 2, archived: true },
-  { word: "causeway", arabic: "طَرِيقٌ مَشْهُودٌ / مَمَرٌّ مُرْتَفِعٌ", hint: "a raised road over water", visual: "road", level: 2, archived: true },
-  { word: "claymore", arabic: "سَيْفٌ اسْكُتْلَنْدِيٌّ / لُغْمٌ مُسَطَّحٌ", hint: "a large old sword", visual: "sword", level: 2, archived: true },
-  { word: "daybreak", arabic: "بُزُوغُ الْفَجْرِ / شُرُوقُ الشَّمْسِ", hint: "first light in the morning", visual: "sunrise", level: 2, archived: true },
-  { word: "dayshift", arabic: "وَرْدِيَّةُ النَّهَارِ", hint: "work time during the day", visual: "worker", level: 2, archived: true },
-  { word: "display", arabic: "يَعْرِضُ / عَرْضٌ", hint: "show something clearly", visual: "display", level: 2, archived: true },
-  { word: "doorstay", arabic: "مِزْلَاجَةُ الْبَابِ / دِعَامَةُ الْبَابِ", hint: "a support that holds a door", visual: "door", level: 2, archived: true },
-  { word: "fairplay", arabic: "لَعِبٌ نَزِيهٌ / نَزَاهَةٌ", hint: "playing by the rules", visual: "handshake", level: 2, archived: true },
-  { word: "gateway", arabic: "بَوَّابَةٌ / مَدْخَلٌ", hint: "an entrance", visual: "gate", level: 2, archived: true },
-  { word: "haystack", arabic: "كُدْسُ التِّبْنِ / رُزْمَةُ قَشٍّ", hint: "a pile of hay", visual: "haystack", level: 2, archived: true },
-  { word: "overstay", arabic: "يَبْقَى أَكْثَرَ مِنَ الْمُدَّةِ", hint: "stay too long", visual: "clock", level: 2, archived: true },
-  { word: "playbook", arabic: "كِتَابُ اللَّعِبِ / خِطَّةُ اللَّعِبِ", hint: "a book of game plans", visual: "book", level: 2, archived: true },
-  { word: "sideways", arabic: "إِلَى الْجَانِبِ / جَانِبِيًّا", hint: "to or from the side", visual: "arrows", level: 2, archived: true },
-  { word: 'blame', arabic: 'يَلُومُ', hint: 'to say someone caused something bad', visual: 'blame', level: 1 },
-  { word: 'brace', arabic: 'دِعَامَةٌ', hint: 'a support that holds something steady', visual: 'brace', level: 1 },
-  { word: 'brave', arabic: 'شُجَاعٌ', hint: 'not afraid; willing to face danger', visual: 'brave', level: 1 },
-  { word: 'chase', arabic: 'يُطَارِدُ', hint: 'to run after someone to catch them', visual: 'chase', level: 1 },
-  { word: 'crane', arabic: 'رَافِعَةٌ / طَائِرُ مَالِكِ الْحَزِينِ', hint: 'a tall machine for lifting heavy things', visual: 'crane', level: 1 },
-  { word: 'flame', arabic: 'لَهَبٌ', hint: 'the bright, hot part of a fire', visual: 'flame', level: 1 },
-  { word: 'flare', arabic: 'وَهَجٌ / شُعْلَةٌ مُضِيئَةٌ', hint: 'a sudden bright burst of light', visual: 'flare', level: 1, archived: true },
-  { word: 'frame', arabic: 'إِطَارٌ', hint: 'a border that holds a picture', visual: 'frame', level: 1 },
-  { word: 'glaze', arabic: 'طِلَاءٌ لَامِعٌ', hint: 'a shiny coating on food or pottery', visual: 'glaze', level: 1 },
-  { word: 'grace', arabic: 'رَشَاقَةٌ / نِعْمَةٌ', hint: 'smooth and elegant movement', visual: 'grace', level: 1 },
-  { word: 'grate', arabic: 'شَبَكَةٌ مَعْدِنِيَّةٌ', hint: 'a metal grid, like over a drain', visual: 'grate', level: 1 },
-  { word: 'grave', arabic: 'قَبْرٌ', hint: 'the place where someone is buried', visual: 'grave', level: 1 },
-  { word: 'graze', arabic: 'يَرْعَى / يَخْدِشُ', hint: 'to eat grass, or to scrape the skin lightly', visual: 'graze', level: 1 },
-  { word: 'paste', arabic: 'مَعْجُونٌ / غِرَاءٌ', hint: 'a soft, sticky substance used to stick things', visual: 'paste', level: 1 },
-  { word: 'phase', arabic: 'مَرْحَلَةٌ', hint: 'a stage in a process of change', visual: 'phase', level: 1 },
-  { word: 'plane', arabic: 'طَائِرَةٌ / مُسْتَوٍ', hint: 'a flying machine, or a flat surface', visual: 'plane', level: 1 },
-  { word: 'plate', arabic: 'طَبَقٌ', hint: 'a flat dish you eat food from', visual: 'plate', level: 1 },
-  { word: 'scare', arabic: 'يُخِيفُ', hint: 'to make someone feel afraid', visual: 'scare', level: 1, archived: true },
-  { word: 'shade', arabic: 'ظِلٌّ', hint: 'a shadowed area sheltered from light', visual: 'shade', level: 1 },
-  { word: 'shame', arabic: 'خَجَلٌ / عَارٌ', hint: 'a bad feeling from doing something wrong', visual: 'shame', level: 1 },
-  { word: 'skate', arabic: 'يَتَزَلَّجُ', hint: 'to glide smoothly on skates or a board', visual: 'skate', level: 1 },
-  { word: 'slate', arabic: 'لَوْحٌ إِرْدْوَازِيٌّ', hint: 'a flat, gray rock used for roofs or writing boards', visual: 'slate', level: 1 },
-  { word: 'space', arabic: 'فَضَاءٌ / مَسَاحَةٌ', hint: 'the area beyond Earth, or empty room', visual: 'space', level: 1 },
-  { word: 'spade', arabic: 'مِجْرَفَةٌ', hint: 'a tool used for digging', visual: 'spade', level: 1 },
-  { word: 'stare', arabic: 'يُحَدِّقُ', hint: 'to look at something for a long time', visual: 'stare', level: 1, archived: true },
-  { word: 'trade', arabic: 'تِجَارَةٌ / يَتَبَادَلُ', hint: 'to exchange one thing for another', visual: 'trade', level: 1 },
+  { word: 'vase', arabic: 'مَزْهَرِيَّةٌ', hint: 'a container used to hold flowers', visual: 'vase', level: 1, say: 'vaze', sentence: "She placed the flowers in a vase." },
+  { word: 'wade', arabic: 'يَخُوضُ الْمَاءَ', hint: 'to walk slowly through water or mud', visual: 'wade', level: 1, sentence: "The children wade through the shallow stream." },
+  { word: 'wage', arabic: 'أَجْرٌ', hint: 'money paid to someone for the work they do', visual: 'wage', level: 1, sentence: "He earns a fair wage at his job." },
+  { word: 'wale', arabic: 'خَطٌّ بَارِزٌ فِي النَّسِيجِ', hint: 'a raised ridge, like the lines in corduroy fabric', visual: 'wale', level: 1, sentence: "You can feel the wale on the corduroy pants." },
+  { word: 'wane', arabic: 'يَتَضَاءَلُ / يَخْبُو', hint: 'to slowly get smaller, like the moon losing its light', visual: 'wane', level: 1, sentence: "The moon will wane after tonight." },
+  { word: 'ware', arabic: 'سِلْعَةٌ / بِضَاعَةٌ', hint: 'goods that are made to be sold', visual: 'ware', level: 1, archived: true, sentence: "The shop sells fine glass ware." },
+  { word: 'wave', arabic: 'مَوْجَةٌ / يُلَوِّحُ', hint: 'a moving ridge of water, or to move your hand in greeting', visual: 'wave', level: 1, sentence: "She waved at her friend across the street." },
+  { word: "always", arabic: "دَائِمًا", hint: "all the time", visual: "infinity", level: 2, archived: true, sentence: "I always brush my teeth before bed." },
+  { word: "runaway", arabic: "هَارِبٌ", hint: "someone who escapes", visual: "runner", level: 2, archived: true, sentence: "The police searched for the runaway dog." },
+  { word: "birthday", arabic: "يَوْمُ الْمِيلَادِ", hint: "a yearly celebration", visual: "cake", level: 2, archived: true, sentence: "Today is my little sister's birthday." },
+  { word: "causeway", arabic: "طَرِيقٌ مَشْهُودٌ / مَمَرٌّ مُرْتَفِعٌ", hint: "a raised road over water", visual: "road", level: 2, archived: true, sentence: "The causeway connects the island to the mainland." },
+  { word: "claymore", arabic: "سَيْفٌ اسْكُتْلَنْدِيٌّ / لُغْمٌ مُسَطَّحٌ", hint: "a large old sword", visual: "sword", level: 2, archived: true, sentence: "The museum displayed an old Scottish claymore." },
+  { word: "daybreak", arabic: "بُزُوغُ الْفَجْرِ / شُرُوقُ الشَّمْسِ", hint: "first light in the morning", visual: "sunrise", level: 2, archived: true, sentence: "We woke up at daybreak to watch the sunrise." },
+  { word: "dayshift", arabic: "وَرْدِيَّةُ النَّهَارِ", hint: "work time during the day", visual: "worker", level: 2, archived: true, sentence: "My brother works the dayshift at the hospital." },
+  { word: "display", arabic: "يَعْرِضُ / عَرْضٌ", hint: "show something clearly", visual: "display", level: 2, archived: true, sentence: "The store has a new display in the window." },
+  { word: "doorstay", arabic: "مِزْلَاجَةُ الْبَابِ / دِعَامَةُ الْبَابِ", hint: "a support that holds a door", visual: "door", level: 2, archived: true, sentence: "The doorstay keeps the door from slamming shut." },
+  { word: "fairplay", arabic: "لَعِبٌ نَزِيهٌ / نَزَاهَةٌ", hint: "playing by the rules", visual: "handshake", level: 2, archived: true, sentence: "The coach always talks about fairplay." },
+  { word: "gateway", arabic: "بَوَّابَةٌ / مَدْخَلٌ", hint: "an entrance", visual: "gate", level: 2, archived: true, sentence: "The old arch is the gateway to the city." },
+  { word: "haystack", arabic: "كُدْسُ التِّبْنِ / رُزْمَةُ قَشٍّ", hint: "a pile of hay", visual: "haystack", level: 2, archived: true, sentence: "The farmer built a tall haystack in the barn." },
+  { word: "overstay", arabic: "يَبْقَى أَكْثَرَ مِنَ الْمُدَّةِ", hint: "stay too long", visual: "clock", level: 2, archived: true, sentence: "Please don't overstay your welcome." },
+  { word: "playbook", arabic: "كِتَابُ اللَّعِبِ / خِطَّةُ اللَّعِبِ", hint: "a book of game plans", visual: "book", level: 2, archived: true, sentence: "The coach studied the team's playbook." },
+  { word: "sideways", arabic: "إِلَى الْجَانِبِ / جَانِبِيًّا", hint: "to or from the side", visual: "arrows", level: 2, archived: true, sentence: "The car skidded sideways on the ice." },
+  { word: 'blame', arabic: 'يَلُومُ', hint: 'to say someone caused something bad', visual: 'blame', level: 1, sentence: "Don't blame me for the mistake." },
+  { word: 'brace', arabic: 'دِعَامَةٌ', hint: 'a support that holds something steady', visual: 'brace', level: 1, sentence: "The metal brace held the shelf in place." },
+  { word: 'brave', arabic: 'شُجَاعٌ', hint: 'not afraid; willing to face danger', visual: 'brave', level: 1, sentence: "The firefighter was very brave during the rescue." },
+  { word: 'chase', arabic: 'يُطَارِدُ', hint: 'to run after someone to catch them', visual: 'chase', level: 1, sentence: "The dog loves to chase the ball." },
+  { word: 'crane', arabic: 'رَافِعَةٌ / طَائِرُ مَالِكِ الْحَزِينِ', hint: 'a tall machine for lifting heavy things', visual: 'crane', level: 1, sentence: "A tall crane lifted the steel beams." },
+  { word: 'flame', arabic: 'لَهَبٌ', hint: 'the bright, hot part of a fire', visual: 'flame', level: 1, sentence: "The candle's flame flickered in the breeze." },
+  { word: 'flare', arabic: 'وَهَجٌ / شُعْلَةٌ مُضِيئَةٌ', hint: 'a sudden bright burst of light', visual: 'flare', level: 1, archived: true, sentence: "A bright flare lit up the night sky." },
+  { word: 'frame', arabic: 'إِطَارٌ', hint: 'a border that holds a picture', visual: 'frame', level: 1, sentence: "He hung the picture in a wooden frame." },
+  { word: 'glaze', arabic: 'طِلَاءٌ لَامِعٌ', hint: 'a shiny coating on food or pottery', visual: 'glaze', level: 1, sentence: "The baker added a sweet glaze to the donuts." },
+  { word: 'grace', arabic: 'رَشَاقَةٌ / نِعْمَةٌ', hint: 'smooth and elegant movement', visual: 'grace', level: 1, sentence: "The dancer moved with great grace." },
+  { word: 'grate', arabic: 'شَبَكَةٌ مَعْدِنِيَّةٌ', hint: 'a metal grid, like over a drain', visual: 'grate', level: 1, sentence: "Water drained through the metal grate." },
+  { word: 'grave', arabic: 'قَبْرٌ', hint: 'the place where someone is buried', visual: 'grave', level: 1, sentence: "Flowers were placed by the grave." },
+  { word: 'graze', arabic: 'يَرْعَى / يَخْدِشُ', hint: 'to eat grass, or to scrape the skin lightly', visual: 'graze', level: 1, sentence: "The cows graze in the green field." },
+  { word: 'paste', arabic: 'مَعْجُونٌ / غِرَاءٌ', hint: 'a soft, sticky substance used to stick things', visual: 'paste', level: 1, sentence: "She used paste to stick the paper together." },
+  { word: 'phase', arabic: 'مَرْحَلَةٌ', hint: 'a stage in a process of change', visual: 'phase', level: 1, sentence: "This is a new phase in his life." },
+  { word: 'plane', arabic: 'طَائِرَةٌ / مُسْتَوٍ', hint: 'a flying machine, or a flat surface', visual: 'plane', level: 1, sentence: "We boarded the plane for our trip." },
+  { word: 'plate', arabic: 'طَبَقٌ', hint: 'a flat dish you eat food from', visual: 'plate', level: 1, sentence: "He set a clean plate on the table." },
+  { word: 'scare', arabic: 'يُخِيفُ', hint: 'to make someone feel afraid', visual: 'scare', level: 1, archived: true, sentence: "The loud thunder gave the puppy a scare." },
+  { word: 'shade', arabic: 'ظِلٌّ', hint: 'a shadowed area sheltered from light', visual: 'shade', level: 1, sentence: "We sat in the shade of the big tree." },
+  { word: 'shame', arabic: 'خَجَلٌ / عَارٌ', hint: 'a bad feeling from doing something wrong', visual: 'shame', level: 1, sentence: "It's a shame we missed the movie." },
+  { word: 'skate', arabic: 'يَتَزَلَّجُ', hint: 'to glide smoothly on skates or a board', visual: 'skate', level: 1, sentence: "She learned to skate at the ice rink." },
+  { word: 'slate', arabic: 'لَوْحٌ إِرْدْوَازِيٌّ', hint: 'a flat, gray rock used for roofs or writing boards', visual: 'slate', level: 1, sentence: "The roof is covered with gray slate." },
+  { word: 'space', arabic: 'فَضَاءٌ / مَسَاحَةٌ', hint: 'the area beyond Earth, or empty room', visual: 'space', level: 1, sentence: "There is enough space for everyone to sit." },
+  { word: 'spade', arabic: 'مِجْرَفَةٌ', hint: 'a tool used for digging', visual: 'spade', level: 1, sentence: "He dug the hole with a spade." },
+  { word: 'stare', arabic: 'يُحَدِّقُ', hint: 'to look at something for a long time', visual: 'stare', level: 1, archived: true, sentence: "It's rude to stare at strangers." },
+  { word: 'trade', arabic: 'تِجَارَةٌ / يَتَبَادَلُ', hint: 'to exchange one thing for another', visual: 'trade', level: 1, sentence: "They agreed to trade their toys." },
   // longAIndices: [2] — only the second "a" (-bate) is genuinely long; the
   // first is an unstressed schwa, but the open-syllable guess (a-b-a) would
   // wrongly flag it too. Found while auditing the "graduate" highlight bug.
-  { word: 'abate', arabic: 'يَخِفُّ / يَهْدَأُ', hint: 'to slowly become less strong, like a storm calming down', visual: 'abate', level: 1, longAIndices: [2] },
-  { word: 'aviator', arabic: 'طَيَّارٌ', hint: 'someone who flies an airplane', visual: 'aviator', level: 1 },
-  { word: 'create', arabic: 'يَبْتَكِرُ / يَخْلُقُ', hint: 'to make something new', visual: 'create', level: 1 },
-  { word: 'debate', arabic: 'مُنَاظَرَةٌ / نِقَاشٌ', hint: 'a discussion where people argue different views', visual: 'debate', level: 1 },
-  { word: 'deflate', arabic: 'يُفَرِّغُ مِنَ الْهَوَاءِ', hint: 'to let the air out of something, like a balloon', visual: 'deflate', level: 1 },
-  { word: 'dictate', arabic: 'يُمْلِي', hint: 'to say words out loud for someone else to write down', visual: 'dictate', level: 1 },
-  { word: 'donate', arabic: 'يَتَبَرَّعُ', hint: 'to give money or things to help others', visual: 'donate', level: 1 },
-  { word: 'educate', arabic: 'يُعَلِّمُ', hint: 'to teach someone new things', visual: 'educate', level: 1 },
-  { word: 'elate', arabic: 'يُبْهِجُ / يُسْعِدُ كَثِيرًا', hint: 'to make someone feel extremely happy', visual: 'elate', level: 1 },
-  { word: 'equate', arabic: 'يُسَاوِي', hint: 'to treat two things as equal or the same', visual: 'equate', level: 1 },
-  { word: 'inflate', arabic: 'يَنْفُخُ', hint: 'to fill something with air, like a balloon', visual: 'inflate', level: 1 },
-  { word: 'isolate', arabic: 'يَعْزِلُ', hint: 'to keep someone or something apart from others', visual: 'isolate', level: 1 },
-  { word: 'locate', arabic: 'يُحَدِّدُ مَكَانًا', hint: 'to find the exact place where something is', visual: 'locate', level: 1 },
-  { word: 'mandate', arabic: 'تَفْوِيضٌ / أَمْرٌ رَسْمِيٌّ', hint: 'an official order or permission to do something', visual: 'mandate', level: 1 },
-  { word: 'nitrate', arabic: 'نِتْرَاتٌ', hint: 'a chemical compound often used in fertilizer', visual: 'nitrate', level: 1 },
-  { word: 'operate', arabic: 'يُشَغِّلُ', hint: 'to run or work a machine', visual: 'operate', level: 1 },
-  { word: 'ornate', arabic: 'مُزَخْرَفٌ', hint: 'covered with many fancy, decorative details', visual: 'ornate', level: 1 },
+  { word: 'abate', arabic: 'يَخِفُّ / يَهْدَأُ', hint: 'to slowly become less strong, like a storm calming down', visual: 'abate', level: 1, longAIndices: [2], sentence: "The storm began to abate by evening." },
+  { word: 'aviator', arabic: 'طَيَّارٌ', hint: 'someone who flies an airplane', visual: 'aviator', level: 1, sentence: "The aviator flew the small plane over the hills." },
+  { word: 'create', arabic: 'يَبْتَكِرُ / يَخْلُقُ', hint: 'to make something new', visual: 'create', level: 1, sentence: "Artists create beautiful paintings." },
+  { word: 'debate', arabic: 'مُنَاظَرَةٌ / نِقَاشٌ', hint: 'a discussion where people argue different views', visual: 'debate', level: 1, sentence: "The students had a lively debate in class." },
+  { word: 'deflate', arabic: 'يُفَرِّغُ مِنَ الْهَوَاءِ', hint: 'to let the air out of something, like a balloon', visual: 'deflate', level: 1, sentence: "The balloon will deflate if you let go." },
+  { word: 'dictate', arabic: 'يُمْلِي', hint: 'to say words out loud for someone else to write down', visual: 'dictate', level: 1, sentence: "She began to dictate a letter to her assistant." },
+  { word: 'donate', arabic: 'يَتَبَرَّعُ', hint: 'to give money or things to help others', visual: 'donate', level: 1, sentence: "We donate old clothes to the shelter." },
+  { word: 'educate', arabic: 'يُعَلِّمُ', hint: 'to teach someone new things', visual: 'educate', level: 1, sentence: "Teachers work hard to educate their students." },
+  { word: 'elate', arabic: 'يُبْهِجُ / يُسْعِدُ كَثِيرًا', hint: 'to make someone feel extremely happy', visual: 'elate', level: 1, sentence: "Good news can elate the whole family." },
+  { word: 'equate', arabic: 'يُسَاوِي', hint: 'to treat two things as equal or the same', visual: 'equate', level: 1, sentence: "Don't equate money with happiness." },
+  { word: 'inflate', arabic: 'يَنْفُخُ', hint: 'to fill something with air, like a balloon', visual: 'inflate', level: 1, sentence: "He used a pump to inflate the tire." },
+  { word: 'isolate', arabic: 'يَعْزِلُ', hint: 'to keep someone or something apart from others', visual: 'isolate', level: 1, sentence: "Doctors isolate patients who are very sick." },
+  { word: 'locate', arabic: 'يُحَدِّدُ مَكَانًا', hint: 'to find the exact place where something is', visual: 'locate', level: 1, sentence: "Can you help me locate my keys?" },
+  { word: 'mandate', arabic: 'تَفْوِيضٌ / أَمْرٌ رَسْمِيٌّ', hint: 'an official order or permission to do something', visual: 'mandate', level: 1, sentence: "The city issued a new mandate about masks." },
+  { word: 'nitrate', arabic: 'نِتْرَاتٌ', hint: 'a chemical compound often used in fertilizer', visual: 'nitrate', level: 1, sentence: "Farmers use nitrate to help plants grow." },
+  { word: 'operate', arabic: 'يُشَغِّلُ', hint: 'to run or work a machine', visual: 'operate', level: 1, sentence: "She knows how to operate the new machine." },
+  { word: 'ornate', arabic: 'مُزَخْرَفٌ', hint: 'covered with many fancy, decorative details', visual: 'ornate', level: 1, sentence: "The palace had an ornate golden ceiling." },
   // say: 'playkate' — TTS reduces the first "a" to a schwa; the respelling
   // (play + kate) forces long-a /eɪ/ on both syllables: /ˈpleɪkeɪt/.
-  { word: 'placate', arabic: 'يُهَدِّئُ / يُرْضِي', hint: 'to calm down someone who is upset', visual: 'placate', level: 1, say: 'playkate' },
+  { word: 'placate', arabic: 'يُهَدِّئُ / يُرْضِي', hint: 'to calm down someone who is upset', visual: 'placate', level: 1, say: 'playkate', sentence: "He brought flowers to placate his upset friend." },
   // say: 'potayto' — same British/American split as "tomato"; forces the
   // American long-a /pəˈteɪtoʊ/ syllable. Found in the broader long-a pass.
-  { word: 'potato', arabic: 'بَطَاطَا', hint: 'a round vegetable that grows underground', visual: 'potato', level: 1, say: 'potayto' },
-  { word: 'predate', arabic: 'يَفْتَرِسُ', hint: 'when an animal hunts and eats another animal', visual: 'predate', level: 1 },
-  { word: 'radiate', arabic: 'يُشِعُّ', hint: 'to send out light or heat from a center', visual: 'radiate', level: 1 },
-  { word: 'rebate', arabic: 'اِسْتِرْدَادُ مَبْلَغٍ', hint: 'an amount of money given back to you after a purchase', visual: 'rebate', level: 1 },
-  { word: 'relate', arabic: 'يَرْتَبِطُ / يَتَعَلَّقُ بِـ', hint: 'to be connected to or similar to something else', visual: 'relate', level: 1 },
-  { word: 'rotate', arabic: 'يَدُورُ', hint: 'to turn around and around a central point', visual: 'rotate', level: 1 },
-  { word: 'sedate', arabic: 'هَادِئٌ', hint: 'calm and unexcited, or to give medicine that makes someone calm and sleepy', visual: 'sedate', level: 1 },
+  { word: 'potato', arabic: 'بَطَاطَا', hint: 'a round vegetable that grows underground', visual: 'potato', level: 1, say: 'potayto', sentence: "I ate a baked potato for dinner." },
+  { word: 'predate', arabic: 'يَفْتَرِسُ', hint: 'when an animal hunts and eats another animal', visual: 'predate', level: 1, sentence: "Owls predate small mice at night." },
+  { word: 'radiate', arabic: 'يُشِعُّ', hint: 'to send out light or heat from a center', visual: 'radiate', level: 1, sentence: "The fireplace can radiate warmth across the room." },
+  { word: 'rebate', arabic: 'اِسْتِرْدَادُ مَبْلَغٍ', hint: 'an amount of money given back to you after a purchase', visual: 'rebate', level: 1, sentence: "We got a rebate after buying the new phone." },
+  { word: 'relate', arabic: 'يَرْتَبِطُ / يَتَعَلَّقُ بِـ', hint: 'to be connected to or similar to something else', visual: 'relate', level: 1, sentence: "I can relate to how you feel." },
+  { word: 'rotate', arabic: 'يَدُورُ', hint: 'to turn around and around a central point', visual: 'rotate', level: 1, sentence: "The earth will rotate once every day." },
+  { word: 'sedate', arabic: 'هَادِئٌ', hint: 'calm and unexcited, or to give medicine that makes someone calm and sleepy', visual: 'sedate', level: 1, sentence: "The doctor gave the dog medicine to sedate it." },
   // say: 'tomayto' — TTS defaults to the British /təˈmɑːtoʊ/ reading; the
   // respelling forces the American long-a /təˈmeɪtoʊ/ syllable.
-  { word: 'tomato', arabic: 'طَمَاطِمُ', hint: 'a round, red fruit used like a vegetable in cooking', visual: 'tomato', level: 1, say: 'tomayto' },
-  { word: 'update', arabic: 'يُحَدِّثُ', hint: 'to add the newest information and make something current', visual: 'update', level: 1 },
-  { word: 'vibrate', arabic: 'يَهْتَزُّ', hint: 'to shake quickly back and forth', visual: 'vibrate', level: 1 },
-  { word: 'activate', arabic: 'يُنَشِّطُ / يُفَعِّلُ', hint: 'to make something start working', visual: 'activate', level: 1 },
-  { word: 'allocate', arabic: 'يُخَصِّصُ', hint: 'to give a share of something for a certain purpose', visual: 'allocate', level: 1 },
-  { word: 'amputate', arabic: 'يَبْتُرُ', hint: 'to remove a body part by surgery', visual: 'amputate', level: 1 },
-  { word: 'conflate', arabic: 'يَخْلِطُ / يَدْمُجُ خَطَأً', hint: 'to mistakenly treat two different things as one', visual: 'conflate', level: 1 },
-  { word: 'decorate', arabic: 'يُزَيِّنُ', hint: 'to make something look nicer by adding pretty things', visual: 'decorate', level: 1 },
-  { word: 'dominate', arabic: 'يُهَيْمِنُ / يُسَيْطِرُ', hint: 'to have the most power or control over something', visual: 'dominate', level: 1 },
-  { word: 'elongate', arabic: 'يُطِيلُ / يُمَدِّدُ', hint: 'to make something longer', visual: 'elongate', level: 1 },
-  { word: 'emigrate', arabic: 'يُهَاجِرُ (يُغَادِرُ بَلَدَهُ)', hint: 'to leave your own country to live in another', visual: 'emigrate', level: 1 },
+  { word: 'tomato', arabic: 'طَمَاطِمُ', hint: 'a round, red fruit used like a vegetable in cooking', visual: 'tomato', level: 1, say: 'tomayto', sentence: "She sliced a fresh tomato for the salad." },
+  { word: 'update', arabic: 'يُحَدِّثُ', hint: 'to add the newest information and make something current', visual: 'update', level: 1, sentence: "Please update me on the latest news." },
+  { word: 'vibrate', arabic: 'يَهْتَزُّ', hint: 'to shake quickly back and forth', visual: 'vibrate', level: 1, sentence: "My phone will vibrate when a message arrives." },
+  { word: 'activate', arabic: 'يُنَشِّطُ / يُفَعِّلُ', hint: 'to make something start working', visual: 'activate', level: 1, sentence: "Press the button to activate the alarm." },
+  { word: 'allocate', arabic: 'يُخَصِّصُ', hint: 'to give a share of something for a certain purpose', visual: 'allocate', level: 1, sentence: "The teacher will allocate time for each group." },
+  { word: 'amputate', arabic: 'يَبْتُرُ', hint: 'to remove a body part by surgery', visual: 'amputate', level: 1, sentence: "The surgeon had to amputate the injured toe." },
+  { word: 'conflate', arabic: 'يَخْلِطُ / يَدْمُجُ خَطَأً', hint: 'to mistakenly treat two different things as one', visual: 'conflate', level: 1, sentence: "Don't conflate these two different problems." },
+  { word: 'decorate', arabic: 'يُزَيِّنُ', hint: 'to make something look nicer by adding pretty things', visual: 'decorate', level: 1, sentence: "We decorate the tree every winter." },
+  { word: 'dominate', arabic: 'يُهَيْمِنُ / يُسَيْطِرُ', hint: 'to have the most power or control over something', visual: 'dominate', level: 1, sentence: "The strong team began to dominate the game." },
+  { word: 'elongate', arabic: 'يُطِيلُ / يُمَدِّدُ', hint: 'to make something longer', visual: 'elongate', level: 1, sentence: "Stretching can elongate your muscles." },
+  { word: 'emigrate', arabic: 'يُهَاجِرُ (يُغَادِرُ بَلَدَهُ)', hint: 'to leave your own country to live in another', visual: 'emigrate', level: 1, sentence: "Her family chose to emigrate to a new country." },
   // say: 'estimayt' — same noun/verb heteronym issue as "moderate": TTS
   // defaults to the noun's schwa ending; forces the verb's long-a /eɪt/.
   // Found in the broader long-a pass.
-  { word: 'estimate', arabic: 'يُقَدِّرُ', hint: 'to guess a number or amount closely, without counting exactly', visual: 'estimate', level: 1, say: 'estimayt' },
+  { word: 'estimate', arabic: 'يُقَدِّرُ', hint: 'to guess a number or amount closely, without counting exactly', visual: 'estimate', level: 1, say: 'estimayt', sentence: "Can you estimate how much it will cost?" },
   // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
   // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
   // flags it too.
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, longAIndices: [5] },
-  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1 },
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, longAIndices: [5], sentence: "She will graduate from high school this year." },
+  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, sentence: "The teacher will initiate the new project today." },
   // Arabic hint corrected to the verb sense used here ("moderate a
   // debate"), not the adjective sense ("in the middle").
   // say: 'moderayt' — TTS defaults the isolated word to the adjective's
   // schwa ending; the respelling forces the verb's long-a /ˈmɒdəreɪt/.
-  { word: 'moderate', arabic: 'يُدِيرُ (نِقَاشًا) / يَتَرَأَّسُ', hint: 'to lead and keep control of a discussion, like a debate', visual: 'moderate', level: 1, say: 'moderayt' },
-  { word: 'motivate', arabic: 'يُحَفِّزُ', hint: 'to give someone a reason to do something', visual: 'motivate', level: 1 },
-  { word: 'narrate', arabic: 'يَرْوِي (قِصَّةً)', hint: 'to tell a story out loud', visual: 'narrate', level: 1 },
-  { word: 'obligate', arabic: 'يُلْزِمُ', hint: 'to make someone required to do something', visual: 'obligate', level: 1 },
-  { word: 'stagnate', arabic: 'يَرْكُدُ / يَتَوَقَّفُ عَنِ التَّطَوُّرِ', hint: 'to stop growing or changing; become still', visual: 'stagnate', level: 1 },
-  { word: 'translate', arabic: 'يُتَرْجِمُ', hint: 'to change words from one language into another', visual: 'translate', level: 1 },
-  { word: 'captivate', arabic: 'يَأْسِرُ / يَسْحَرُ', hint: "to hold someone's attention completely", visual: 'captivate', level: 1 },
-  { word: 'compensate', arabic: 'يُعَوِّضُ', hint: 'to make up for a loss or harm', visual: 'compensate', level: 1 },
-  { word: 'cultivate', arabic: 'يَزْرَعُ / يُنَمِّي', hint: 'to prepare land and grow plants, or to develop a skill', visual: 'cultivate', level: 1 },
-  { word: 'deactivate', arabic: 'يُعَطِّلُ', hint: 'to turn something off or make it stop working', visual: 'deactivate', level: 1 },
-  { word: 'eliminate', arabic: 'يُزِيلُ / يَسْتَبْعِدُ', hint: 'to remove or get rid of something completely', visual: 'eliminate', level: 1 },
-  { word: 'exaggerate', arabic: 'يُبَالِغُ', hint: 'to make something sound bigger or more than it really is', visual: 'exaggerate', level: 1 },
-  { word: 'illustrate', arabic: 'يُوَضِّحُ / يُصَوِّرُ', hint: 'to explain with pictures or clear examples', visual: 'illustrate', level: 1 },
-  { word: 'infiltrate', arabic: 'يَتَسَلَّلُ', hint: 'to secretly get into a place or group', visual: 'infiltrate', level: 1 },
-  { word: 'intoxicate', arabic: 'يُسْكِرُ / يُنَشِّي', hint: 'to make someone drunk or very excited', visual: 'intoxicate', level: 1 },
-  { word: 'participate', arabic: 'يُشَارِكُ', hint: 'to take part in an activity with others', visual: 'participate', level: 1 },
-  { word: 'pollinate', arabic: 'يُلَقِّحُ', hint: 'to carry pollen between flowers so they can make seeds', visual: 'pollinate', level: 1 },
-  { word: 'regenerate', arabic: 'يَتَجَدَّدُ / يَنْمُو مِنْ جَدِيدٍ', hint: 'to grow back or become new and strong again', visual: 'regenerate', level: 1 },
-  { word: 'replicate', arabic: 'يُكَرِّرُ / يَنْسَخُ', hint: 'to make an exact copy of something', visual: 'replicate', level: 1 },
-  { word: 'terminate', arabic: 'يُنْهِي', hint: 'to bring something to an end', visual: 'terminate', level: 1 },
+  { word: 'moderate', arabic: 'يُدِيرُ (نِقَاشًا) / يَتَرَأَّسُ', hint: 'to lead and keep control of a discussion, like a debate', visual: 'moderate', level: 1, say: 'moderayt', sentence: "He will moderate the debate tonight." },
+  { word: 'motivate', arabic: 'يُحَفِّزُ', hint: 'to give someone a reason to do something', visual: 'motivate', level: 1, sentence: "Good coaches motivate their players to try harder." },
+  { word: 'narrate', arabic: 'يَرْوِي (قِصَّةً)', hint: 'to tell a story out loud', visual: 'narrate', level: 1, sentence: "She will narrate the story for the audiobook." },
+  { word: 'obligate', arabic: 'يُلْزِمُ', hint: 'to make someone required to do something', visual: 'obligate', level: 1, sentence: "The contract does not obligate you to stay." },
+  { word: 'stagnate', arabic: 'يَرْكُدُ / يَتَوَقَّفُ عَنِ التَّطَوُّرِ', hint: 'to stop growing or changing; become still', visual: 'stagnate', level: 1, sentence: "Without new ideas, the business began to stagnate." },
+  { word: 'translate', arabic: 'يُتَرْجِمُ', hint: 'to change words from one language into another', visual: 'translate', level: 1, sentence: "Can you translate this sentence into English?" },
+  { word: 'captivate', arabic: 'يَأْسِرُ / يَسْحَرُ', hint: "to hold someone's attention completely", visual: 'captivate', level: 1, sentence: "The magic show will captivate the audience." },
+  { word: 'compensate', arabic: 'يُعَوِّضُ', hint: 'to make up for a loss or harm', visual: 'compensate', level: 1, sentence: "The company will compensate workers for the delay." },
+  { word: 'cultivate', arabic: 'يَزْرَعُ / يُنَمِّي', hint: 'to prepare land and grow plants, or to develop a skill', visual: 'cultivate', level: 1, sentence: "Farmers cultivate the soil before planting seeds." },
+  { word: 'deactivate', arabic: 'يُعَطِّلُ', hint: 'to turn something off or make it stop working', visual: 'deactivate', level: 1, sentence: "You can deactivate the alarm with this code." },
+  { word: 'eliminate', arabic: 'يُزِيلُ / يَسْتَبْعِدُ', hint: 'to remove or get rid of something completely', visual: 'eliminate', level: 1, sentence: "We need to eliminate the mistakes in this report." },
+  { word: 'exaggerate', arabic: 'يُبَالِغُ', hint: 'to make something sound bigger or more than it really is', visual: 'exaggerate', level: 1, sentence: "He likes to exaggerate his stories a little." },
+  { word: 'illustrate', arabic: 'يُوَضِّحُ / يُصَوِّرُ', hint: 'to explain with pictures or clear examples', visual: 'illustrate', level: 1, sentence: "The artist will illustrate the children's book." },
+  { word: 'infiltrate', arabic: 'يَتَسَلَّلُ', hint: 'to secretly get into a place or group', visual: 'infiltrate', level: 1, sentence: "The spy tried to infiltrate the enemy base." },
+  { word: 'intoxicate', arabic: 'يُسْكِرُ / يُنَشِّي', hint: 'to make someone drunk or very excited', visual: 'intoxicate', level: 1, sentence: "Too much sugar can intoxicate a young child with energy." },
+  { word: 'participate', arabic: 'يُشَارِكُ', hint: 'to take part in an activity with others', visual: 'participate', level: 1, sentence: "Every student should participate in the class discussion." },
+  { word: 'pollinate', arabic: 'يُلَقِّحُ', hint: 'to carry pollen between flowers so they can make seeds', visual: 'pollinate', level: 1, sentence: "Bees pollinate flowers as they collect nectar." },
+  { word: 'regenerate', arabic: 'يَتَجَدَّدُ / يَنْمُو مِنْ جَدِيدٍ', hint: 'to grow back or become new and strong again', visual: 'regenerate', level: 1, sentence: "New skin cells regenerate after a small cut." },
+  { word: 'replicate', arabic: 'يُكَرِّرُ / يَنْسَخُ', hint: 'to make an exact copy of something', visual: 'replicate', level: 1, sentence: "Scientists tried to replicate the experiment's results." },
+  { word: 'terminate', arabic: 'يُنْهِي', hint: 'to bring something to an end', visual: 'terminate', level: 1, sentence: "The company decided to terminate the old contract." },
 ];
 
 // Each row is [pattern, ipa, note, exampleWord]. exampleWord is what actually
@@ -558,6 +558,23 @@ let state = {
   groupCelebration: null,
   badgeShelfOpen: false,
   practice: {},
+  // Reading Activity — a per-level alternative to the word-card grid (see
+  // learnModeToggleTemplate()/readingActivityTemplate()). `learnMode`
+  // switches the Learn tab's main panel between 'cards' and 'reading';
+  // `reading` itself is transient playback/navigation state, never
+  // persisted, so a reload always lands back on the card grid.
+  learnMode: 'cards',
+  reading: {
+    index: 0, // which word (within the current level's word list) is showing
+    playing: false,
+    // Index into the *displayed* sentence's word tokens, kept in sync with
+    // TTS playback by updateReadingWordHighlight(); -1 = nothing playing.
+    activeWordIndex: -1,
+  },
+  // Highlight-style and line-focus preferences persist like voiceMode —
+  // they're accessibility choices a learner sets once, not per-session UI.
+  readingHighlightStyle: localStorage.readingHighlightStyle || 'sweep', // 'sweep' | 'ball'
+  readingLineFocus: localStorage.readingLineFocus !== 'off',
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file.
@@ -639,6 +656,177 @@ function speak(text, lang = 'en-US', rate = 0.75) {
   utterance.rate = rate;
   const voice = pickVoice(lang);
   if (voice) utterance.voice = voice;
+  speechSynthesis.speak(utterance);
+}
+
+// ---------- Reading Activity: word-boundary-synced sentence playback ----------
+// Splits on whitespace so every token keeps any attached punctuation
+// (e.g. "hay." stays one token) — that's how the sentence is meant to
+// read, and it's also exactly how Chrome/Edge's boundary charIndex lines
+// up with word starts.
+function tokenizeWords(text) {
+  const tokens = [];
+  const re = /\S+/g;
+  let match;
+  while ((match = re.exec(text))) tokens.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+  return tokens;
+}
+
+// The text actually handed to the speech engine: if this word has a `say`
+// respelling (see the pronunciation-fix comments throughout WORDS, e.g.
+// "vase" -> "vaze"), the same fix is applied inside the sentence so the
+// target word is spoken correctly there too — not just on the lone
+// word-card button. Every `say` respelling swaps exactly one word for
+// another single word, so the spoken text always has the same word count,
+// in the same order, as the displayed sentence. That's what lets
+// highlighting stay correct by *word index* below, without ever needing to
+// map character offsets between two differently-spelled strings.
+function speechTextFor(item) {
+  if (!item.say) return item.sentence;
+  const pattern = new RegExp(`\\b${item.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  return item.sentence.replace(pattern, item.say);
+}
+
+// Fallback timing when the Web Speech API doesn't (yet) deliver a
+// word-boundary event — see playReadingSentence() for how this blends with
+// real boundary events. ~13 chars/sec at rate 1.0 is a rough average
+// English speaking pace; scaled by the utterance's own rate.
+const AVG_CHARS_PER_SECOND_AT_RATE_1 = 13;
+function estimateWordDurations(words, rate) {
+  const charsPerSecond = AVG_CHARS_PER_SECOND_AT_RATE_1 * Math.max(rate, 0.1);
+  return words.map((word) => Math.max(180, ((word.text.length + 1) / charsPerSecond) * 1000));
+}
+
+// Applies the currently-playing word to the DOM directly, bypassing the
+// normal full render() pipeline. A sentence only has a handful of words,
+// but a boundary/timer event can fire several times a second, and
+// rebuilding the entire app's innerHTML (sidebar, hero, every other level's
+// markup) on each one is enough DOM churn to visibly stutter the highlight
+// — the one thing in this feature that has to feel smooth. So this only
+// ever touches the existing .reading-word spans' classes (and the ball's
+// position), and still keeps state.reading.activeWordIndex up to date so
+// any *other* render() (toggling big text mid-playback, say) redraws with
+// the right word already highlighted.
+function updateReadingWordHighlight(index) {
+  state.reading.activeWordIndex = index;
+  const wrap = document.querySelector('[data-reading-sentence]');
+  if (!wrap) return;
+  wrap.querySelectorAll('.reading-word').forEach((el, i) => {
+    el.classList.toggle('is-active', i === index);
+    el.classList.toggle('is-read', i < index);
+  });
+  if (state.readingHighlightStyle === 'ball') positionReadingBall();
+}
+
+// Bouncing-ball style: the ball's position is measured fresh off the live
+// DOM (not pre-computed) so it lands correctly regardless of text wrapping
+// onto a second line.
+function positionReadingBall() {
+  const wrap = document.querySelector('[data-reading-sentence]');
+  const ball = document.querySelector('[data-reading-ball]');
+  if (!wrap || !ball) return;
+  const activeWord = wrap.querySelector('.reading-word.is-active');
+  if (!activeWord) {
+    ball.style.opacity = '0';
+    return;
+  }
+  const wrapRect = wrap.getBoundingClientRect();
+  const wordRect = activeWord.getBoundingClientRect();
+  const left = wordRect.left - wrapRect.left + wordRect.width / 2;
+  const top = wordRect.top - wrapRect.top;
+  ball.style.opacity = '1';
+  ball.style.transform = `translate(${left}px, ${top}px)`;
+  const dot = ball.firstElementChild;
+  if (dot) {
+    dot.classList.remove('is-bouncing');
+    void dot.offsetWidth; // restart the hop keyframe even on repeat words
+    dot.classList.add('is-bouncing');
+  }
+}
+
+// One in-flight reading-activity utterance's pending fallback timers, if
+// any. Module-scoped (not local to playReadingSentence) so
+// stopReadingPlayback() can always reach and clear them — from a Stop
+// click, a Prev/Next tap, a level switch, or leaving the Learn tab.
+let readingPlayback = null;
+
+function stopReadingPlayback() {
+  if (readingPlayback) {
+    readingPlayback.timers.forEach(clearTimeout);
+    readingPlayback = null;
+  }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+// Plays one Reading Activity sentence aloud, highlighting each word as it's
+// spoken. Sync approach: this app's only TTS mechanism is the Web Speech
+// API (SpeechSynthesisUtterance), which — on Chromium browsers — fires a
+// 'boundary' event with a charIndex at the start of each spoken word. That
+// event is the primary sync signal here: it's tied to the actual audio, so
+// it's as accurate as the browser/voice makes available. But boundary
+// event support is inconsistent across browsers and voices (some fire
+// sparsely, some not at all), so an estimated-timing schedule (word-length
+// weighted, scaled to the utterance's rate) runs alongside it as a
+// fallback. Every real boundary event cancels and reschedules the estimate
+// from that point on, so the estimate can never drift far out of step
+// before a real event corrects it — and in a browser with no boundary
+// support at all, the estimate quietly carries the whole sentence.
+function playReadingSentence(item) {
+  stopReadingPlayback();
+  if (!('speechSynthesis' in window)) {
+    alert('Text to speech is not supported in this browser.');
+    return;
+  }
+  loadVoices();
+  const spokenText = speechTextFor(item);
+  const spokenWords = tokenizeWords(spokenText);
+  if (!spokenWords.length) return;
+
+  const utterance = new SpeechSynthesisUtterance(spokenText);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.75;
+  const voice = pickVoice('en-US');
+  if (voice) utterance.voice = voice;
+
+  const estimates = estimateWordDurations(spokenWords, utterance.rate);
+  const playback = { timers: [] };
+  readingPlayback = playback;
+
+  function scheduleEstimatesFrom(startIndex) {
+    playback.timers.forEach(clearTimeout);
+    playback.timers = [];
+    let acc = 0;
+    for (let i = startIndex; i < spokenWords.length; i++) {
+      acc += estimates[i];
+      const idx = i;
+      playback.timers.push(setTimeout(() => updateReadingWordHighlight(idx), acc));
+    }
+  }
+
+  let lastBoundaryIndex = -1;
+  utterance.onboundary = (event) => {
+    if (event.name && event.name !== 'word') return;
+    let idx = spokenWords.findIndex((word) => event.charIndex >= word.start && event.charIndex < word.end);
+    if (idx === -1) idx = spokenWords.reduce((best, word, i) => (word.start <= event.charIndex ? i : best), 0);
+    if (idx <= lastBoundaryIndex) return;
+    lastBoundaryIndex = idx;
+    updateReadingWordHighlight(idx);
+    scheduleEstimatesFrom(idx + 1);
+  };
+  const finishPlayback = () => {
+    playback.timers.forEach(clearTimeout);
+    readingPlayback = null;
+    state.reading.playing = false;
+    state.reading.activeWordIndex = -1;
+    render();
+  };
+  utterance.onend = finishPlayback;
+  utterance.onerror = finishPlayback;
+
+  scheduleEstimatesFrom(0);
+  state.reading.playing = true;
+  state.reading.activeWordIndex = -1;
+  render();
   speechSynthesis.speak(utterance);
 }
 
@@ -1117,6 +1305,83 @@ function levelCompleteTemplate(group, level) {
   </div>`;
 }
 
+// Switches the Learn tab's main panel between the normal word-card grid
+// and the Reading Activity, for whichever level is currently selected in
+// the sidebar. Deliberately just a view switch on existing
+// soundGroup/level state — not a separate navigation concept — so Reading
+// Activity is available for every level of every sound group for free,
+// with no per-group/per-level wiring.
+function learnModeToggleTemplate() {
+  return `<div class="learn-mode-toggle" role="tablist" aria-label="Level view">
+    <button data-learn-mode="cards" role="tab" aria-selected="${state.learnMode === 'cards'}" class="${state.learnMode === 'cards' ? 'active' : ''}">${icon('book')}Word cards</button>
+    <button data-learn-mode="reading" role="tab" aria-selected="${state.learnMode === 'reading'}" class="${state.learnMode === 'reading' ? 'active' : ''}">${icon('chat')}Reading Activity</button>
+  </div>`;
+}
+
+function readingWordSpan(token, index, activeIndex) {
+  const classes = ['reading-word'];
+  if (index === activeIndex) classes.push('is-active');
+  else if (index < activeIndex) classes.push('is-read');
+  return `<span class="${classes.join(' ')}" data-word-index="${index}">${escapeHtml(token.text)}</span>`;
+}
+
+// The read-along reader: one word's picture + sentence at a time, a play
+// button that speaks the sentence via the app's existing TTS mechanism
+// (see playReadingSentence()), word-by-word highlighting synced to that
+// playback in either of two styles, an optional Line Focus dimming
+// treatment, and Prev/Next to move through the level's word list without
+// leaving this view. Takes `levelWords` (the same list the card grid would
+// show) so it always matches whatever level/group is selected — nothing
+// here names a specific sound group.
+function readingActivityTemplate(group, levelWords) {
+  if (!levelWords.length) {
+    return emptyGroupTemplate(`No words to read yet in ${escapeHtml(group.label)} at this level.`);
+  }
+  if (state.reading.index >= levelWords.length) state.reading.index = 0;
+  const index = state.reading.index;
+  const item = levelWords[index];
+  const done = !!state.done[item.word];
+  const tokens = tokenizeWords(item.sentence);
+  const activeIndex = state.reading.activeWordIndex;
+  const playing = state.reading.playing;
+  const styleBall = state.readingHighlightStyle === 'ball';
+
+  return `
+    <div class="reading-activity">
+      <div class="reading-focus-overlay ${state.readingLineFocus && playing ? 'is-active' : ''}" aria-hidden="true"></div>
+      <div class="reading-stage">
+        <div class="reading-word-meta">
+          <div class="pic reading-pic">${imageSvg(item.visual, item.word, item.svg)}</div>
+          <div>
+            <h2 class="reading-target-word">${highlightWord(item)}</h2>
+            <p class="hint">${escapeHtml(item.hint)}</p>
+          </div>
+        </div>
+        <div class="reading-sentence-wrap ${styleBall ? 'style-ball' : 'style-sweep'}" data-reading-sentence>
+          <p class="reading-sentence">${tokens.map((token, i) => readingWordSpan(token, i, activeIndex)).join(' ')}</p>
+          ${styleBall ? `<span class="reading-ball" data-reading-ball aria-hidden="true"><span class="reading-ball-dot"></span></span>` : ''}
+        </div>
+        <div class="reading-controls">
+          <button class="reading-nav" data-reading-prev ${index === 0 ? 'disabled' : ''} aria-label="Previous word">${icon('chevron')}<span>Prev</span></button>
+          <button class="reading-play ${playing ? 'is-playing' : ''}" data-reading-play aria-label="${playing ? 'Stop reading' : 'Play sentence'}">${icon(playing ? 'close' : 'speaker')}<span>${playing ? 'Stop' : 'Play sentence'}</span></button>
+          <button class="reading-nav reading-nav-next" data-reading-next ${index === levelWords.length - 1 ? 'disabled' : ''} aria-label="Next word"><span>Next</span>${icon('chevron')}</button>
+          <button class="reading-known ${done ? 'is-done' : ''}" data-toggle="${escapeHtml(item.word)}">${icon('check')}${done ? 'Known' : 'I know it'}</button>
+        </div>
+        <div class="reading-progress-track">
+          <span class="reading-progress-label">Word ${index + 1} of ${levelWords.length}</span>
+        </div>
+        <div class="reading-options">
+          <span class="reading-options-label">Highlight style</span>
+          <div class="reading-style-toggle" role="radiogroup" aria-label="Highlight style">
+            <button data-reading-style="sweep" class="${!styleBall ? 'active' : ''}" aria-pressed="${!styleBall}">Color sweep</button>
+            <button data-reading-style="ball" class="${styleBall ? 'active' : ''}" aria-pressed="${styleBall}">Bouncing ball</button>
+          </div>
+          <button class="reading-line-focus-toggle ${state.readingLineFocus ? 'is-on' : ''}" data-reading-line-focus aria-pressed="${state.readingLineFocus}">${icon('eye')}Line focus</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function learnTemplate() {
   const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
   const groupWords = wordsInSoundGroup(group.id);
@@ -1126,7 +1391,9 @@ function learnTemplate() {
   const { known, total, pct: levelPct } = levelProgress(group.id, state.level);
 
   let body;
-  if (!groupWords.length) {
+  if (state.learnMode === 'reading') {
+    body = readingActivityTemplate(group, filtered);
+  } else if (!groupWords.length) {
     body = emptyGroupTemplate(`No "${group.label}" words yet — this sound group is ready for when it's added.`);
   } else if (!filtered.length) {
     body = emptyGroupTemplate(`No "${group.label}" words at this level yet.`);
@@ -1144,7 +1411,8 @@ function learnTemplate() {
       <h2>${escapeHtml(group.label)} <span class="level-heading-sep">·</span> ${escapeHtml(levelLabelText)}</h2>
       <span class="level-heading-progress">${known}/${total} words known (${levelPct}%)</span>
     </div>
-    ${filtered.length ? levelCompleteTemplate(group, state.level) : ''}
+    ${learnModeToggleTemplate()}
+    ${state.learnMode === 'cards' && filtered.length ? levelCompleteTemplate(group, state.level) : ''}
     ${body}`;
 }
 
@@ -1491,6 +1759,74 @@ function badgeShelfTemplate() {
   </div>`;
 }
 
+// Reading Activity control wiring — the mode toggle is always bound (it's
+// visible whenever the Learn tab is), the play/nav/option controls only
+// exist in the DOM (and so are only worth binding) while Reading Activity
+// mode is actually showing.
+function wireReadingEvents() {
+  document.querySelectorAll('[data-learn-mode]').forEach((button) => button.onclick = () => {
+    stopReadingPlayback();
+    state.learnMode = button.dataset.learnMode;
+    state.reading.playing = false;
+    state.reading.activeWordIndex = -1;
+    render();
+  });
+  if (state.view !== 'learn' || state.learnMode !== 'reading') return;
+
+  const currentLevelWords = () => {
+    const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
+    return wordsForGroupLevel(group.id, state.level);
+  };
+  const stopAndReset = () => {
+    stopReadingPlayback();
+    state.reading.playing = false;
+    state.reading.activeWordIndex = -1;
+  };
+
+  const playButton = $('[data-reading-play]');
+  if (playButton) {
+    playButton.onclick = () => {
+      if (state.reading.playing) {
+        stopAndReset();
+        render();
+        return;
+      }
+      const item = currentLevelWords()[state.reading.index];
+      if (item) playReadingSentence(item);
+    };
+  }
+  const prevButton = $('[data-reading-prev]');
+  if (prevButton) {
+    prevButton.onclick = () => {
+      stopAndReset();
+      state.reading.index = Math.max(0, state.reading.index - 1);
+      render();
+    };
+  }
+  const nextButton = $('[data-reading-next]');
+  if (nextButton) {
+    nextButton.onclick = () => {
+      const words = currentLevelWords();
+      stopAndReset();
+      state.reading.index = Math.min(words.length - 1, state.reading.index + 1);
+      render();
+    };
+  }
+  document.querySelectorAll('[data-reading-style]').forEach((button) => button.onclick = () => {
+    state.readingHighlightStyle = button.dataset.readingStyle;
+    localStorage.readingHighlightStyle = state.readingHighlightStyle;
+    render();
+  });
+  const lineFocusButton = $('[data-reading-line-focus]');
+  if (lineFocusButton) {
+    lineFocusButton.onclick = () => {
+      state.readingLineFocus = !state.readingLineFocus;
+      localStorage.readingLineFocus = state.readingLineFocus ? 'on' : 'off';
+      render();
+    };
+  }
+}
+
 function render() {
   normalizeSelection();
   const activeWords = WORDS.filter((word) => !word.archived);
@@ -1539,7 +1875,12 @@ function render() {
     ${groupCelebrationTemplate()}
     ${badgeShelfTemplate()}`;
   $('[data-voice]').value = state.voiceMode;
-  document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setState('view', button.dataset.view));
+  document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
+    stopReadingPlayback();
+    state.reading.playing = false;
+    state.reading.activeWordIndex = -1;
+    setState('view', button.dataset.view);
+  });
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
   $('[data-dyslexia]').onclick = () => setState('dyslexia', !state.dyslexia);
@@ -1566,9 +1907,13 @@ function render() {
     const [groupId, levelStr] = button.dataset.sidebarLevel.split('::');
     const level = Number(levelStr);
     if (!isLevelUnlocked(groupId, level)) return;
+    stopReadingPlayback();
     state.soundGroup = groupId;
     state.level = level;
     state.expandedGroups[groupId] = true;
+    state.reading.index = 0;
+    state.reading.playing = false;
+    state.reading.activeWordIndex = -1;
     render();
   });
   $('[data-badge-shelf-open]').onclick = () => { state.badgeShelfOpen = true; render(); };
@@ -1578,6 +1923,7 @@ function render() {
   if (celebrationToast) celebrationToast.onclick = () => dismissCelebration();
   document.querySelectorAll('[data-dismiss-group-celebration]').forEach((el) => el.onclick = () => dismissGroupCelebration());
   wireAdminEvents();
+  wireReadingEvents();
 }
 
 render();
