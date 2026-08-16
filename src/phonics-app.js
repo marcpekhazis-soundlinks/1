@@ -1350,10 +1350,14 @@ function readingActivityTemplate(group, levelWords) {
     <div class="reading-activity">
       <div class="reading-focus-overlay ${state.readingLineFocus && playing ? 'is-active' : ''}" aria-hidden="true"></div>
       <div class="reading-stage">
+        ${state.admin ? `<div class="admin-card-controls">
+          <button class="admin-icon-btn" data-admin-edit="${escapeHtml(item.word)}" title="Edit word" aria-label="Edit ${escapeHtml(item.word)}">${icon('pencil')}</button>
+        </div>` : ''}
         <div class="reading-word-meta">
           <div class="pic reading-pic">${imageSvg(item.visual, item.word, item.svg)}</div>
           <div>
             <h2 class="reading-target-word">${highlightWord(item)}</h2>
+            <p class="arabic" dir="rtl">${escapeHtml(item.arabic)}</p>
             <p class="hint">${escapeHtml(item.hint)}</p>
           </div>
         </div>
