@@ -811,6 +811,18 @@ function playReadingSentence(item) {
   const estimates = estimateWordDurations(spokenWords, utterance.rate);
   const playback = { timers: [] };
   readingPlayback = playback;
+  // Changing speed mid-playback (see wireReadingEvents()) cancels the
+  // in-flight utterance and immediately starts a new one at the new rate.
+  // But a canceled utterance's onstart/onboundary/onend/onerror can still
+  // fire — sometimes appreciably later, since cancellation isn't always
+  // instant on the engine side — and without this guard, that stale
+  // utterance's finishPlayback() would null out readingPlayback and reset
+  // state.reading.playing/activeWordIndex out from under the *new*
+  // utterance that has since taken over, even though it's still genuinely
+  // speaking. That desync is exactly what made a speed change look like it
+  // had no effect: the UI silently dropped back to "not playing" while the
+  // new utterance kept going, unsynced, in the background.
+  const isCurrentPlayback = () => readingPlayback === playback;
 
   // Schedules highlight(i) to fire `elapsed` ms from now for word
   // `startIndex`, then each word after at the cumulative estimated time
@@ -831,6 +843,7 @@ function playReadingSentence(item) {
   let started = false;
   let lastBoundaryIndex = -1;
   utterance.onstart = () => {
+    if (!isCurrentPlayback()) return;
     // A real 'boundary' event for word 0 can in principle arrive before
     // 'start' fires — if it already has, trust it over this estimate.
     if (started) return;
@@ -840,6 +853,7 @@ function playReadingSentence(item) {
     scheduleEstimatesFrom(1, estimates[0]);
   };
   utterance.onboundary = (event) => {
+    if (!isCurrentPlayback()) return;
     if (event.name && event.name !== 'word') return;
     started = true;
     let idx = spokenWords.findIndex((word) => event.charIndex >= word.start && event.charIndex < word.end);
@@ -850,6 +864,7 @@ function playReadingSentence(item) {
     scheduleEstimatesFrom(idx + 1, 0);
   };
   const finishPlayback = () => {
+    if (!isCurrentPlayback()) return;
     playback.timers.forEach(clearTimeout);
     readingPlayback = null;
     state.reading.playing = false;
@@ -862,12 +877,19 @@ function playReadingSentence(item) {
   state.reading.playing = true;
   state.reading.activeWordIndex = -1;
   render();
-  speechSynthesis.speak(utterance);
+  // A speak() called in the same synchronous tick as the cancel() above
+  // (stopReadingPlayback(), at the top of this function) can itself behave
+  // unreliably in some engines — a brief delay lets the engine actually
+  // finish tearing the previous utterance down first. This doesn't affect
+  // perceived sync: the highlight schedule is anchored to 'start' (see
+  // above), not to when speak() is called, so a short queueing delay here
+  // is invisible to it.
+  setTimeout(() => { if (isCurrentPlayback()) speechSynthesis.speak(utterance); }, 80);
 
   // Safety net: 'start' is spec-mandated but not every engine fires it
   // reliably — without a fallback, a missing 'start' event would leave the
   // sentence completely unhighlighted for its whole playback.
-  playback.timers.push(setTimeout(() => { if (!started) scheduleEstimatesFrom(0, 0); }, 400));
+  playback.timers.push(setTimeout(() => { if (isCurrentPlayback() && !started) scheduleEstimatesFrom(0, 0); }, 480));
 }
 
 function setState(key, value) {
