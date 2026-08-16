@@ -794,6 +794,121 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   .reading-word, .reading-ball, .reading-ball-dot, .reading-focus-overlay { transition: none !important; animation: none !important; }
 }
 
+/* ---------- Roll and Read ----------
+   A dice board over the current level's word list (see rollReadTemplate()
+   in JS): a control panel with two dice + a Roll button + the landed
+   word's "Hear it" button, next to a grid of every word on the board.
+   Reuses .reading-nav's icon-button visual language for the roll button
+   rather than inventing a third button style. */
+.roll-read { display: grid; gap: 22px; grid-template-columns: minmax(200px, 260px) 1fr; align-items: start; }
+
+.roll-read-panel {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.roll-read-dice { display: flex; gap: 14px; }
+.roll-die { width: 56px; height: 56px; }
+.roll-die svg { width: 100%; height: 100%; }
+.roll-die rect { fill: var(--surface); stroke: var(--primary-tint-300); stroke-width: 4; }
+.roll-die circle { fill: var(--primary-dark); }
+
+.roll-read-roll-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  padding: 12px 22px;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.roll-read-roll-btn:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.roll-read-roll-btn:disabled { opacity: 0.7; cursor: default; }
+.roll-read-roll-btn.is-rolling .icon { animation: roll-read-spin 0.5s linear infinite; }
+@keyframes roll-read-spin { to { transform: rotate(360deg); } }
+
+.roll-read-result { min-height: 3.4em; display: grid; justify-items: center; gap: 8px; }
+.roll-read-result-word { margin: 0; font-family: var(--font-heading); font-size: clamp(1.4rem, 3vw, 1.8rem); font-weight: 800; color: var(--ink); }
+.roll-read-result-hint { margin: 0; color: var(--ink-soft); font-size: 0.9rem; }
+.roll-read-hear-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.roll-read-hear-btn:hover { background: var(--primary); color: #fff; }
+
+.roll-read-progress { margin: 0; font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); }
+
+.roll-read-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--roll-read-cols, 6), 1fr);
+  gap: 10px;
+}
+.roll-read-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 64px;
+  padding: 8px 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+.roll-read-cell.is-empty { background: transparent; border: 2px dashed var(--primary-tint-100); box-shadow: none; }
+.roll-read-cell-word { font-family: var(--font-heading); font-weight: 700; font-size: clamp(0.85rem, 1.6vw, 1.1rem); color: var(--ink); text-align: center; }
+.roll-read-cell.is-seen { background: var(--primary-tint-50); border-color: var(--primary-tint-200); }
+.roll-read-seen-mark {
+  position: absolute; top: -8px; right: -8px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+  display: grid; place-items: center;
+  box-shadow: var(--shadow-sm);
+}
+.roll-read-seen-mark .icon { width: 0.75em; height: 0.75em; margin: 0; }
+.roll-read-cell.is-selected {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 4px var(--rose-soft), var(--shadow-md);
+  transform: translateY(-2px) scale(1.04);
+  z-index: 1;
+}
+
+@media (max-width: 780px) {
+  .roll-read { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .roll-read-grid { gap: 7px; }
+  .roll-read-cell { min-height: 52px; padding: 6px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roll-read-roll-btn.is-rolling .icon { animation: none !important; }
+  .roll-read-cell { transition: none !important; }
+}
+
 /* ---------- Rules ---------- */
 .rules { display: grid; gap: 18px; }
 .rules > h2 { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); color: var(--ink); position: relative; padding-bottom: 10px; }
@@ -1003,6 +1118,22 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .reading-line-focus-toggle { background: #000; color: #fff; border-color: #fff; }
 .contrast .reading-line-focus-toggle.is-on { background: #fff; color: #000; }
 
+.contrast .roll-read-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-die rect { fill: #000; stroke: #fff; }
+.contrast .roll-die circle { fill: #fff; }
+.contrast .roll-read-roll-btn { background: #fff; color: #000; }
+.contrast .roll-read-roll-btn:hover:not(:disabled) { background: #ccc; }
+.contrast .roll-read-result-word { color: #fff; }
+.contrast .roll-read-result-hint, .contrast .roll-read-progress { color: #ccc; }
+.contrast .roll-read-hear-btn { background: #000; color: #fff; border: 2px solid #fff; }
+.contrast .roll-read-hear-btn:hover { background: #fff; color: #000; }
+.contrast .roll-read-cell { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-read-cell.is-empty { border: 2px dashed #333; }
+.contrast .roll-read-cell-word { color: #fff; }
+.contrast .roll-read-cell.is-seen { background: #001a12; border-color: #0f0; }
+.contrast .roll-read-seen-mark { background: #0f0; color: #000; }
+.contrast .roll-read-cell.is-selected { border-color: #ff5252; box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.35); }
+
 /* ---------- Dyslexia-friendly mode ----------
    Fully independent of Large text / High contrast and combinable with
    either. Font, spacing, and line-height rules always apply. The
@@ -1030,7 +1161,9 @@ body.dyslexia .rule li,
 body.dyslexia .hint,
 body.dyslexia .card h2,
 body.dyslexia .reading-target-word,
-body.dyslexia .reading-sentence {
+body.dyslexia .reading-sentence,
+body.dyslexia .roll-read-result-word,
+body.dyslexia .roll-read-cell-word {
   letter-spacing: 0.02em;
   word-spacing: 0.12em;
 }
@@ -1046,7 +1179,9 @@ body.dyslexia:not(.contrast) .instructions,
 body.dyslexia:not(.contrast) .card,
 body.dyslexia:not(.contrast) .rule,
 body.dyslexia:not(.contrast) .sidebar,
-body.dyslexia:not(.contrast) .reading-stage {
+body.dyslexia:not(.contrast) .reading-stage,
+body.dyslexia:not(.contrast) .roll-read-panel,
+body.dyslexia:not(.contrast) .roll-read-cell {
   background: var(--dyslexia-surface);
   color: var(--dyslexia-ink);
 }
@@ -1058,7 +1193,9 @@ body.dyslexia:not(.contrast) .rule strong,
 body.dyslexia:not(.contrast) .sidebar-group-header,
 body.dyslexia:not(.contrast) .level-heading h2,
 body.dyslexia:not(.contrast) .reading-target-word,
-body.dyslexia:not(.contrast) .reading-sentence {
+body.dyslexia:not(.contrast) .reading-sentence,
+body.dyslexia:not(.contrast) .roll-read-result-word,
+body.dyslexia:not(.contrast) .roll-read-cell-word {
   color: var(--dyslexia-ink);
 }
 body.dyslexia:not(.contrast) .hint,
@@ -1066,7 +1203,9 @@ body.dyslexia:not(.contrast) .rule p,
 body.dyslexia:not(.contrast) .ink-soft,
 body.dyslexia:not(.contrast) .instructions ol,
 body.dyslexia:not(.contrast) .sidebar-level-count,
-body.dyslexia:not(.contrast) .level-heading-progress {
+body.dyslexia:not(.contrast) .level-heading-progress,
+body.dyslexia:not(.contrast) .roll-read-result-hint,
+body.dyslexia:not(.contrast) .roll-read-progress {
   color: var(--dyslexia-ink-soft);
 }
 body.dyslexia:not(.contrast) .sidebar-level { background: var(--dyslexia-bg); color: var(--dyslexia-ink); }
