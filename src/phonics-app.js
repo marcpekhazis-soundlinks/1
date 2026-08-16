@@ -638,12 +638,22 @@ if ('speechSynthesis' in window) {
 // "vase" and "tomato" where the two accents genuinely diverge. Now the
 // full region tag (en-US) is preferred, falling back to any same-language
 // voice only if the browser has no exact regional match.
-function pickVoice(lang) {
+//
+// `preferLocal` (opt-in, default off so existing callers are unaffected):
+// SpeechSynthesisVoice.localService is true for on-device voices and false
+// for network/cloud-backed ones (e.g. some "Google US English" voices).
+// Rate control has historically been unreliable-to-ignored on some network
+// voices — this app has no way to query "does this specific voice honor
+// utterance.rate," but localService is the closest available signal, and
+// Reading Activity's Normal/Slow toggle only matters if rate actually
+// changes the audio, so it asks for a local voice when one exists.
+function pickVoice(lang, { preferLocal = false } = {}) {
   const target = lang.toLowerCase();
   const regionVoices = voices.filter((voice) => voice.lang.toLowerCase().replace('_', '-') === target);
   const languageVoices = regionVoices.length ? regionVoices : voices.filter((voice) => voice.lang.toLowerCase().startsWith(target.slice(0, 2)));
+  const pool = preferLocal && languageVoices.some((voice) => voice.localService) ? languageVoices.filter((voice) => voice.localService) : languageVoices;
   const preferredGender = state.voiceMode === 'male' ? ['male', 'david', 'mark', 'george', 'microsoft zira?'] : ['female', 'zira', 'samantha', 'susan', 'victoria'];
-  return languageVoices.find((voice) => preferredGender.some((term) => voice.name.toLowerCase().includes(term.replace('?', '')))) || languageVoices[0] || null;
+  return pool.find((voice) => preferredGender.some((term) => voice.name.toLowerCase().includes(term.replace('?', '')))) || pool[0] || null;
 }
 
 function speak(text, lang = 'en-US', rate = 0.75) {
@@ -693,8 +703,10 @@ function speechTextFor(item) {
 // the app's TTS ("hear it"/"sentence cue" buttons) already uses; "slow" is
 // a meaningfully slower, more deliberate pace for learners — including
 // those with dyslexia or other language-processing needs — who need more
-// time per word than the app's default rate gives them.
-const READING_RATES = { normal: 0.75, slow: 0.55 };
+// time per word than the app's default rate gives them. Kept a clear
+// 0.15 apart (not e.g. 0.75/0.7) so the difference is unmistakable rather
+// than marginal, per the reported "Slow doesn't sound different" bug.
+const READING_RATES = { normal: 0.75, slow: 0.6 };
 function readingPlaybackRate() {
   return READING_RATES[state.readingSpeed] || READING_RATES.normal;
 }
@@ -719,7 +731,13 @@ function estimateWordDurations(words, rate) {
 // position), and still keeps state.reading.activeWordIndex up to date so
 // any *other* render() (toggling big text mid-playback, say) redraws with
 // the right word already highlighted.
-function updateReadingWordHighlight(index) {
+//
+// `wordDurationMs` is this word's own estimated speaking time (see
+// estimateWordDurations()) — the same rate-scaled number that decided
+// *when* this call happens in the first place. Passing it through to the
+// ball (see positionReadingBall()) is what keeps the ball's own motion
+// tied to that one timing source instead of an independent constant.
+function updateReadingWordHighlight(index, wordDurationMs) {
   state.reading.activeWordIndex = index;
   const wrap = document.querySelector('[data-reading-sentence]');
   if (!wrap) return;
@@ -727,13 +745,30 @@ function updateReadingWordHighlight(index) {
     el.classList.toggle('is-active', i === index);
     el.classList.toggle('is-read', i < index);
   });
-  if (state.readingHighlightStyle === 'ball') positionReadingBall();
+  if (state.readingHighlightStyle === 'ball') positionReadingBall(wordDurationMs);
 }
 
 // Bouncing-ball style: the ball's position is measured fresh off the live
 // DOM (not pre-computed) so it lands correctly regardless of text wrapping
 // onto a second line.
-function positionReadingBall() {
+//
+// Root-caused two reported bugs at once here:
+//   - "the ball lags behind the audio at the start" — the CSS transition
+//     used to apply uniformly, including to the ball's very first move
+//     from its unset origin. The *highlight index* was already correctly
+//     synced to the audio's 'start' event (see playReadingSentence()), but
+//     the ball still visibly took ~150ms to glide/fade into place, reading
+//     as "late" even though the underlying sync wasn't. Now the very first
+//     appearance in a playback snaps in with a 0ms transition, and only
+//     word-to-word moves glide.
+//   - "the ball doesn't slow down with the Slow setting" — the glide's
+//     transition-duration was a fixed CSS constant, completely decoupled
+//     from utterance.rate. It's now computed from `wordDurationMs`, so at
+//     Slow (longer per-word durations) each hop genuinely takes longer,
+//     and at Normal it's snappier — both automatically, from the same
+//     rate-derived numbers driving when the ball moves, not a second
+//     independent animation timer.
+function positionReadingBall(wordDurationMs) {
   const wrap = document.querySelector('[data-reading-sentence]');
   const ball = document.querySelector('[data-reading-ball]');
   if (!wrap || !ball) return;
@@ -746,6 +781,14 @@ function positionReadingBall() {
   const wordRect = activeWord.getBoundingClientRect();
   const left = wordRect.left - wrapRect.left + wordRect.width / 2;
   const top = wordRect.top - wrapRect.top;
+  const isFirstAppearance = ball.style.opacity !== '1';
+  const glideMs = isFirstAppearance ? 0 : Math.round(Math.min(320, Math.max(120, (wordDurationMs || 260) * 0.55)));
+  const fadeMs = isFirstAppearance ? 0 : 150;
+  // Overrides only the duration of the .reading-ball-dot's `transition:
+  // transform <dur> <easing>, opacity <dur> <easing>` shorthand (declared
+  // in phonics-styles.css) — the easing functions themselves stay as
+  // stylesheet-defined, only how long each leg takes changes per move.
+  ball.style.transitionDuration = `${glideMs}ms, ${fadeMs}ms`;
   ball.style.opacity = '1';
   ball.style.transform = `translate(${left}px, ${top}px)`;
   const dot = ball.firstElementChild;
@@ -805,8 +848,13 @@ function playReadingSentence(item) {
   const utterance = new SpeechSynthesisUtterance(spokenText);
   utterance.lang = 'en-US';
   utterance.rate = readingPlaybackRate();
-  const voice = pickVoice('en-US');
+  const voice = pickVoice('en-US', { preferLocal: true });
   if (voice) utterance.voice = voice;
+  // Left in place intentionally (not just a debugging aid removed after
+  // this fix) so the actual rate reaching the TTS engine can always be
+  // spot-checked from the browser console — the bug this addresses was
+  // never visible from the UI alone.
+  console.log('Reading Activity speed:', state.readingSpeed, 'rate:', utterance.rate, 'voice:', voice ? `${voice.name} (local: ${voice.localService})` : '(browser default)');
 
   const estimates = estimateWordDurations(spokenWords, utterance.rate);
   const playback = { timers: [] };
@@ -835,7 +883,7 @@ function playReadingSentence(item) {
     let acc = elapsed;
     for (let i = startIndex; i < spokenWords.length; i++) {
       const idx = i;
-      playback.timers.push(setTimeout(() => updateReadingWordHighlight(idx), acc));
+      playback.timers.push(setTimeout(() => updateReadingWordHighlight(idx, estimates[idx]), acc));
       acc += estimates[i];
     }
   }
@@ -849,7 +897,7 @@ function playReadingSentence(item) {
     if (started) return;
     started = true;
     lastBoundaryIndex = 0;
-    updateReadingWordHighlight(0);
+    updateReadingWordHighlight(0, estimates[0]);
     scheduleEstimatesFrom(1, estimates[0]);
   };
   utterance.onboundary = (event) => {
@@ -860,7 +908,7 @@ function playReadingSentence(item) {
     if (idx === -1) idx = spokenWords.reduce((best, word, i) => (word.start <= event.charIndex ? i : best), 0);
     if (idx <= lastBoundaryIndex) return;
     lastBoundaryIndex = idx;
-    updateReadingWordHighlight(idx);
+    updateReadingWordHighlight(idx, estimates[idx]);
     scheduleEstimatesFrom(idx + 1, 0);
   };
   const finishPlayback = () => {
