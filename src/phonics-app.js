@@ -571,10 +571,12 @@ let state = {
     // TTS playback by updateReadingWordHighlight(); -1 = nothing playing.
     activeWordIndex: -1,
   },
-  // Highlight-style and line-focus preferences persist like voiceMode —
-  // they're accessibility choices a learner sets once, not per-session UI.
+  // Highlight-style, line-focus, and speed preferences persist like
+  // voiceMode — they're accessibility choices a learner sets once, not
+  // per-session UI.
   readingHighlightStyle: localStorage.readingHighlightStyle || 'sweep', // 'sweep' | 'ball'
   readingLineFocus: localStorage.readingLineFocus !== 'off',
+  readingSpeed: localStorage.readingSpeed === 'slow' ? 'slow' : 'normal', // 'normal' | 'slow'
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file.
@@ -687,6 +689,16 @@ function speechTextFor(item) {
   return item.sentence.replace(pattern, item.say);
 }
 
+// Reading Activity speed control. "normal" matches the rate the rest of
+// the app's TTS ("hear it"/"sentence cue" buttons) already uses; "slow" is
+// a meaningfully slower, more deliberate pace for learners — including
+// those with dyslexia or other language-processing needs — who need more
+// time per word than the app's default rate gives them.
+const READING_RATES = { normal: 0.75, slow: 0.55 };
+function readingPlaybackRate() {
+  return READING_RATES[state.readingSpeed] || READING_RATES.normal;
+}
+
 // Fallback timing when the Web Speech API doesn't (yet) deliver a
 // word-boundary event — see playReadingSentence() for how this blends with
 // real boundary events. ~13 chars/sec at rate 1.0 is a rough average
@@ -771,6 +783,14 @@ function stopReadingPlayback() {
 // from that point on, so the estimate can never drift far out of step
 // before a real event corrects it — and in a browser with no boundary
 // support at all, the estimate quietly carries the whole sentence.
+//
+// Both the estimate and the boundary path are anchored to the utterance's
+// 'start' event, not to the moment speak() is called below — engine
+// warm-up (voice loading, queueing, thread hand-off) can put a real,
+// user-perceptible gap between the two, and scheduling from speak()-time
+// made the very first word's highlight visibly lag the audio. 'start'
+// fires exactly when the engine actually begins producing audio, so
+// that's the correct zero point for "the first word is being spoken now."
 function playReadingSentence(item) {
   stopReadingPlayback();
   if (!('speechSynthesis' in window)) {
@@ -784,7 +804,7 @@ function playReadingSentence(item) {
 
   const utterance = new SpeechSynthesisUtterance(spokenText);
   utterance.lang = 'en-US';
-  utterance.rate = 0.75;
+  utterance.rate = readingPlaybackRate();
   const voice = pickVoice('en-US');
   if (voice) utterance.voice = voice;
 
@@ -792,26 +812,42 @@ function playReadingSentence(item) {
   const playback = { timers: [] };
   readingPlayback = playback;
 
-  function scheduleEstimatesFrom(startIndex) {
+  // Schedules highlight(i) to fire `elapsed` ms from now for word
+  // `startIndex`, then each word after at the cumulative estimated time
+  // its *predecessors* take to speak — i.e. at the start of that word's
+  // own speaking window, not the end of it (an inclusive running total
+  // would highlight every word one word late).
+  function scheduleEstimatesFrom(startIndex, elapsed) {
     playback.timers.forEach(clearTimeout);
     playback.timers = [];
-    let acc = 0;
+    let acc = elapsed;
     for (let i = startIndex; i < spokenWords.length; i++) {
-      acc += estimates[i];
       const idx = i;
       playback.timers.push(setTimeout(() => updateReadingWordHighlight(idx), acc));
+      acc += estimates[i];
     }
   }
 
+  let started = false;
   let lastBoundaryIndex = -1;
+  utterance.onstart = () => {
+    // A real 'boundary' event for word 0 can in principle arrive before
+    // 'start' fires — if it already has, trust it over this estimate.
+    if (started) return;
+    started = true;
+    lastBoundaryIndex = 0;
+    updateReadingWordHighlight(0);
+    scheduleEstimatesFrom(1, estimates[0]);
+  };
   utterance.onboundary = (event) => {
     if (event.name && event.name !== 'word') return;
+    started = true;
     let idx = spokenWords.findIndex((word) => event.charIndex >= word.start && event.charIndex < word.end);
     if (idx === -1) idx = spokenWords.reduce((best, word, i) => (word.start <= event.charIndex ? i : best), 0);
     if (idx <= lastBoundaryIndex) return;
     lastBoundaryIndex = idx;
     updateReadingWordHighlight(idx);
-    scheduleEstimatesFrom(idx + 1);
+    scheduleEstimatesFrom(idx + 1, 0);
   };
   const finishPlayback = () => {
     playback.timers.forEach(clearTimeout);
@@ -823,11 +859,15 @@ function playReadingSentence(item) {
   utterance.onend = finishPlayback;
   utterance.onerror = finishPlayback;
 
-  scheduleEstimatesFrom(0);
   state.reading.playing = true;
   state.reading.activeWordIndex = -1;
   render();
   speechSynthesis.speak(utterance);
+
+  // Safety net: 'start' is spec-mandated but not every engine fires it
+  // reliably — without a fallback, a missing 'start' event would leave the
+  // sentence completely unhighlighted for its whole playback.
+  playback.timers.push(setTimeout(() => { if (!started) scheduleEstimatesFrom(0, 0); }, 400));
 }
 
 function setState(key, value) {
@@ -1345,6 +1385,7 @@ function readingActivityTemplate(group, levelWords) {
   const activeIndex = state.reading.activeWordIndex;
   const playing = state.reading.playing;
   const styleBall = state.readingHighlightStyle === 'ball';
+  const speedSlow = state.readingSpeed === 'slow';
 
   return `
     <div class="reading-activity">
@@ -1379,6 +1420,11 @@ function readingActivityTemplate(group, levelWords) {
           <div class="reading-style-toggle" role="radiogroup" aria-label="Highlight style">
             <button data-reading-style="sweep" class="${!styleBall ? 'active' : ''}" aria-pressed="${!styleBall}">Color sweep</button>
             <button data-reading-style="ball" class="${styleBall ? 'active' : ''}" aria-pressed="${styleBall}">Bouncing ball</button>
+          </div>
+          <span class="reading-options-label">Speed</span>
+          <div class="reading-style-toggle" role="radiogroup" aria-label="Reading speed">
+            <button data-reading-speed="normal" class="${!speedSlow ? 'active' : ''}" aria-pressed="${!speedSlow}">Normal</button>
+            <button data-reading-speed="slow" class="${speedSlow ? 'active' : ''}" aria-pressed="${speedSlow}">Slow</button>
           </div>
           <button class="reading-line-focus-toggle ${state.readingLineFocus ? 'is-on' : ''}" data-reading-line-focus aria-pressed="${state.readingLineFocus}">${icon('eye')}Line focus</button>
         </div>
@@ -1823,6 +1869,21 @@ function wireReadingEvents() {
     state.readingHighlightStyle = button.dataset.readingStyle;
     localStorage.readingHighlightStyle = state.readingHighlightStyle;
     render();
+  });
+  document.querySelectorAll('[data-reading-speed]').forEach((button) => button.onclick = () => {
+    const speed = button.dataset.readingSpeed;
+    if (speed === state.readingSpeed) return;
+    state.readingSpeed = speed;
+    localStorage.readingSpeed = speed;
+    // The Web Speech API has no way to change an in-flight utterance's
+    // rate — it's fixed at speak()-time — so a mid-playback speed change
+    // has to restart the sentence from the top at the new rate, rather
+    // than silently keep playing at the old one while claiming otherwise.
+    const wasPlaying = state.reading.playing;
+    const item = currentLevelWords()[state.reading.index];
+    stopAndReset();
+    render();
+    if (wasPlaying && item) playReadingSentence(item);
   });
   const lineFocusButton = $('[data-reading-line-focus]');
   if (lineFocusButton) {
