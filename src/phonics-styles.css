@@ -592,6 +592,208 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .actions button:last-child:hover { background: var(--success); color: #fff; }
 .actions button:last-child.is-done { background: var(--success); color: #fff; }
 
+/* ---------- Reading Activity ----------
+   A per-level alternative to the word-card grid: one word's picture +
+   sentence at a time, with a play button that speaks the sentence via the
+   app's existing TTS and highlights each word in sync as it's spoken (see
+   playReadingSentence()/updateReadingWordHighlight() in JS). Two highlight
+   styles share the same markup: .style-sweep colors words in place as
+   .reading-word.is-active/.is-read change; .style-ball instead moves a
+   floating dot (.reading-ball) to sit on the active word, leaving the text
+   itself unstyled so the two styles read as genuinely different visual
+   metaphors, not just a palette swap. */
+.learn-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 20px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+.learn-mode-toggle button {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 9px 16px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.learn-mode-toggle button:hover { color: var(--primary-dark); }
+.learn-mode-toggle button.active { background: var(--primary); color: #fff; }
+
+.reading-activity { position: relative; }
+.reading-focus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  background: rgba(245, 248, 254, 0.82);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.reading-focus-overlay.is-active { opacity: 1; }
+
+.reading-stage {
+  position: relative;
+  z-index: 13;
+  display: grid;
+  gap: 22px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+}
+.reading-word-meta { display: flex; align-items: center; gap: 20px; }
+.reading-pic { width: 120px; flex: none; }
+.reading-target-word { font-size: clamp(1.7rem, 3.4vw, 2.2rem); font-weight: 800; color: var(--ink); margin: 0 0 0.15em; }
+
+.reading-sentence-wrap { position: relative; padding: 6px 4px; }
+/* Ball mode needs headroom above the text for the ball to hop into without
+   crowding the picture/word row above it — the sweep style has no floating
+   element, so it doesn't need the extra top padding. */
+.reading-sentence-wrap.style-ball { padding-top: 42px; }
+.reading-sentence {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 3.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 2;
+  color: var(--ink);
+}
+.reading-word {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 0 0.12em;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.style-sweep .reading-word.is-read { color: var(--ink-soft); }
+.style-sweep .reading-word.is-active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+.style-ball .reading-word.is-active {
+  text-decoration: underline;
+  text-decoration-color: var(--warning);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+
+.reading-ball {
+  position: absolute;
+  top: 0; left: 0;
+  width: 0; height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.16s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s ease;
+}
+.reading-ball-dot {
+  position: absolute;
+  top: -30px; left: -11px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #ffd873, var(--warning-dark));
+  box-shadow: var(--shadow-md);
+}
+.reading-ball-dot.is-bouncing { animation: reading-ball-hop 0.32s ease; }
+@keyframes reading-ball-hop {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-12px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.reading-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.reading-nav, .reading-play, .reading-known {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+  padding: 11px 16px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.reading-nav:hover:not(:disabled), .reading-known:hover { background: var(--primary); color: #fff; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.reading-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.reading-nav .icon { transform: rotate(90deg); }
+.reading-nav-next .icon { transform: rotate(-90deg); }
+.reading-play { background: var(--primary); color: #fff; margin-inline: auto 0; }
+.reading-play:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.reading-play.is-playing { background: var(--incorrect); }
+.reading-play.is-playing:hover { background: var(--incorrect-dark); }
+.reading-known { background: var(--success-soft); color: var(--success-dark); }
+.reading-known:hover { background: var(--success); color: #fff; }
+.reading-known.is-done { background: var(--success); color: #fff; }
+
+.reading-progress-track { text-align: center; }
+.reading-progress-label { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
+
+.reading-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--primary-tint-100);
+}
+.reading-options-label { font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
+.reading-style-toggle { display: inline-flex; gap: 4px; padding: 3px; background: var(--primary-tint-50); border-radius: var(--radius-pill); }
+.reading-style-toggle button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 7px 13px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.reading-style-toggle button.active { background: var(--primary); color: #fff; }
+.reading-line-focus-toggle {
+  display: inline-flex; align-items: center;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 7px 14px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+.reading-line-focus-toggle.is-on { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+@media (max-width: 700px) {
+  .reading-stage { padding: 20px; }
+  .reading-word-meta { flex-direction: column; align-items: flex-start; }
+  .reading-pic { width: 100px; }
+  .reading-play { margin-inline: 0; flex: 1 1 auto; justify-content: center; }
+  .reading-nav { flex: 1 1 auto; justify-content: center; }
+  .reading-known { flex: 1 1 100%; justify-content: center; }
+  .reading-line-focus-toggle { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-word, .reading-ball, .reading-ball-dot, .reading-focus-overlay { transition: none !important; animation: none !important; }
+}
+
 /* ---------- Rules ---------- */
 .rules { display: grid; gap: 18px; }
 .rules > h2 { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); color: var(--ink); position: relative; padding-bottom: 10px; }
@@ -675,6 +877,8 @@ body.big h1 { font-size: clamp(2.2rem, 5.6vw, 4.2rem); }
 body.big .card h2 { font-size: clamp(2.2rem, 5vw, 3rem); }
 body.big .group { font-size: 0.82rem; }
 body.big .arabic { font-size: 1.45rem; }
+body.big .reading-target-word { font-size: clamp(2rem, 4vw, 2.6rem); }
+body.big .reading-sentence { font-size: clamp(1.6rem, 3.8vw, 2.3rem); }
 body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 
 /* ---------- High contrast ----------
@@ -773,6 +977,32 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .practice-listening { background: #001830; color: #7fd0ff; }
 .contrast [data-practice].is-listening, .contrast [data-practice].is-listening::after { background: #000; border-color: #fff; color: #fff; }
 
+.contrast .learn-mode-toggle { background: #000; border: 2px solid #fff; box-shadow: none; }
+.contrast .learn-mode-toggle button { color: #fff; }
+.contrast .learn-mode-toggle button.active { background: #fff; color: #000; }
+.contrast .reading-focus-overlay { background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.contrast .reading-stage { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .reading-target-word { color: #fff; }
+.contrast .reading-sentence { color: #fff; }
+.contrast .style-sweep .reading-word.is-read { color: #999; }
+.contrast .style-sweep .reading-word.is-active { color: #000; background: #fff; }
+.contrast .style-ball .reading-word.is-active { text-decoration-color: #ff5252; }
+.contrast .reading-ball-dot { background: #fff; box-shadow: none; }
+.contrast .reading-nav, .contrast .reading-known { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .reading-nav:hover:not(:disabled) { background: #fff; color: #000; }
+.contrast .reading-play { background: #fff; color: #000; }
+.contrast .reading-play:hover { background: #ccc; }
+.contrast .reading-play.is-playing { background: #ff5252; color: #000; }
+.contrast .reading-known.is-done { background: #0f0; color: #000; }
+.contrast .reading-progress-label { color: #ccc; }
+.contrast .reading-options { border-top-color: #333; }
+.contrast .reading-options-label { color: #ccc; }
+.contrast .reading-style-toggle { background: #111; }
+.contrast .reading-style-toggle button { color: #ccc; }
+.contrast .reading-style-toggle button.active { background: #fff; color: #000; }
+.contrast .reading-line-focus-toggle { background: #000; color: #fff; border-color: #fff; }
+.contrast .reading-line-focus-toggle.is-on { background: #fff; color: #000; }
+
 /* ---------- Dyslexia-friendly mode ----------
    Fully independent of Large text / High contrast and combinable with
    either. Font, spacing, and line-height rules always apply. The
@@ -798,10 +1028,13 @@ body.dyslexia .instructions ol li,
 body.dyslexia .rule p,
 body.dyslexia .rule li,
 body.dyslexia .hint,
-body.dyslexia .card h2 {
+body.dyslexia .card h2,
+body.dyslexia .reading-target-word,
+body.dyslexia .reading-sentence {
   letter-spacing: 0.02em;
   word-spacing: 0.12em;
 }
+body.dyslexia .reading-sentence { line-height: 2.2; }
 /* Arabic script is cursive/connected — added letter-spacing distorts it. */
 body.dyslexia .arabic { letter-spacing: normal; word-spacing: normal; }
 body.dyslexia .hint { line-height: 1.9; }
@@ -812,7 +1045,8 @@ body.dyslexia:not(.contrast) { background-color: var(--dyslexia-bg); }
 body.dyslexia:not(.contrast) .instructions,
 body.dyslexia:not(.contrast) .card,
 body.dyslexia:not(.contrast) .rule,
-body.dyslexia:not(.contrast) .sidebar {
+body.dyslexia:not(.contrast) .sidebar,
+body.dyslexia:not(.contrast) .reading-stage {
   background: var(--dyslexia-surface);
   color: var(--dyslexia-ink);
 }
@@ -822,7 +1056,9 @@ body.dyslexia:not(.contrast) .tier-heading h2,
 body.dyslexia:not(.contrast) .rule h3,
 body.dyslexia:not(.contrast) .rule strong,
 body.dyslexia:not(.contrast) .sidebar-group-header,
-body.dyslexia:not(.contrast) .level-heading h2 {
+body.dyslexia:not(.contrast) .level-heading h2,
+body.dyslexia:not(.contrast) .reading-target-word,
+body.dyslexia:not(.contrast) .reading-sentence {
   color: var(--dyslexia-ink);
 }
 body.dyslexia:not(.contrast) .hint,
@@ -835,6 +1071,8 @@ body.dyslexia:not(.contrast) .level-heading-progress {
 }
 body.dyslexia:not(.contrast) .sidebar-level { background: var(--dyslexia-bg); color: var(--dyslexia-ink); }
 body.dyslexia:not(.contrast) .sidebar-level-name { color: var(--dyslexia-ink); }
+body.dyslexia:not(.contrast) .reading-focus-overlay { background: rgba(250, 242, 223, 0.85); }
+body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--dyslexia-ink-soft); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
