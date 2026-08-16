@@ -86,6 +86,14 @@ function patchWordLine(source, originalWord, updated) {
     let entry = `${indent}{ word: ${jsStringLiteral(updated.word)}, arabic: ${jsStringLiteral(updated.arabic)}, hint: ${jsStringLiteral(updated.hint)}, visual: ${jsStringLiteral(updated.visual)}, level: ${Number(updated.level)}`;
     if (updated.archived) entry += ', archived: true';
     if (updated.svg) entry += `, svg: ${jsStringLiteral(updated.svg)}`;
+    // `say` (a TTS pronunciation-fix respelling) and `longAIndices` (a
+    // highlight override) aren't in the edit form — they're admin data
+    // curated at the code level, not through this UI — but the write-back
+    // still has to carry them through unchanged, or saving any other field
+    // on a word like "ate" or "vase" would silently delete its `say` fix.
+    if (updated.say) entry += `, say: ${jsStringLiteral(updated.say)}`;
+    if (updated.longAIndices) entry += `, longAIndices: ${JSON.stringify(updated.longAIndices)}`;
+    if (updated.sentence) entry += `, sentence: ${jsStringLiteral(updated.sentence)}`;
     entry += ' },';
     return entry;
   });

@@ -1524,6 +1524,7 @@ function editModalTemplate() {
           <label>Word text<input type="text" name="word" value="${escapeHtml(item.word)}" required></label>
           <label>Hint<input type="text" name="hint" value="${escapeHtml(item.hint)}" required></label>
           <label>Arabic translation<input type="text" name="arabic" dir="rtl" value="${escapeHtml(item.arabic)}" required></label>
+          <label>Reading Activity sentence<input type="text" name="sentence" value="${escapeHtml(item.sentence || '')}" required></label>
           <label>SVG illustration code<textarea name="svg" rows="7" spellcheck="false">${escapeHtml(svgValue)}</textarea></label>
           <div class="modal-actions">
             <button type="submit">${icon('check')}Save</button>
@@ -1587,6 +1588,7 @@ async function saveWordEditForm(originalWord, formValues) {
     word: formValues.word.trim(),
     hint: formValues.hint.trim(),
     arabic: formValues.arabic.trim(),
+    sentence: formValues.sentence.trim(),
   };
   const svgValue = formValues.svg.trim();
   if (svgValue) updated.svg = svgValue;
@@ -1627,6 +1629,7 @@ function wireAdminEvents() {
         word: data.get('word') || '',
         hint: data.get('hint') || '',
         arabic: data.get('arabic') || '',
+        sentence: data.get('sentence') || '',
         svg: data.get('svg') || '',
       });
     };
