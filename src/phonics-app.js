@@ -558,11 +558,12 @@ let state = {
   groupCelebration: null,
   badgeShelfOpen: false,
   practice: {},
-  // Reading Activity — a per-level alternative to the word-card grid (see
-  // learnModeToggleTemplate()/readingActivityTemplate()). `learnMode`
-  // switches the Learn tab's main panel between 'cards' and 'reading';
-  // `reading` itself is transient playback/navigation state, never
-  // persisted, so a reload always lands back on the card grid.
+  // Reading Activity and Roll and Read — per-level alternatives to the
+  // word-card grid (see learnModeToggleTemplate()/readingActivityTemplate()/
+  // rollReadTemplate()). `learnMode` switches the Learn tab's main panel
+  // between 'cards', 'reading', and 'roll'; `reading`/`rollRead` are each
+  // transient playback/navigation state, never persisted, so a reload
+  // always lands back on the card grid.
   learnMode: 'cards',
   reading: {
     index: 0, // which word (within the current level's word list) is showing
@@ -577,6 +578,22 @@ let state = {
   readingHighlightStyle: localStorage.readingHighlightStyle || 'sweep', // 'sweep' | 'ball'
   readingLineFocus: localStorage.readingLineFocus !== 'off',
   readingSpeed: ['normal', 'slow', 'veryslow'].includes(localStorage.readingSpeed) ? localStorage.readingSpeed : 'normal', // 'normal' | 'slow' | 'veryslow'
+  // Roll and Read: a dice-driven "land on a word, read it aloud" board
+  // game over the same level word list. `boardKey` records which
+  // group/level `seen`/`row`/`col` currently belong to — rollReadTemplate()
+  // compares it against the level actually on screen and resets the rest
+  // of this object the moment they no longer match, so switching levels
+  // always starts a fresh board with no explicit reset wiring needed at
+  // every navigation call site. `seen` is a lightweight, session-only
+  // record of which words have already come up on the current board (see
+  // the PR description for why this is worth tracking).
+  rollRead: {
+    boardKey: null,
+    seen: {},
+    row: null,
+    col: null,
+    rolling: false,
+  },
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file.
@@ -616,6 +633,7 @@ const ICONS = {
   chevron: '<path d="M6 9l6 6 6-6"/>',
   bolt: '<path d="M13 2 5 14h5l-1 8 8-12h-5z" fill="currentColor" stroke="none"/>',
   medal: '<path d="M8.5 3h7l-2.6 7.4h-1.8z"/><circle cx="12" cy="15" r="6"/><path d="M12 12.2l1.1 2.3 2.5.4-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.4z" fill="currentColor" stroke="none"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.3" fill="currentColor" stroke="none"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -958,6 +976,101 @@ function playReadingSentence(item) {
   // reliably — without a fallback, a missing 'start' event would leave the
   // sentence completely unhighlighted for its whole playback.
   playback.timers.push(setTimeout(() => { if (isCurrentPlayback() && !started) scheduleEstimatesFrom(0, 0); }, 480));
+}
+
+// ---------- Roll and Read ----------
+// A dice-driven board game over the same per-level word list the card grid
+// and Reading Activity already use: two dice pick a row and column, that
+// cell's word gets read aloud (by the student, or via "Hear it"), repeat.
+// Nothing here is specific to Long A or any one sound group — the board is
+// just whichever level's word list is currently selected, so a brand-new
+// sound group gets a working Roll and Read board for free the moment it
+// has words, the same way Reading Activity already does.
+
+// Capped at 36 (a 6x6 board) so two ordinary six-sided dice can always
+// address every cell — a level with more words than that (most of them)
+// simply plays across its first 36 rather than needing bigger dice.
+const ROLL_READ_MAX_CELLS = 36;
+
+function rollReadBoardWords(groupId, level) {
+  return wordsForGroupLevel(groupId, level).slice(0, ROLL_READ_MAX_CELLS);
+}
+
+// Chooses a rows x cols shape that's as close to square as the word count
+// allows, rather than hardcoding 6x6 — a 3-word level plays on a 2x2 board
+// (with one empty cell) instead of a mostly-empty 6x6 one, and the dice
+// themselves are sized to match (see rollReadTemplate()), so a roll can
+// never land on a row/column that doesn't exist.
+function rollReadGridShape(count) {
+  if (!count) return { rows: 0, cols: 0 };
+  const cols = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / cols);
+  return { rows, cols };
+}
+
+function rollReadBoardKey(groupId, level) {
+  return `${groupId}::${level}`;
+}
+
+// Standard six-sided die pip layouts, on a 0-100 face. Grid boards are
+// capped at 6x6 (see ROLL_READ_MAX_CELLS/rollReadGridShape()), so a rolled
+// row or column index never needs a face beyond 6.
+const DIE_PIPS = {
+  1: [[50, 50]],
+  2: [[27, 27], [73, 73]],
+  3: [[27, 27], [50, 50], [73, 73]],
+  4: [[27, 27], [73, 27], [27, 73], [73, 73]],
+  5: [[27, 27], [73, 27], [50, 50], [27, 73], [73, 73]],
+  6: [[27, 22], [73, 22], [27, 50], [73, 50], [27, 78], [73, 78]],
+};
+function dieFaceTemplate(value, label) {
+  const pips = DIE_PIPS[value] || [];
+  return `<div class="roll-die" role="img" aria-label="${escapeHtml(label)}: ${value || 'not rolled yet'}">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="4" y="4" width="92" height="92" rx="18"/>
+      ${pips.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9"/>`).join('')}
+    </svg>
+  </div>`;
+}
+
+// One in-flight roll's animation timer, if any. Module-scoped so
+// stopRollAnimation() can always reach it — from a level switch, a
+// learn-mode switch, or another Roll click landing mid-animation.
+let rollAnimationTimer = null;
+function stopRollAnimation() {
+  if (rollAnimationTimer) {
+    clearInterval(rollAnimationTimer);
+    rollAnimationTimer = null;
+  }
+  state.rollRead.rolling = false;
+}
+
+// Rolls both dice: a brief cycling animation (random faces, re-rendered a
+// handful of times) that settles on a genuine random row/col within the
+// board's actual shape, highlights that cell, and marks its word seen.
+// `boardWords`/`rows`/`cols` are passed in (rather than recomputed here)
+// so this always rolls against the *exact* board currently on screen.
+function rollDice(boardWords, rows, cols) {
+  if (state.rollRead.rolling) return;
+  stopRollAnimation();
+  state.rollRead.rolling = true;
+  render();
+  let ticks = 0;
+  const totalTicks = 8;
+  rollAnimationTimer = setInterval(() => {
+    ticks++;
+    state.rollRead.row = 1 + Math.floor(Math.random() * rows);
+    state.rollRead.col = 1 + Math.floor(Math.random() * cols);
+    if (ticks >= totalTicks) {
+      clearInterval(rollAnimationTimer);
+      rollAnimationTimer = null;
+      state.rollRead.rolling = false;
+      const index = (state.rollRead.row - 1) * cols + (state.rollRead.col - 1);
+      const landed = boardWords[index];
+      if (landed) state.rollRead.seen[landed.word] = true;
+    }
+    render();
+  }, 90);
 }
 
 function setState(key, value) {
@@ -1445,6 +1558,7 @@ function learnModeToggleTemplate() {
   return `<div class="learn-mode-toggle" role="tablist" aria-label="Level view">
     <button data-learn-mode="cards" role="tab" aria-selected="${state.learnMode === 'cards'}" class="${state.learnMode === 'cards' ? 'active' : ''}">${icon('book')}Word cards</button>
     <button data-learn-mode="reading" role="tab" aria-selected="${state.learnMode === 'reading'}" class="${state.learnMode === 'reading' ? 'active' : ''}">${icon('chat')}Reading Activity</button>
+    <button data-learn-mode="roll" role="tab" aria-selected="${state.learnMode === 'roll'}" class="${state.learnMode === 'roll' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
   </div>`;
 }
 
@@ -1523,6 +1637,73 @@ function readingActivityTemplate(group, levelWords) {
     </div>`;
 }
 
+function rollReadGridCellTemplate(item, r, c, selected, seen) {
+  const classes = ['roll-read-cell'];
+  if (selected) classes.push('is-selected');
+  if (seen) classes.push('is-seen');
+  return `<div class="${classes.join(' ')}" role="gridcell" aria-label="Row ${r}, column ${c}: ${escapeHtml(item.word)}${seen ? ', already rolled' : ''}">
+    ${seen ? `<span class="roll-read-seen-mark" aria-hidden="true">${icon('check')}</span>` : ''}
+    <span class="roll-read-cell-word">${highlightWord(item)}</span>
+  </div>`;
+}
+
+// A dice board over the current level's word list: Roll picks a random
+// row and column (each die capped to the board's own shape, so a roll can
+// never land off the grid), highlights that cell, and offers the same
+// "Hear it" TTS button the word cards use. `levelWords` is the same list
+// the card grid and Reading Activity already receive, so this needs no
+// per-group/per-level wiring of its own — nothing here names a specific
+// sound group or hardcodes a board size.
+//
+// state.rollRead persists across switching to another Learn mode and back
+// (so checking a word card mid-game doesn't reset your progress), but
+// resets the moment the underlying board itself changes — tracked via
+// `boardKey` — so a fresh level always starts from an empty, unrolled
+// board rather than showing stale dice/highlights from a different one.
+function rollReadTemplate(group, levelWords) {
+  const boardWords = levelWords.slice(0, ROLL_READ_MAX_CELLS);
+  if (!boardWords.length) {
+    return emptyGroupTemplate(`No words to roll yet in ${escapeHtml(group.label)} at this level.`);
+  }
+  const boardKey = rollReadBoardKey(group.id, state.level);
+  if (state.rollRead.boardKey !== boardKey) {
+    stopRollAnimation();
+    state.rollRead = { boardKey, seen: {}, row: null, col: null, rolling: false };
+  }
+  const { rows, cols } = rollReadGridShape(boardWords.length);
+  const { row, col, rolling, seen } = state.rollRead;
+  const selectedIndex = row && col && (row - 1) * cols + (col - 1) < boardWords.length ? (row - 1) * cols + (col - 1) : -1;
+  const selectedWord = selectedIndex >= 0 ? boardWords[selectedIndex] : null;
+  const seenCount = Object.keys(seen).length;
+  const emptyCells = rows * cols - boardWords.length;
+
+  return `
+    <div class="roll-read">
+      <div class="roll-read-panel">
+        <div class="roll-read-dice" aria-live="polite" aria-atomic="true">
+          ${dieFaceTemplate(row, 'Row die')}
+          ${dieFaceTemplate(col, 'Column die')}
+        </div>
+        <button class="roll-read-roll-btn ${rolling ? 'is-rolling' : ''}" data-roll-dice ${rolling ? 'disabled' : ''}>${icon('dice')}${rolling ? 'Rolling…' : row ? 'Roll again' : 'Roll'}</button>
+        <div class="roll-read-result">
+          ${selectedWord && !rolling
+            ? `<p class="roll-read-result-word">${highlightWord(selectedWord)}</p>
+               <button data-say="${escapeHtml(selectedWord.say || selectedWord.word)}" data-lang="en-US" class="roll-read-hear-btn">${icon('speaker')}Hear it</button>`
+            : `<p class="roll-read-result-hint">${rolling ? 'Rolling…' : 'Press Roll to pick a word'}</p>`}
+        </div>
+        <p class="roll-read-progress">${seenCount}/${boardWords.length} words rolled this board</p>
+      </div>
+      <div class="roll-read-grid" style="--roll-read-cols:${cols}" role="grid" aria-label="${escapeHtml(group.label)} Roll and Read board">
+        ${boardWords.map((item, index) => {
+          const r = Math.floor(index / cols) + 1;
+          const c = (index % cols) + 1;
+          return rollReadGridCellTemplate(item, r, c, r === row && c === col, !!seen[item.word]);
+        }).join('')}
+        ${Array.from({ length: emptyCells }, () => '<div class="roll-read-cell is-empty" aria-hidden="true"></div>').join('')}
+      </div>
+    </div>`;
+}
+
 function learnTemplate() {
   const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
   const groupWords = wordsInSoundGroup(group.id);
@@ -1534,6 +1715,8 @@ function learnTemplate() {
   let body;
   if (state.learnMode === 'reading') {
     body = readingActivityTemplate(group, filtered);
+  } else if (state.learnMode === 'roll') {
+    body = rollReadTemplate(group, filtered);
   } else if (!groupWords.length) {
     body = emptyGroupTemplate(`No "${group.label}" words yet — this sound group is ready for when it's added.`);
   } else if (!filtered.length) {
@@ -1910,6 +2093,7 @@ function badgeShelfTemplate() {
 function wireReadingEvents() {
   document.querySelectorAll('[data-learn-mode]').forEach((button) => button.onclick = () => {
     stopReadingPlayback();
+    stopRollAnimation();
     state.learnMode = button.dataset.learnMode;
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
@@ -1986,6 +2170,23 @@ function wireReadingEvents() {
   }
 }
 
+// Roll and Read control wiring. Only the Roll button needs dedicated JS —
+// "Hear it" reuses the existing global [data-say] binding (see render()),
+// the same way word cards' own audio buttons work, so there's no separate
+// TTS wiring to maintain here.
+function wireRollReadEvents() {
+  if (state.view !== 'learn' || state.learnMode !== 'roll') return;
+  const rollButton = $('[data-roll-dice]');
+  if (!rollButton) return;
+  rollButton.onclick = () => {
+    const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
+    const boardWords = rollReadBoardWords(group.id, state.level);
+    const { rows, cols } = rollReadGridShape(boardWords.length);
+    if (!boardWords.length) return;
+    rollDice(boardWords, rows, cols);
+  };
+}
+
 function render() {
   normalizeSelection();
   const activeWords = WORDS.filter((word) => !word.archived);
@@ -2036,6 +2237,7 @@ function render() {
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
     stopReadingPlayback();
+    stopRollAnimation();
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
     setState('view', button.dataset.view);
@@ -2067,6 +2269,7 @@ function render() {
     const level = Number(levelStr);
     if (!isLevelUnlocked(groupId, level)) return;
     stopReadingPlayback();
+    stopRollAnimation();
     state.soundGroup = groupId;
     state.level = level;
     state.expandedGroups[groupId] = true;
@@ -2083,6 +2286,7 @@ function render() {
   document.querySelectorAll('[data-dismiss-group-celebration]').forEach((el) => el.onclick = () => dismissGroupCelebration());
   wireAdminEvents();
   wireReadingEvents();
+  wireRollReadEvents();
 }
 
 render();
