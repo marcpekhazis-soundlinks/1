@@ -699,18 +699,22 @@ function speechTextFor(item) {
   return item.sentence.replace(pattern, item.say);
 }
 
-// Reading Activity speed control. Deliberately spaced far apart — each
-// step is close to half the previous rate — so every step reads as
-// unmistakably different by ear, not a marginal adjustment: 0.6 vs 0.75
-// (the previous values) was reported as too subtle to reliably notice on
-// a short one-line sentence.
+// Reading Activity speed control. Each step is *exactly* half the
+// previous rate, not just "somewhat lower" — 0.6 vs 0.75 (an earlier
+// attempt) was reported as too subtle to reliably notice, and veryslow at
+// 0.4 repeated the same mistake relative to slow's 0.5 (only a 20%
+// reduction, vs. normal->slow's 50% reduction) even though the two values
+// were, and had to be re-verified as, genuinely distinct — human
+// perception of speech tempo tracks the *ratio* between two rates much
+// more than the raw difference, so a proportionally small step reads as
+// "no difference" even when the numbers themselves aren't equal.
 // "normal" is the TTS engine's own full natural rate (1.0) — note this no
 // longer matches the 0.75 the word-card "hear it"/"sentence cue" buttons
 // use; those are untouched, this is Reading Activity's own scale now.
-// "slow" (0.5, clearly half-speed) and "veryslow" (0.4) are for learners —
+// "slow" (half-speed) and "veryslow" (quarter-speed) are for learners —
 // including those with dyslexia or other language-processing needs — who
 // need progressively more time per word than natural speech gives them.
-const READING_RATES = { normal: 1, slow: 0.5, veryslow: 0.4 };
+const READING_RATES = { normal: 1, slow: 0.5, veryslow: 0.25 };
 // Display labels + button order for the speed toggle, driven off the same
 // READING_RATES keys so a future speed step only needs adding in one
 // place — this list, not a second hardcoded button set in the template.
@@ -917,7 +921,15 @@ function playReadingSentence(item) {
     if (idx <= lastBoundaryIndex) return;
     lastBoundaryIndex = idx;
     updateReadingWordHighlight(idx, estimates[idx]);
-    scheduleEstimatesFrom(idx + 1, 0);
+    // Re-anchor the *fallback* schedule to "word idx just started now," so
+    // word idx+1 doesn't fire until word idx's own estimated duration has
+    // elapsed — mirrors the onstart handler's scheduleEstimatesFrom(1,
+    // estimates[0]) above. Passing 0 here (as this used to) told the next
+    // word to fire immediately: every real boundary event was silently
+    // fast-forwarding the very next word to a ~0ms flash, invisible before
+    // being overwritten by whatever fired after it — which is what made
+    // the word right after any boundary-confirmed word look skipped.
+    scheduleEstimatesFrom(idx + 1, estimates[idx]);
   };
   const finishPlayback = () => {
     if (!isCurrentPlayback()) return;
