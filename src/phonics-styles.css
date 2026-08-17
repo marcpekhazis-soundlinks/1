@@ -51,6 +51,12 @@
   --illus-shade: rgba(6, 62, 143, 0.16);
   --illus-shine: rgba(255, 255, 255, 0.6);
   --illus-shadow: rgba(6, 62, 143, 0.14);
+  /* Catch the Sound's woven basket — its own warm-brown trio (distinct
+     from --illus-sand/-sand-dark above so the basket reads as a separate
+     prop sitting on the sand, not the same material). */
+  --illus-basket: #e2a75c;
+  --illus-basket-shade: #9c6425;
+  --illus-basket-weave: #7a4e1c;
 
   --radius-lg: 28px;
   --radius-md: 20px;
@@ -912,11 +918,13 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 /* ---------- Catch the Sound ----------
    An arcade word-catching game (see catchGameTemplate()/playCatchRound()
    in JS): a "Play a word" button speaks a target word, 2-3 spelling
-   options fall from the top of .catch-game-field, and a basket controlled
-   by the ← / → arrow keys has to catch the correct one before it reaches
-   .catch-ground-line. The falling chips' motion is the one animation in
-   this app that's core gameplay rather than decoration — unlike the Roll
-   and Read/Reading Activity transitions above, it's deliberately left out
+   options fall from the top of .catch-game-field over a flat beach
+   backdrop (see catchSceneTemplate()), and a woven basket (see
+   catchBasketSvg()) controlled by the ← / → arrow keys has to catch the
+   correct one before it reaches the sand. The falling chips' motion is
+   the one animation in this app that's core gameplay rather than
+   decoration — unlike the Roll and Read/Reading Activity transitions
+   above (and the catch/miss flourishes below), it's deliberately left out
    of the prefers-reduced-motion rule, since removing it would remove the
    only signal a player has to react to. */
 .catch-game { display: flex; flex-direction: column; gap: 16px; }
@@ -951,19 +959,22 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   position: relative;
   height: 380px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--primary-tint-50), var(--surface-alt));
+  background: var(--primary-tint-100); /* shows briefly under the SVG scene while fonts/paint settle */
   border: 2px solid var(--primary-tint-200);
   overflow: hidden;
 }
 
-.catch-ground-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 58px;
-  height: 2px;
-  background: repeating-linear-gradient(90deg, var(--primary-tint-300) 0 12px, transparent 12px 24px);
-}
+/* The beach backdrop (see catchSceneTemplate()) — absolutely positioned
+   to fill the field and sit behind every falling word/the basket, which
+   are positioned afterward in DOM order (no z-index arms race needed). */
+.catch-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.catch-scene .cs-sky { fill: var(--illus-sky); }
+.catch-scene .cs-sun { fill: var(--illus-sun); }
+.catch-scene .cs-shade { fill: var(--illus-shade); }
+.catch-scene .cs-line { stroke: var(--illus-outline); stroke-width: 3; }
+.catch-scene .cs-shine { fill: var(--illus-shine); }
+.catch-scene .cs-sand { fill: var(--illus-sand); }
+.catch-scene .cs-sand-dark { fill: var(--illus-sand-dark); }
 
 .catch-word {
   position: absolute;
@@ -979,21 +990,84 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   box-shadow: var(--shadow-sm);
   white-space: nowrap;
 }
-.catch-word.is-correct { background: var(--success-soft); border-color: var(--success); color: var(--success-dark); }
-.catch-word.is-wrong { background: var(--incorrect-soft); border-color: var(--incorrect); color: var(--incorrect-dark); }
-.catch-word.is-missed { background: var(--warning-soft); border-color: var(--warning); color: var(--warning-dark); }
+.catch-word.is-correct { background: var(--success-soft); border-color: var(--success); color: var(--success-dark); animation: catch-word-pop 420ms ease; }
+.catch-word.is-wrong { background: var(--incorrect-soft); border-color: var(--incorrect); color: var(--incorrect-dark); animation: catch-word-shake 400ms ease; }
+.catch-word.is-missed { background: var(--warning-soft); border-color: var(--warning); color: var(--warning-dark); animation: catch-word-fade-out 550ms ease forwards; }
 
+@keyframes catch-word-pop {
+  0% { transform: translateX(-50%) scale(1); }
+  35% { transform: translateX(-50%) scale(1.25); }
+  60% { transform: translateX(-50%) scale(0.95); }
+  100% { transform: translateX(-50%) scale(1.05); }
+}
+@keyframes catch-word-shake {
+  0%, 100% { transform: translateX(-50%); }
+  20% { transform: translateX(-50%) translateX(-8px) rotate(-4deg); }
+  40% { transform: translateX(-50%) translateX(7px) rotate(3deg); }
+  60% { transform: translateX(-50%) translateX(-5px) rotate(-2deg); }
+  80% { transform: translateX(-50%) translateX(3px) rotate(1deg); }
+}
+@keyframes catch-word-fade-out {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+}
+
+/* The basket is sized noticeably larger than a typical UI icon so it feels
+   substantial to catch words with — width/height are tuned together with
+   CATCH_GAME_CONFIG.basketWidthPct in JS, which must stay in sync with the
+   width below since collision detection reads the element's live
+   bounding box, not this file. */
 .catch-basket {
   position: absolute;
-  bottom: 8px;
-  width: 20%; /* keep in sync with CATCH_GAME_CONFIG.basketWidthPct in JS */
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-dark);
+  bottom: 4px;
+  width: 32%;
+  height: 108px;
+  transform-origin: 50% 100%;
 }
-.catch-basket .icon { width: 60%; height: 60%; }
+.catch-basket-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.catch-basket-svg .cb-body { fill: var(--illus-basket); }
+.catch-basket-svg .cb-line { stroke: var(--illus-basket-shade); stroke-width: 4; stroke-linejoin: round; }
+.catch-basket-svg .cb-weave path { stroke: var(--illus-basket-weave); stroke-width: 3; fill: none; opacity: 0.55; }
+.catch-basket-svg .cb-rim { fill: var(--illus-basket-shade); }
+.catch-basket-svg .cb-rim-line { stroke: var(--illus-basket-weave); stroke-width: 2; }
+.catch-basket-svg .cb-shine { fill: var(--illus-shine); }
+
+/* A quick squash-and-stretch on a successful catch — restarted per catch
+   by bounceBasket() in JS (remove/reflow/re-add the class, the same
+   restart trick positionReadingBall() uses for the reading ball's hop). */
+.catch-basket.is-catching { animation: catch-basket-bounce 380ms ease; }
+@keyframes catch-basket-bounce {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.18, 0.8); }
+  55% { transform: scale(0.92, 1.12); }
+  80% { transform: scale(1.04, 0.97); }
+  100% { transform: scale(1, 1); }
+}
+
+/* A brief radial sparkle burst at the basket on a correct catch — see
+   spawnCatchParticles() in JS, which creates/removes this element
+   directly rather than modeling it in state. Each .catch-particle is
+   rotated to its own slice of the circle (360°/7 ≈ 51.4°) and animates
+   outward along that rotated axis, producing a burst without any
+   per-particle JS math. */
+.catch-particles { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
+.catch-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px;
+  background: var(--illus-sun);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  opacity: 0;
+  animation: catch-particle-burst 600ms ease-out forwards;
+  animation-delay: calc(var(--i) * 15ms);
+}
+@keyframes catch-particle-burst {
+  0% { opacity: 1; transform: rotate(calc(var(--i) * 51.4deg)) translateY(0) scale(0.6); }
+  100% { opacity: 0; transform: rotate(calc(var(--i) * 51.4deg)) translateY(-48px) scale(1.1); }
+}
 
 .catch-game-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
 .catch-game-feedback.is-correct { color: var(--success-dark); }
@@ -1002,7 +1076,7 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 
 @media (max-width: 700px) {
   .catch-game-field { height: 320px; }
-  .catch-basket { width: 28%; }
+  .catch-basket { width: 40%; height: 92px; }
   .catch-word { padding: 8px 12px; font-size: 1rem; }
 }
 @media (max-width: 480px) {
@@ -1010,17 +1084,24 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   .catch-game-scoreboard { justify-items: start; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .catch-word.is-correct, .catch-word.is-wrong, .catch-basket.is-catching, .catch-particle { animation: none !important; }
+}
+
 .contrast .catch-play-btn { background: #fff; color: #000; }
 .contrast .catch-play-btn:hover:not(:disabled) { background: #ccc; }
 .contrast .catch-game-score-label, .contrast .catch-game-score-goal { color: #ccc; }
 .contrast .catch-game-score-value { color: #fff; }
 .contrast .catch-game-field { background: #000; border: 2px solid #fff; }
-.contrast .catch-ground-line { background: repeating-linear-gradient(90deg, #666 0 12px, transparent 12px 24px); }
+.contrast .catch-scene { display: none; }
 .contrast .catch-word { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .catch-word.is-correct { background: #001a12; border-color: #0f0; color: #7cffb2; }
 .contrast .catch-word.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
 .contrast .catch-word.is-missed { background: #2a1c00; border-color: #ffd27f; color: #ffd27f; }
-.contrast .catch-basket { color: #fff; }
+.contrast .catch-basket-svg .cb-body, .contrast .catch-basket-svg .cb-rim { fill: #fff; }
+.contrast .catch-basket-svg .cb-line, .contrast .catch-basket-svg .cb-rim-line { stroke: #000; }
+.contrast .catch-basket-svg .cb-weave, .contrast .catch-basket-svg .cb-shine { display: none; }
+.contrast .catch-particle { background: #fff; }
 .contrast .catch-game-feedback { color: #ccc; }
 
 /* ---------- Rules ---------- */

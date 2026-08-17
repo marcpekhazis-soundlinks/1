@@ -1963,6 +1963,55 @@ function catchWordChipTemplate(option, index) {
   return `<div class="catch-word" data-catch-word data-index="${index}" style="left:${((index + 0.5) / state.game.round.options.length) * 100}%;top:-14%">${escapeHtml(option.text)}</div>`;
 }
 
+// A simple flat beach backdrop for the game field: light-blue sky, a sun in
+// the corner, and a sandy band along the bottom for the basket to stand in.
+// Reuses the exact --illus-* tokens the app's word-card SVG illustrations
+// already draw from (see WORD_SVGS/imageSvg()) so it reads as the same
+// flat illustration style rather than a second, unrelated art style — just
+// arranged as a wide backdrop instead of a single word icon. Purely
+// decorative and static (no per-frame updates), so it's plain markup
+// rendered once per round/render() rather than anything the game loop
+// touches. `preserveAspectRatio="none"` stretches to exactly fill the
+// field at any width rather than cropping — the field's real aspect
+// ratio varies with the browser window, and a "slice"/cover crop centered
+// on a much taller viewBox would push a corner sun mostly off-screen at
+// wide/short aspect ratios. A wide 3:1 viewBox (close to a typical
+// desktop field) keeps the stretch distortion on the sun/sand curves
+// minor at common sizes.
+function catchSceneTemplate() {
+  return `<svg class="catch-scene" viewBox="0 0 900 300" preserveAspectRatio="none" aria-hidden="true">
+    <rect width="900" height="300" class="cs-sky"/>
+    <circle class="cs-sun" cx="780" cy="72" r="40"/>
+    <path class="cs-shade" d="M780 32A40 40 0 0 1 780 112A54 54 0 0 0 780 32Z"/>
+    <circle class="cs-line" cx="780" cy="72" r="40" fill="none"/>
+    <ellipse class="cs-shine" cx="763" cy="57" rx="11" ry="7"/>
+    <path class="cs-sand-dark" d="M0 218q140-26 300-8t320 6t280-16V300H0Z"/>
+    <path class="cs-sand" d="M0 238q150-22 320-4t320 2t260-18V300H0Z"/>
+  </svg>`;
+}
+
+// A small colored woven-basket illustration (not a single-color stroke
+// icon like the nav tab's basket — see ICONS.basket) so it reads as a
+// real prop sitting in the sand: a tan body with a diagonal weave lattice
+// clipped to its silhouette, a darker rim, and a soft highlight. Sized and
+// positioned entirely by .catch-basket's CSS (see stepCatchBasket()),
+// this only ever needs to draw the basket itself.
+function catchBasketSvg() {
+  const bodyPath = 'M20 24 Q20 16 29 16 H111 Q120 16 120 24 L107 83 Q105 91 95 91 H45 Q35 91 33 83 Z';
+  return `<svg class="catch-basket-svg" viewBox="0 0 140 92" aria-hidden="true">
+    <defs><clipPath id="catchBasketClip"><path d="${bodyPath}"/></clipPath></defs>
+    <path class="cb-body" d="${bodyPath}"/>
+    <g class="cb-weave" clip-path="url(#catchBasketClip)">
+      <path d="M-10 25 L55 100 M8 12 L78 100 M30 8 L102 100 M55 8 L127 96 M80 8 L150 84 M105 8 L150 60"/>
+      <path d="M150 25 L85 100 M132 12 L62 100 M110 8 L38 100 M85 8 L13 96 M60 8 L-10 84"/>
+    </g>
+    <path class="cb-line" d="${bodyPath}" fill="none"/>
+    <ellipse class="cb-rim" cx="70" cy="17" rx="51" ry="9"/>
+    <ellipse class="cb-rim-line" cx="70" cy="17" rx="51" ry="9" fill="none"/>
+    <ellipse class="cb-shine" cx="52" cy="14" rx="14" ry="3.5"/>
+  </svg>`;
+}
+
 function catchGameTemplate() {
   const { status, round, basketPct, feedback } = state.game;
   return `
@@ -1975,9 +2024,9 @@ function catchGameTemplate() {
         </div>
       </div>
       <div class="catch-game-field" data-catch-field>
+        ${catchSceneTemplate()}
         ${round ? round.options.map((option, i) => catchWordChipTemplate(option, i)).join('') : ''}
-        <div class="catch-ground-line" aria-hidden="true"></div>
-        <div class="catch-basket" data-catch-basket style="left:${basketPct}%">${icon('basket')}</div>
+        <div class="catch-basket" data-catch-basket style="left:${basketPct}%">${catchBasketSvg()}</div>
       </div>
       <p class="catch-game-feedback ${feedback ? `is-${feedback.kind}` : ''}" data-catch-feedback aria-live="polite">${feedback ? escapeHtml(feedback.text) : 'Press "Play a word" to hear a word, then use the ← and → keys to catch its correct spelling before it lands.'}</p>
     </section>`;
@@ -2544,7 +2593,40 @@ function resolveCatchWord(el, reason) {
     chip.style.transition = 'none';
     chip.dataset.resolved = 'true';
   });
+  if (outcomeClass === 'is-correct') {
+    const basket = $('[data-catch-basket]');
+    bounceBasket(basket);
+    spawnCatchParticles(basket, field);
+  }
   setTimeout(() => finishCatchRound(feedback, points), 550);
+}
+
+// Restarts the basket's squash-and-bounce animation (see .catch-basket.
+// is-catching in CSS) on a successful catch — remove-reflow-readd is the
+// same trick positionReadingBall() uses to restart a CSS keyframe
+// animation even when the class is already present from a previous catch.
+function bounceBasket(basketEl) {
+  if (!basketEl) return;
+  basketEl.classList.remove('is-catching');
+  void basketEl.offsetWidth;
+  basketEl.classList.add('is-catching');
+}
+
+// A brief radial burst of small sparkles at the basket on a correct catch
+// — purely decorative, so the elements are created directly and removed
+// on a timeout (mirroring the confetti-piece burst already used for group
+// celebrations) rather than being modeled in state/render().
+function spawnCatchParticles(basketEl, fieldEl) {
+  if (!basketEl || !fieldEl) return;
+  const basketRect = basketEl.getBoundingClientRect();
+  const fieldRect = fieldEl.getBoundingClientRect();
+  const burst = document.createElement('div');
+  burst.className = 'catch-particles';
+  burst.style.left = `${basketRect.left - fieldRect.left + basketRect.width / 2}px`;
+  burst.style.top = `${basketRect.top - fieldRect.top + basketRect.height * 0.3}px`;
+  burst.innerHTML = Array.from({ length: 7 }, (_, i) => `<span class="catch-particle" style="--i:${i}"></span>`).join('');
+  fieldEl.appendChild(burst);
+  setTimeout(() => burst.remove(), 650);
 }
 
 function finishCatchRound(feedback, points) {
