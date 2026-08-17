@@ -575,12 +575,23 @@ function catchGamePoints(word) {
 // Tunable knobs for Catch the Sound's pacing — adjust these to rebalance
 // the game without touching any of the logic below.
 const CATCH_GAME_CONFIG = {
-  fallDurationMs: 7000, // how long a falling word takes to reach the ground
+  fallDurationMs: 9500, // how long a falling word takes to reach the ground
   basketSpeedPctPerSec: 65, // how fast the basket moves, in % of field width per second
-  basketWidthPct: 20, // basket width, as % of field width — must match .catch-basket's CSS width
+  basketWidthPct: 32, // basket width, as % of field width — must match .catch-basket's CSS width
   minOptions: 2,
   maxOptions: 3,
+  wrongCatchPenalty: 1, // points subtracted for catching a decoy
 };
+
+// The basket's resting horizontal position — dead center of the field,
+// accounting for its own width so it's visually centered rather than its
+// left edge sitting at the 50% mark. Used both for the initial state and
+// to re-center the basket at the start of every new round (see
+// playCatchRound()) so a round never starts wherever the player happened
+// to leave the basket after the last one.
+function catchBasketCenterPct() {
+  return (100 - CATCH_GAME_CONFIG.basketWidthPct) / 2;
+}
 
 function shuffle(list) {
   const arr = [...list];
@@ -736,9 +747,13 @@ let state = {
   game: {
     status: 'idle',
     round: null,
-    basketPct: 40,
+    basketPct: catchBasketCenterPct(),
     feedback: null,
   },
+  // Whether Catch the Sound's ambient background hum plays — persisted
+  // like voiceMode so muting it sticks across reloads instead of coming
+  // back on every time. See startCatchMusic()/stopCatchMusic().
+  musicOn: localStorage.catchMusicOn !== 'off',
   // Reading Activity and Roll and Read — per-level alternatives to the
   // word-card grid (see learnModeToggleTemplate()/readingActivityTemplate()/
   // rollReadTemplate()). `learnMode` switches the Learn tab's main panel
@@ -816,6 +831,7 @@ const ICONS = {
   medal: '<path d="M8.5 3h7l-2.6 7.4h-1.8z"/><circle cx="12" cy="15" r="6"/><path d="M12 12.2l1.1 2.3 2.5.4-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.4z" fill="currentColor" stroke="none"/>',
   dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.3" fill="currentColor" stroke="none"/>',
   basket: '<path d="M4 10h16l-1.6 9.3a2 2 0 0 1-2 1.7H7.6a2 2 0 0 1-2-1.7z"/><path d="M8 10l1-5h6l1 5"/><path d="M9 13.5v3.5M12 13.5v3.5M15 13.5v3.5"/>',
+  musicNote: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="3"/><circle cx="17.5" cy="16" r="3"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -2012,16 +2028,33 @@ function catchBasketSvg() {
   </svg>`;
 }
 
+// The scoreboard reads very differently before/after the badge is earned.
+// Below the threshold it's a literal progress fraction ("6/10"). Once
+// earned, gameScore keeps climbing every session (the game stays fully
+// playable/replayable after unlocking — catching words is still the
+// point), so continuing to show it as "21/10" would read as a broken
+// fraction rather than a running total. Past the threshold this drops the
+// "/10" denominator and switches the label to an explicit "unlocked"
+// statement instead, so the number is unambiguously a lifetime score, not
+// a fraction of something it has already exceeded. See the PR description
+// for the reasoning against the alternative (capping the display at
+// 10/10).
+function catchScoreboardTemplate() {
+  const earned = !!state.badges[CATCH_GAME_BADGE_ID];
+  return `<div class="catch-game-scoreboard">
+    <span class="catch-game-score-label">${earned ? 'Badge unlocked! Total score' : 'Total score'}</span>
+    <span class="catch-game-score-value">${state.gameScore}${earned ? '' : `<span class="catch-game-score-goal">/${CATCH_GAME_BADGE_THRESHOLD}</span>`}</span>
+  </div>`;
+}
+
 function catchGameTemplate() {
   const { status, round, basketPct, feedback } = state.game;
   return `
     <section class="catch-game">
       <div class="catch-game-top">
         <button class="catch-play-btn" data-catch-play ${status === 'playing' ? 'disabled' : ''}>${icon('speaker')}${status === 'playing' ? 'Listening…' : 'Play a word'}</button>
-        <div class="catch-game-scoreboard">
-          <span class="catch-game-score-label">Total score</span>
-          <span class="catch-game-score-value">${state.gameScore}<span class="catch-game-score-goal">/${CATCH_GAME_BADGE_THRESHOLD}</span></span>
-        </div>
+        <button class="catch-music-toggle ${state.musicOn ? 'is-on' : ''}" data-catch-music-toggle aria-pressed="${state.musicOn}">${icon('musicNote')}${state.musicOn ? 'Music on' : 'Music off'}</button>
+        ${catchScoreboardTemplate()}
       </div>
       <div class="catch-game-field" data-catch-field>
         ${catchSceneTemplate()}
@@ -2064,8 +2097,8 @@ function instructionsTemplate() {
         <li>Press "Play a word" to hear its pronunciation.</li>
         <li>2-3 spellings fall from the top — only one is the correct spelling of the word you heard.</li>
         <li>Move the basket with the ← and → arrow keys, Pong-paddle style, to catch the correct spelling before it reaches the ground.</li>
-        <li>Catching the right word scores points based on its length; catching a wrong one, or letting the right one fall, ends the round with no points.</li>
-        <li>Score ${CATCH_GAME_BADGE_THRESHOLD} total points to earn the Catch the Sound badge.</li>
+        <li>Catching the right word scores points based on its length; catching a wrong one costs you ${CATCH_GAME_CONFIG.wrongCatchPenalty} point${CATCH_GAME_CONFIG.wrongCatchPenalty === 1 ? '' : 's'}, and letting the right one fall ends the round with no points either way.</li>
+        <li>Score ${CATCH_GAME_BADGE_THRESHOLD} total points to earn the Catch the Sound badge — the game keeps going afterward, so every catch still counts.</li>
       </ol>`;
   }
   return `<ol>
@@ -2506,6 +2539,89 @@ function stopCatchGame() {
     catchLoopHandle = null;
   }
   catchRoundActive = false;
+  stopCatchMusic();
+}
+
+// ---------- Catch the Sound: ambient music ----------
+// A very quiet, code-synthesized drone via the Web Audio API — no audio
+// file, so there's nothing to fetch and nothing to loop-seam: the
+// oscillators just run continuously for as long as the Catch the Sound
+// view is mounted, which is inherently seamless (there's no clip boundary
+// to click or pop at). Square/triangle waveforms give it a lo-fi
+// "chiptune" timbre; a lowpass filter tames their harsher overtones down
+// into a soft hum rather than a buzz, and a very slow (20s) LFO breathes
+// the volume gently up and down so it feels alive without ever forming a
+// melody — the brief was "ambient hum, not a melody," so this
+// deliberately never plays discrete notes.
+let catchAudioCtx = null;
+let catchMusicNodes = null;
+
+function ensureCatchAudioCtx() {
+  if (catchAudioCtx) return catchAudioCtx;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  catchAudioCtx = new AudioCtx();
+  return catchAudioCtx;
+}
+
+function startCatchMusic() {
+  if (!state.musicOn || catchMusicNodes) return;
+  const ctx = ensureCatchAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // Kept deliberately faint (peak ~0.05) — this only ever has to be
+  // audible as ambience under the "Play a word" pronunciation and any
+  // catch effects, never compete with them.
+  const master = ctx.createGain();
+  master.gain.value = 0.0001;
+  master.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 1.5);
+  master.connect(ctx.destination);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 900;
+  filter.connect(master);
+
+  // Two softly detuned low tones a fifth apart (A2 + E3).
+  const oscillators = [
+    { freq: 110, type: 'triangle', gain: 1 },
+    { freq: 164.81, type: 'square', gain: 0.4 },
+  ].map(({ freq, type, gain }) => {
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const oscGain = ctx.createGain();
+    oscGain.gain.value = gain;
+    osc.connect(oscGain);
+    oscGain.connect(filter);
+    osc.start();
+    return osc;
+  });
+
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.value = 1 / 20; // one gentle swell every 20 seconds
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 0.015;
+  lfo.connect(lfoGain);
+  lfoGain.connect(master.gain);
+  lfo.start();
+
+  catchMusicNodes = { master, oscillators, lfo };
+}
+
+function stopCatchMusic() {
+  if (!catchMusicNodes || !catchAudioCtx) return;
+  const { master, oscillators, lfo } = catchMusicNodes;
+  const ctx = catchAudioCtx;
+  const now = ctx.currentTime;
+  master.gain.cancelScheduledValues(now);
+  master.gain.setValueAtTime(master.gain.value, now);
+  master.gain.linearRampToValueAtTime(0, now + 0.4);
+  const nodes = [...oscillators, lfo];
+  setTimeout(() => nodes.forEach((node) => { try { node.stop(); } catch { /* already stopped */ } }), 500);
+  catchMusicNodes = null;
 }
 
 // Runs continuously while the Catch the Sound view is mounted (started/
@@ -2569,14 +2685,15 @@ function resolveCatchWord(el, reason) {
   const option = state.game.round.options[Number(el.dataset.index)];
   if (reason === 'landed' && !option.correct) return;
 
-  let outcomeClass, feedback, points = 0;
+  let outcomeClass, feedback, scoreDelta = 0;
   if (reason === 'caught' && option.correct) {
-    points = catchGamePoints(option.text);
+    scoreDelta = catchGamePoints(option.text);
     outcomeClass = 'is-correct';
-    feedback = { kind: 'correct', text: `Caught it! "${option.text}" is right — +${points} point${points === 1 ? '' : 's'}.` };
+    feedback = { kind: 'correct', text: `Caught it! "${option.text}" is right — +${scoreDelta} point${scoreDelta === 1 ? '' : 's'}.` };
   } else if (reason === 'caught') {
+    scoreDelta = -CATCH_GAME_CONFIG.wrongCatchPenalty;
     outcomeClass = 'is-wrong';
-    feedback = { kind: 'wrong', text: `"${option.text}" isn't the right spelling — that catch missed the mark.` };
+    feedback = { kind: 'wrong', text: `"${option.text}" isn't the right spelling — that catch cost you ${CATCH_GAME_CONFIG.wrongCatchPenalty} point${CATCH_GAME_CONFIG.wrongCatchPenalty === 1 ? '' : 's'}.` };
   } else {
     outcomeClass = 'is-missed';
     feedback = { kind: 'missed', text: `Missed it — the correct spelling was "${option.text}".` };
@@ -2584,6 +2701,7 @@ function resolveCatchWord(el, reason) {
   el.classList.add(outcomeClass);
   catchRoundActive = false;
   const field = $('[data-catch-field]');
+  const basket = $('[data-catch-basket]');
   const fieldRect = field ? field.getBoundingClientRect() : null;
   document.querySelectorAll('[data-catch-word]').forEach((chip) => {
     if (fieldRect) {
@@ -2593,12 +2711,12 @@ function resolveCatchWord(el, reason) {
     chip.style.transition = 'none';
     chip.dataset.resolved = 'true';
   });
+  if (reason === 'caught') spawnCatchScorePopup(scoreDelta, basket, field);
   if (outcomeClass === 'is-correct') {
-    const basket = $('[data-catch-basket]');
     bounceBasket(basket);
     spawnCatchParticles(basket, field);
   }
-  setTimeout(() => finishCatchRound(feedback, points), 550);
+  setTimeout(() => finishCatchRound(feedback, scoreDelta), 550);
 }
 
 // Restarts the basket's squash-and-bounce animation (see .catch-basket.
@@ -2629,30 +2747,57 @@ function spawnCatchParticles(basketEl, fieldEl) {
   setTimeout(() => burst.remove(), 650);
 }
 
-function finishCatchRound(feedback, points) {
+// The classic floating "+2"/"-1" score pop-up, shown at the basket the
+// instant a chip is actually caught (not on an uncaught miss, which never
+// touches the basket at all) — rises and fades on its own CSS animation,
+// same disposable-element pattern as spawnCatchParticles() above.
+function spawnCatchScorePopup(delta, basketEl, fieldEl) {
+  if (!basketEl || !fieldEl || !delta) return;
+  const basketRect = basketEl.getBoundingClientRect();
+  const fieldRect = fieldEl.getBoundingClientRect();
+  const popup = document.createElement('div');
+  popup.className = `catch-score-popup ${delta > 0 ? 'is-positive' : 'is-negative'}`;
+  popup.textContent = delta > 0 ? `+${delta}` : `${delta}`;
+  popup.style.left = `${basketRect.left - fieldRect.left + basketRect.width / 2}px`;
+  popup.style.top = `${basketRect.top - fieldRect.top}px`;
+  fieldEl.appendChild(popup);
+  setTimeout(() => popup.remove(), 900);
+}
+
+function finishCatchRound(feedback, scoreDelta) {
   state.game.status = 'idle';
   state.game.feedback = feedback;
   state.game.round = null;
-  if (points > 0) awardCatchGamePoints(points);
+  if (scoreDelta !== 0) applyCatchGameScore(scoreDelta);
   else render();
 }
 
-// Adds points to the persisted score and, the moment the running total
-// first reaches the badge threshold, awards the badge and shows the same
-// celebration toast level-completion badges use (see toggleDone()) — they
-// share state.celebration/celebrationTimer, which is fine since both are
-// only ever triggered by an explicit player action, never concurrently.
-function awardCatchGamePoints(points) {
-  state.gameScore += points;
+// Applies a score change (positive for a correct catch, negative for the
+// wrong-catch penalty — see CATCH_GAME_CONFIG.wrongCatchPenalty) to the
+// persisted total, floored at 0 so a string of penalties can't push it
+// negative. The moment the running total first *reaches* the badge
+// threshold, awards the badge and shows the same celebration toast
+// level-completion badges use (see toggleDone()) — they share
+// state.celebration/celebrationTimer, which is fine since both are only
+// ever triggered by an explicit player action, never concurrently. A
+// penalty can never revoke an already-earned badge: awardCatchGame
+// BadgeIfEligible() only ever adds state.badges[...], never removes it,
+// so once earned it stays earned even if the score later dips back below
+// the threshold — matching how level badges behave if a word is toggled
+// back to "not known" after its level was already completed.
+function applyCatchGameScore(delta) {
+  state.gameScore = Math.max(0, state.gameScore + delta);
   localStorage.catchGameScore = String(state.gameScore);
-  const badge = awardCatchGameBadgeIfEligible();
-  if (badge) {
-    clearTimeout(celebrationTimer);
-    state.celebration = badge;
-    celebrationTimer = setTimeout(() => {
-      state.celebration = null;
-      render();
-    }, 2200);
+  if (delta > 0) {
+    const badge = awardCatchGameBadgeIfEligible();
+    if (badge) {
+      clearTimeout(celebrationTimer);
+      state.celebration = badge;
+      celebrationTimer = setTimeout(() => {
+        state.celebration = null;
+        render();
+      }, 2200);
+    }
   }
   render();
 }
@@ -2670,6 +2815,7 @@ function playCatchRound() {
   state.game.round = buildCatchRound();
   state.game.status = 'playing';
   state.game.feedback = null;
+  state.game.basketPct = catchBasketCenterPct();
   render();
   speak(state.game.round.target.say || state.game.round.target.word, 'en-US');
   requestAnimationFrame(() => requestAnimationFrame(startCatchFall));
@@ -2684,17 +2830,29 @@ function startCatchFall() {
   });
 }
 
-// The "Play a word" button is the only control besides the arrow keys, so
-// this only needs (re)binding it and starting/stopping the basket/
-// collision loop for as long as the Catch the Sound view is mounted.
+// Besides the arrow keys, this view has three controls: "Play a word",
+// the music mute toggle, and starting/stopping the basket/collision loop
+// (plus the ambient hum, see stopCatchGame()/startCatchMusic()) for as
+// long as the Catch the Sound view is mounted.
 function wireCatchGameEvents() {
   if (state.view !== 'game') {
     stopCatchGame();
     return;
   }
   startCatchLoop();
+  if (state.musicOn) startCatchMusic();
   const playButton = $('[data-catch-play]');
   if (playButton) playButton.onclick = () => playCatchRound();
+  const musicButton = $('[data-catch-music-toggle]');
+  if (musicButton) {
+    musicButton.onclick = () => {
+      state.musicOn = !state.musicOn;
+      localStorage.catchMusicOn = state.musicOn ? 'on' : 'off';
+      if (state.musicOn) startCatchMusic();
+      else stopCatchMusic();
+      render();
+    };
+  }
 }
 
 function render() {
@@ -2761,7 +2919,7 @@ function render() {
     state.done = {};
     state.badges = {};
     state.gameScore = 0;
-    state.game = { status: 'idle', round: null, basketPct: 40, feedback: null };
+    state.game = { status: 'idle', round: null, basketPct: catchBasketCenterPct(), feedback: null };
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
     localStorage.removeItem('catchGameScore');

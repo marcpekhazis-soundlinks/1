@@ -950,6 +950,29 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .catch-play-btn:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .catch-play-btn:disabled { opacity: 0.7; cursor: default; }
 
+/* Same pill-toggle visual language as the global Voice/High contrast/
+   Dyslexia-friendly mode buttons in the toolbar (see .controls-bar button
+   in the layout rules above) — reused here rather than duplicated in that
+   always-visible global bar, since ambient music is meaningful only on
+   this one screen and a toggle that does nothing audible on every other
+   tab would be a confusing dead control there. */
+.catch-music-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.catch-music-toggle:hover { border-color: var(--primary-tint-300); color: var(--ink); }
+.catch-music-toggle.is-on { background: var(--primary-tint-100); border-color: var(--primary-tint-300); color: var(--primary-dark); }
+
 .catch-game-scoreboard { display: grid; justify-items: end; line-height: 1.2; }
 .catch-game-score-label { font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); }
 .catch-game-score-value { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--primary-darker); }
@@ -957,7 +980,7 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 
 .catch-game-field {
   position: relative;
-  height: 380px;
+  height: 560px;
   border-radius: var(--radius-lg);
   background: var(--primary-tint-100); /* shows briefly under the SVG scene while fonts/paint settle */
   border: 2px solid var(--primary-tint-200);
@@ -1069,13 +1092,35 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   100% { opacity: 0; transform: rotate(calc(var(--i) * 51.4deg)) translateY(-48px) scale(1.1); }
 }
 
+/* The floating "+2"/"-1" pop-up at the moment a chip is caught — see
+   spawnCatchScorePopup() in JS, which sets left/top inline to the catch
+   point and removes the element after the animation finishes. */
+.catch-score-popup {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.3rem;
+  pointer-events: none;
+  z-index: 3;
+  animation: catch-score-popup-rise 850ms ease-out forwards;
+}
+.catch-score-popup.is-positive { color: var(--success-dark); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7); }
+.catch-score-popup.is-negative { color: var(--incorrect-dark); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7); }
+@keyframes catch-score-popup-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  30% { transform: translate(-50%, -60%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -140%) scale(1); }
+}
+
 .catch-game-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
 .catch-game-feedback.is-correct { color: var(--success-dark); }
 .catch-game-feedback.is-wrong { color: var(--incorrect-dark); }
 .catch-game-feedback.is-missed { color: var(--warning-dark); }
 
 @media (max-width: 700px) {
-  .catch-game-field { height: 320px; }
+  .catch-game-field { height: 440px; }
   .catch-basket { width: 40%; height: 92px; }
   .catch-word { padding: 8px 12px; font-size: 1rem; }
 }
@@ -1085,15 +1130,19 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .catch-word.is-correct, .catch-word.is-wrong, .catch-basket.is-catching, .catch-particle { animation: none !important; }
+  .catch-word.is-correct, .catch-word.is-wrong, .catch-basket.is-catching, .catch-particle, .catch-score-popup { animation: none !important; }
 }
 
 .contrast .catch-play-btn { background: #fff; color: #000; }
 .contrast .catch-play-btn:hover:not(:disabled) { background: #ccc; }
+.contrast .catch-music-toggle { background: #000; color: #fff; border-color: #fff; }
+.contrast .catch-music-toggle.is-on { background: #fff; color: #000; }
 .contrast .catch-game-score-label, .contrast .catch-game-score-goal { color: #ccc; }
 .contrast .catch-game-score-value { color: #fff; }
 .contrast .catch-game-field { background: #000; border: 2px solid #fff; }
 .contrast .catch-scene { display: none; }
+.contrast .catch-score-popup.is-positive { color: #7cffb2; text-shadow: none; }
+.contrast .catch-score-popup.is-negative { color: #ff8a80; text-shadow: none; }
 .contrast .catch-word { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .catch-word.is-correct { background: #001a12; border-color: #0f0; color: #7cffb2; }
 .contrast .catch-word.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
