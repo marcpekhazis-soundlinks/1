@@ -917,25 +917,27 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 
 /* ---------- Catch the Sound ----------
    An arcade word-catching game (see catchGameTemplate()/playCatchRound()
-   in JS): a "Play a word" button speaks a target word, 2-3 spelling
-   options fall from the top of .catch-game-field over a flat beach
-   backdrop (see catchSceneTemplate()), and a woven basket (see
+   in JS): a target word plays automatically, 2-3 spelling options fall
+   from the top of .catch-game-field over a randomly-picked photo backdrop
+   (see CATCH_BACKGROUNDS/wireCatchGameEvents()), and a woven basket (see
    catchBasketSvg()) controlled by the ← / → arrow keys has to catch the
-   correct one before it reaches the sand. The falling chips' motion is
-   the one animation in this app that's core gameplay rather than
-   decoration — unlike the Roll and Read/Reading Activity transitions
-   above (and the catch/miss flourishes below), it's deliberately left out
-   of the prefers-reduced-motion rule, since removing it would remove the
-   only signal a player has to react to. */
+   correct one before it reaches the bottom. Rounds advance on their own —
+   see beginCatchCountdown() — so the only manual controls left are the
+   arrow keys and the small repeat-audio/music-mute buttons below. The
+   falling chips' motion is the one animation in this app that's core
+   gameplay rather than decoration — unlike the Roll and Read/Reading
+   Activity transitions above (and the catch/miss flourishes below), it's
+   deliberately left out of the prefers-reduced-motion rule, since
+   removing it would remove the only signal a player has to react to. */
 .catch-game { display: flex; flex-direction: column; gap: 16px; }
 
 .catch-game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
-.catch-play-btn {
+.catch-status-group { display: inline-flex; align-items: center; gap: 8px; }
+.catch-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 0;
   border-radius: var(--radius-pill);
   background: var(--primary);
   color: #fff;
@@ -943,12 +945,24 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 0.95rem;
-  cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
-.catch-play-btn:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.catch-play-btn:disabled { opacity: 0.7; cursor: default; }
+.catch-status-badge.is-counting { background: var(--primary-tint-100); color: var(--primary-dark); box-shadow: none; }
+.catch-repeat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+.catch-repeat-btn:hover { background: var(--primary-tint-50); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.catch-repeat-btn .icon { width: 1.1em; height: 1.1em; margin: 0; }
 
 /* Same pill-toggle visual language as the global Voice/High contrast/
    Dyslexia-friendly mode buttons in the toolbar (see .controls-bar button
@@ -978,26 +992,26 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .catch-game-score-value { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--primary-darker); }
 .catch-game-score-goal { font-size: 1rem; font-weight: 700; color: var(--ink-soft); }
 
+/* The background-image itself is set inline per-render (see
+   catchGameTemplate()) since it's one of twelve random photos, not a
+   fixed asset — this just handles how that image is cropped/positioned.
+   `cover` + `bottom center` matters more than it might look: every photo
+   in CATCH_BACKGROUNDS is a tall portrait shot with its subject/detail in
+   the bottom third and plain sky filling the rest, while this field is a
+   short, wide rectangle — anchoring the crop to the bottom keeps the
+   ground the basket "stands in" on screen and trims the empty sky above
+   it, at any field width. */
 .catch-game-field {
   position: relative;
   height: 560px;
   border-radius: var(--radius-lg);
-  background: var(--primary-tint-100); /* shows briefly under the SVG scene while fonts/paint settle */
+  background-color: var(--primary-tint-100); /* shows briefly while the photo loads */
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
   border: 2px solid var(--primary-tint-200);
   overflow: hidden;
 }
-
-/* The beach backdrop (see catchSceneTemplate()) — absolutely positioned
-   to fill the field and sit behind every falling word/the basket, which
-   are positioned afterward in DOM order (no z-index arms race needed). */
-.catch-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.catch-scene .cs-sky { fill: var(--illus-sky); }
-.catch-scene .cs-sun { fill: var(--illus-sun); }
-.catch-scene .cs-shade { fill: var(--illus-shade); }
-.catch-scene .cs-line { stroke: var(--illus-outline); stroke-width: 3; }
-.catch-scene .cs-shine { fill: var(--illus-shine); }
-.catch-scene .cs-sand { fill: var(--illus-sand); }
-.catch-scene .cs-sand-dark { fill: var(--illus-sand-dark); }
 
 .catch-word {
   position: absolute;
@@ -1047,7 +1061,11 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   height: 108px;
   transform-origin: 50% 100%;
 }
-.catch-basket-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+/* Photo backgrounds are far busier than the old flat beach illustration
+   — this drop shadow gives the basket a bit of separation/grounding
+   against any of them, the same way a game sprite reads clearly over a
+   detailed scene. */
+.catch-basket-svg { width: 100%; height: 100%; overflow: visible; display: block; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.32)); }
 .catch-basket-svg .cb-body { fill: var(--illus-basket); }
 .catch-basket-svg .cb-line { stroke: var(--illus-basket-shade); stroke-width: 4; stroke-linejoin: round; }
 .catch-basket-svg .cb-weave path { stroke: var(--illus-basket-weave); stroke-width: 3; fill: none; opacity: 0.55; }
@@ -1105,8 +1123,15 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   z-index: 3;
   animation: catch-score-popup-rise 850ms ease-out forwards;
 }
-.catch-score-popup.is-positive { color: var(--success-dark); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7); }
-.catch-score-popup.is-negative { color: var(--incorrect-dark); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7); }
+/* Bright, saturated text plus a soft dark halo (rather than the single
+   light-side emboss this had over the old flat illustration) so the
+   number stays legible over any of the twelve photo backgrounds — light
+   sky, dark space, mid-tone forest — not just a pale one. The old
+   --success-dark/--incorrect-dark tokens are tuned for text on a plain
+   white card and read as muddy against a dark photo, so these use
+   brighter, higher-contrast variants instead. */
+.catch-score-popup.is-positive { color: #34d399; text-shadow: 0 0 6px rgba(0, 0, 0, 0.65), 0 0 3px rgba(0, 0, 0, 0.65), 0 2px 2px rgba(0, 0, 0, 0.5); }
+.catch-score-popup.is-negative { color: #ff6b5b; text-shadow: 0 0 6px rgba(0, 0, 0, 0.65), 0 0 3px rgba(0, 0, 0, 0.65), 0 2px 2px rgba(0, 0, 0, 0.5); }
 @keyframes catch-score-popup-rise {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
   15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
@@ -1133,14 +1158,20 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   .catch-word.is-correct, .catch-word.is-wrong, .catch-basket.is-catching, .catch-particle, .catch-score-popup { animation: none !important; }
 }
 
-.contrast .catch-play-btn { background: #fff; color: #000; }
-.contrast .catch-play-btn:hover:not(:disabled) { background: #ccc; }
+.contrast .catch-status-badge { background: #fff; color: #000; }
+.contrast .catch-status-badge.is-counting { background: #000; color: #fff; box-shadow: inset 0 0 0 2px #fff; }
+.contrast .catch-repeat-btn { background: #000; color: #fff; border-color: #fff; }
+.contrast .catch-repeat-btn:hover { background: #222; }
 .contrast .catch-music-toggle { background: #000; color: #fff; border-color: #fff; }
 .contrast .catch-music-toggle.is-on { background: #fff; color: #000; }
 .contrast .catch-game-score-label, .contrast .catch-game-score-goal { color: #ccc; }
 .contrast .catch-game-score-value { color: #fff; }
-.contrast .catch-game-field { background: #000; border: 2px solid #fff; }
-.contrast .catch-scene { display: none; }
+/* The `!important` is load-bearing here, not a convenience — the photo
+   backdrop is set as an inline style per-render (see catchGameTemplate()),
+   which normally beats any stylesheet rule; high contrast mode has to win
+   that fight to guarantee a plain black field regardless of which of the
+   twelve photos got picked. */
+.contrast .catch-game-field { background-image: none !important; background-color: #000; border: 2px solid #fff; }
 .contrast .catch-score-popup.is-positive { color: #7cffb2; text-shadow: none; }
 .contrast .catch-score-popup.is-negative { color: #ff8a80; text-shadow: none; }
 .contrast .catch-word { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }

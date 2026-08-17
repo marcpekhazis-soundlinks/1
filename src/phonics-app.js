@@ -593,6 +593,34 @@ function catchBasketCenterPct() {
   return (100 - CATCH_GAME_CONFIG.basketWidthPct) / 2;
 }
 
+// Twelve rotating photo backgrounds for the game field (src/assets/
+// backgrounds/), picked randomly once per visit to the tab — see
+// pickRandomCatchBackground()/wireCatchGameEvents(). All are portrait
+// illustrations with their detail concentrated in the bottom third and a
+// plain sky gradient filling the rest, which is exactly what
+// `background-size: cover` + `background-position: bottom` needs to crop
+// sensibly into this field's much wider, shorter aspect ratio (see
+// .catch-game-field in the CSS) — the crop keeps the ground/subject the
+// basket "stands in" and trims the empty sky above it, on any screen size.
+const CATCH_BACKGROUNDS = [
+  { id: 'city', file: '01-city-street.jpg', label: 'City street' },
+  { id: 'mountains', file: '02-mountains.jpg', label: 'Mountains' },
+  { id: 'snow', file: '03-snow.jpg', label: 'Snowy hills' },
+  { id: 'farm', file: '04-green-farm.jpg', label: 'Green farm' },
+  { id: 'underwater', file: '05-underwater-ocean-floor.jpg', label: 'Underwater' },
+  { id: 'desert', file: '06-desert-dunes.jpg', label: 'Desert dunes' },
+  { id: 'sunset', file: '07-sunset-sky.jpg', label: 'Sunset sky' },
+  { id: 'forest', file: '08-forest-clearing.jpg', label: 'Forest clearing' },
+  { id: 'moonlit', file: '09-moonlit-landscape.jpg', label: 'Moonlit landscape' },
+  { id: 'space', file: '10-outer-space.jpg', label: 'Outer space' },
+  { id: 'beach', file: '11-sandy-beach.jpg', label: 'Sandy beach' },
+  { id: 'hills', file: '12-clouds-rolling-hills.jpg', label: 'Rolling hills' },
+];
+
+function pickRandomCatchBackground() {
+  return CATCH_BACKGROUNDS[Math.floor(Math.random() * CATCH_BACKGROUNDS.length)];
+}
+
 function shuffle(list) {
   const arr = [...list];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -738,17 +766,23 @@ let state = {
   // the badge threshold (see awardCatchGameBadgeIfEligible()), stored the
   // same way `done`/`badges` are. `game` is the transient round state —
   // never persisted, so a reload always lands back on an idle field —
-  // `status` is 'idle' (no round in flight) or 'playing' (words falling),
-  // `round` is the current buildCatchRound() result or null, `basketPct`
+  // `status` is 'idle' (nothing happening yet), 'countdown' (between
+  // rounds, see beginCatchCountdown()), or 'playing' (words falling);
+  // `round` is the current buildCatchRound() result or null; `basketPct`
   // is the basket's left-edge position as a % of the field's width (kept
-  // here so it survives the render() at the end of each round), and
-  // `feedback` is the last round's outcome message.
+  // here so it survives the render() at the end of each round);
+  // `feedback` is the last round's outcome message; `countdown` is the
+  // whole seconds left until the next round auto-starts; `backgroundId`
+  // is the CATCH_BACKGROUNDS entry picked for this visit to the tab (see
+  // wireCatchGameEvents()/stopCatchGame()).
   gameScore: Number(localStorage.catchGameScore) || 0,
   game: {
     status: 'idle',
     round: null,
     basketPct: catchBasketCenterPct(),
     feedback: null,
+    countdown: 0,
+    backgroundId: null,
   },
   // Whether Catch the Sound's ambient background hum plays — persisted
   // like voiceMode so muting it sticks across reloads instead of coming
@@ -1979,33 +2013,6 @@ function catchWordChipTemplate(option, index) {
   return `<div class="catch-word" data-catch-word data-index="${index}" style="left:${((index + 0.5) / state.game.round.options.length) * 100}%;top:-14%">${escapeHtml(option.text)}</div>`;
 }
 
-// A simple flat beach backdrop for the game field: light-blue sky, a sun in
-// the corner, and a sandy band along the bottom for the basket to stand in.
-// Reuses the exact --illus-* tokens the app's word-card SVG illustrations
-// already draw from (see WORD_SVGS/imageSvg()) so it reads as the same
-// flat illustration style rather than a second, unrelated art style — just
-// arranged as a wide backdrop instead of a single word icon. Purely
-// decorative and static (no per-frame updates), so it's plain markup
-// rendered once per round/render() rather than anything the game loop
-// touches. `preserveAspectRatio="none"` stretches to exactly fill the
-// field at any width rather than cropping — the field's real aspect
-// ratio varies with the browser window, and a "slice"/cover crop centered
-// on a much taller viewBox would push a corner sun mostly off-screen at
-// wide/short aspect ratios. A wide 3:1 viewBox (close to a typical
-// desktop field) keeps the stretch distortion on the sun/sand curves
-// minor at common sizes.
-function catchSceneTemplate() {
-  return `<svg class="catch-scene" viewBox="0 0 900 300" preserveAspectRatio="none" aria-hidden="true">
-    <rect width="900" height="300" class="cs-sky"/>
-    <circle class="cs-sun" cx="780" cy="72" r="40"/>
-    <path class="cs-shade" d="M780 32A40 40 0 0 1 780 112A54 54 0 0 0 780 32Z"/>
-    <circle class="cs-line" cx="780" cy="72" r="40" fill="none"/>
-    <ellipse class="cs-shine" cx="763" cy="57" rx="11" ry="7"/>
-    <path class="cs-sand-dark" d="M0 218q140-26 300-8t320 6t280-16V300H0Z"/>
-    <path class="cs-sand" d="M0 238q150-22 320-4t320 2t260-18V300H0Z"/>
-  </svg>`;
-}
-
 // A small colored woven-basket illustration (not a single-color stroke
 // icon like the nav tab's basket — see ICONS.basket) so it reads as a
 // real prop sitting in the sand: a tan body with a diagonal weave lattice
@@ -2047,21 +2054,39 @@ function catchScoreboardTemplate() {
   </div>`;
 }
 
+// Rounds advance on their own (see beginCatchCountdown()/finishCatchRound()
+// /wireCatchGameEvents()), so this status pill is a passive readout, not a
+// button: 'playing' while a word's spellings are falling, 'countdown'
+// (ticking down the seconds to the next round) right after one ends, and
+// a generic "Get ready…" for the brief instant before the very first
+// round of a visit kicks off. The little repeat button next to it is the
+// one manual control left — replaying the *current* round's word without
+// touching the round itself — so it only ever renders while a round (and
+// so a target word) actually exists.
+function catchStatusTemplate() {
+  const { status, round, countdown } = state.game;
+  const label = status === 'playing' ? 'Listening…' : status === 'countdown' ? `Next word in ${countdown}…` : 'Get ready…';
+  return `<div class="catch-status-group">
+    <span class="catch-status-badge ${status === 'countdown' ? 'is-counting' : ''}">${icon('speaker')}${label}</span>
+    ${round ? `<button class="catch-repeat-btn" data-catch-repeat aria-label="Replay this word's pronunciation">${icon('retry')}</button>` : ''}
+  </div>`;
+}
+
 function catchGameTemplate() {
-  const { status, round, basketPct, feedback } = state.game;
+  const { round, basketPct, feedback, backgroundId } = state.game;
+  const background = CATCH_BACKGROUNDS.find((entry) => entry.id === backgroundId) || CATCH_BACKGROUNDS[0];
   return `
     <section class="catch-game">
       <div class="catch-game-top">
-        <button class="catch-play-btn" data-catch-play ${status === 'playing' ? 'disabled' : ''}>${icon('speaker')}${status === 'playing' ? 'Listening…' : 'Play a word'}</button>
+        ${catchStatusTemplate()}
         <button class="catch-music-toggle ${state.musicOn ? 'is-on' : ''}" data-catch-music-toggle aria-pressed="${state.musicOn}">${icon('musicNote')}${state.musicOn ? 'Music on' : 'Music off'}</button>
         ${catchScoreboardTemplate()}
       </div>
-      <div class="catch-game-field" data-catch-field>
-        ${catchSceneTemplate()}
+      <div class="catch-game-field" data-catch-field style="background-image:url('src/assets/backgrounds/${background.file}')">
         ${round ? round.options.map((option, i) => catchWordChipTemplate(option, i)).join('') : ''}
         <div class="catch-basket" data-catch-basket style="left:${basketPct}%">${catchBasketSvg()}</div>
       </div>
-      <p class="catch-game-feedback ${feedback ? `is-${feedback.kind}` : ''}" data-catch-feedback aria-live="polite">${feedback ? escapeHtml(feedback.text) : 'Press "Play a word" to hear a word, then use the ← and → keys to catch its correct spelling before it lands.'}</p>
+      <p class="catch-game-feedback ${feedback ? `is-${feedback.kind}` : ''}" data-catch-feedback aria-live="polite">${feedback ? escapeHtml(feedback.text) : 'Listen for the word, then use the ← and → keys to catch its correct spelling before it lands.'}</p>
     </section>`;
 }
 
@@ -2094,10 +2119,10 @@ function instructionsTemplate() {
   }
   if (state.view === 'game') {
     return `<ol>
-        <li>Press "Play a word" to hear its pronunciation.</li>
-        <li>2-3 spellings fall from the top — only one is the correct spelling of the word you heard.</li>
+        <li>A word plays automatically — 2-3 spellings then fall from the top, only one of them correct. Missed the word? Tap the small repeat icon to hear it again.</li>
         <li>Move the basket with the ← and → arrow keys, Pong-paddle style, to catch the correct spelling before it reaches the ground.</li>
         <li>Catching the right word scores points based on its length; catching a wrong one costs you ${CATCH_GAME_CONFIG.wrongCatchPenalty} point${CATCH_GAME_CONFIG.wrongCatchPenalty === 1 ? '' : 's'}, and letting the right one fall ends the round with no points either way.</li>
+        <li>The next word starts on its own a few seconds after each round ends — no need to click anything between rounds.</li>
         <li>Score ${CATCH_GAME_BADGE_THRESHOLD} total points to earn the Catch the Sound badge — the game keeps going afterward, so every catch still counts.</li>
       </ol>`;
   }
@@ -2532,6 +2557,18 @@ let catchLoopHandle = null;
 // below stops looking for catches on chips that are about to be frozen
 // and removed by finishCatchRound().
 let catchRoundActive = false;
+// The pending "next round" timer — either the 3-second countdown after a
+// round ends (see beginCatchCountdown()) or nothing at all mid-round.
+// Cleared by stopCatchGame() so leaving the view can never leave a timer
+// armed to silently start a round (and speak a word) while unmounted.
+let catchAdvanceTimer = null;
+
+function stopCatchAdvanceTimer() {
+  if (catchAdvanceTimer) {
+    clearInterval(catchAdvanceTimer);
+    catchAdvanceTimer = null;
+  }
+}
 
 function stopCatchGame() {
   if (catchLoopHandle) {
@@ -2539,22 +2576,43 @@ function stopCatchGame() {
     catchLoopHandle = null;
   }
   catchRoundActive = false;
+  stopCatchAdvanceTimer();
   stopCatchMusic();
+  // Clearing this means wireCatchGameEvents() picks a fresh random
+  // background the next time the tab is opened — "the start of each game
+  // session" is treated as "each visit to this tab," which gives variety
+  // across sessions while a background never changes out from under the
+  // player mid-round (see catchGameTemplate()/CATCH_BACKGROUNDS).
+  state.game.backgroundId = null;
 }
 
 // ---------- Catch the Sound: ambient music ----------
-// A very quiet, code-synthesized drone via the Web Audio API — no audio
-// file, so there's nothing to fetch and nothing to loop-seam: the
-// oscillators just run continuously for as long as the Catch the Sound
-// view is mounted, which is inherently seamless (there's no clip boundary
-// to click or pop at). Square/triangle waveforms give it a lo-fi
-// "chiptune" timbre; a lowpass filter tames their harsher overtones down
-// into a soft hum rather than a buzz, and a very slow (20s) LFO breathes
-// the volume gently up and down so it feels alive without ever forming a
-// melody — the brief was "ambient hum, not a melody," so this
-// deliberately never plays discrete notes.
+// A very quiet, code-synthesized loop via the Web Audio API — no audio
+// file, so there's nothing to fetch and nothing to loop-seam: it's a live
+// sequence that just keeps scheduling itself for as long as the Catch the
+// Sound view is mounted, which is inherently seamless (there's no clip
+// boundary to click or pop at).
+//
+// This replaced an earlier version built from two detuned low
+// triangle/square drone tones — reported as sounding "static/haunting"
+// rather than pleasant. The redesign swaps that out for a bright C-major
+// pad (a plain root+fifth, no dissonant interval) under a soft, bouncy
+// four-note major arpeggio played one note at a time on a slow, steady
+// pulse — sine waves throughout (no harsh square/triangle overtones to
+// filter out), each melody note shaped with a quick soft attack and a
+// gentle decay so it reads as a cheerful little "plink" rather than a
+// sustained tone. It's still clearly a loop/texture rather than a real
+// tune: four notes, one pitch at a time, no variation.
 let catchAudioCtx = null;
 let catchMusicNodes = null;
+
+// C major pad, an octave+ below the melody so it sits underneath rather
+// than competing with it — root and fifth only (no third) to stay simple
+// and avoid any muddiness at the very low volume this plays at.
+const CATCH_MUSIC_PAD_FREQS = [130.81, 196.0]; // C3, G3
+// A bouncy little rise-and-fall in C major, one note every 900ms.
+const CATCH_MUSIC_MELODY = [523.25, 659.25, 783.99, 659.25]; // C5, E5, G5, E5
+const CATCH_MUSIC_NOTE_INTERVAL_MS = 900;
 
 function ensureCatchAudioCtx() {
   if (catchAudioCtx) return catchAudioCtx;
@@ -2564,63 +2622,77 @@ function ensureCatchAudioCtx() {
   return catchAudioCtx;
 }
 
+// Schedules one melody note and, unless the loop has been stopped in the
+// meantime (catchMusicNodes cleared by stopCatchMusic()), queues the next
+// one — this recursive setTimeout chain *is* the loop; there's no fixed
+// "track length" to restart. Each note is its own short-lived oscillator
+// (Web Audio oscillators are one-shot — start once, stop once) with its
+// own gain envelope, so notes never linger or overlap oddly.
+function scheduleCatchMelodyNote(ctx, destination, index) {
+  if (!catchMusicNodes) return;
+  const freq = CATCH_MUSIC_MELODY[index % CATCH_MUSIC_MELODY.length];
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  const noteGain = ctx.createGain();
+  noteGain.gain.setValueAtTime(0, now);
+  noteGain.gain.linearRampToValueAtTime(0.05, now + 0.08); // soft attack
+  noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65); // gentle decay
+  osc.connect(noteGain);
+  noteGain.connect(destination);
+  osc.start(now);
+  osc.stop(now + 0.7);
+  catchMusicNodes.melodyTimer = setTimeout(() => scheduleCatchMelodyNote(ctx, destination, index + 1), CATCH_MUSIC_NOTE_INTERVAL_MS);
+}
+
 function startCatchMusic() {
   if (!state.musicOn || catchMusicNodes) return;
   const ctx = ensureCatchAudioCtx();
   if (!ctx) return;
   if (ctx.state === 'suspended') ctx.resume();
 
-  // Kept deliberately faint (peak ~0.05) — this only ever has to be
-  // audible as ambience under the "Play a word" pronunciation and any
-  // catch effects, never compete with them.
+  // `master` only ever handles the fade in/out envelope (0 -> 1 -> 0);
+  // the actual loudness of each part (pad vs. melody notes) is set on
+  // their own gains below, kept faint enough that this only ever reads as
+  // ambience under the "Play a word" pronunciation and any catch effects,
+  // never competing with them.
   const master = ctx.createGain();
-  master.gain.value = 0.0001;
-  master.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 1.5);
+  master.gain.value = 0;
+  master.gain.linearRampToValueAtTime(1, ctx.currentTime + 1.5);
   master.connect(ctx.destination);
 
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 900;
-  filter.connect(master);
+  const padFilter = ctx.createBiquadFilter();
+  padFilter.type = 'lowpass';
+  padFilter.frequency.value = 700;
+  padFilter.connect(master);
 
-  // Two softly detuned low tones a fifth apart (A2 + E3).
-  const oscillators = [
-    { freq: 110, type: 'triangle', gain: 1 },
-    { freq: 164.81, type: 'square', gain: 0.4 },
-  ].map(({ freq, type, gain }) => {
+  const oscillators = CATCH_MUSIC_PAD_FREQS.map((freq) => {
     const osc = ctx.createOscillator();
-    osc.type = type;
+    osc.type = 'sine';
     osc.frequency.value = freq;
     const oscGain = ctx.createGain();
-    oscGain.gain.value = gain;
+    oscGain.gain.value = 0.018;
     osc.connect(oscGain);
-    oscGain.connect(filter);
+    oscGain.connect(padFilter);
     osc.start();
     return osc;
   });
 
-  const lfo = ctx.createOscillator();
-  lfo.type = 'sine';
-  lfo.frequency.value = 1 / 20; // one gentle swell every 20 seconds
-  const lfoGain = ctx.createGain();
-  lfoGain.gain.value = 0.015;
-  lfo.connect(lfoGain);
-  lfoGain.connect(master.gain);
-  lfo.start();
-
-  catchMusicNodes = { master, oscillators, lfo };
+  catchMusicNodes = { master, oscillators, melodyTimer: null };
+  scheduleCatchMelodyNote(ctx, master, 0);
 }
 
 function stopCatchMusic() {
   if (!catchMusicNodes || !catchAudioCtx) return;
-  const { master, oscillators, lfo } = catchMusicNodes;
+  const { master, oscillators, melodyTimer } = catchMusicNodes;
+  clearTimeout(melodyTimer);
   const ctx = catchAudioCtx;
   const now = ctx.currentTime;
   master.gain.cancelScheduledValues(now);
   master.gain.setValueAtTime(master.gain.value, now);
   master.gain.linearRampToValueAtTime(0, now + 0.4);
-  const nodes = [...oscillators, lfo];
-  setTimeout(() => nodes.forEach((node) => { try { node.stop(); } catch { /* already stopped */ } }), 500);
+  setTimeout(() => oscillators.forEach((node) => { try { node.stop(); } catch { /* already stopped */ } }), 500);
   catchMusicNodes = null;
 }
 
@@ -2765,11 +2837,35 @@ function spawnCatchScorePopup(delta, basketEl, fieldEl) {
 }
 
 function finishCatchRound(feedback, scoreDelta) {
-  state.game.status = 'idle';
   state.game.feedback = feedback;
   state.game.round = null;
   if (scoreDelta !== 0) applyCatchGameScore(scoreDelta);
   else render();
+  beginCatchCountdown();
+}
+
+// Rounds advance on their own now — no more clicking "Play a word" for
+// every single word. This starts (or restarts) the 3-second gap between
+// one round ending and the next one's word actually playing, ticking
+// state.game.countdown down once a second so catchGameTemplate() can show
+// it; playCatchRound() takes over the instant it reaches zero. Also used
+// (with the default 3s) the first time the Catch the Sound view is
+// mounted, so a fresh visit needs no click either — see
+// wireCatchGameEvents().
+function beginCatchCountdown(seconds = 3) {
+  stopCatchAdvanceTimer();
+  state.game.status = 'countdown';
+  state.game.countdown = seconds;
+  render();
+  catchAdvanceTimer = setInterval(() => {
+    state.game.countdown -= 1;
+    if (state.game.countdown <= 0) {
+      stopCatchAdvanceTimer();
+      playCatchRound();
+    } else {
+      render();
+    }
+  }, 1000);
 }
 
 // Applies a score change (positive for a correct catch, negative for the
@@ -2812,6 +2908,7 @@ function applyCatchGameScore(delta) {
 // changes into a single paint, which would skip the animation entirely.
 function playCatchRound() {
   if (state.game.status === 'playing') return;
+  stopCatchAdvanceTimer();
   state.game.round = buildCatchRound();
   state.game.status = 'playing';
   state.game.feedback = null;
@@ -2830,10 +2927,15 @@ function startCatchFall() {
   });
 }
 
-// Besides the arrow keys, this view has three controls: "Play a word",
-// the music mute toggle, and starting/stopping the basket/collision loop
-// (plus the ambient hum, see stopCatchGame()/startCatchMusic()) for as
-// long as the Catch the Sound view is mounted.
+// Rounds now advance on their own (see beginCatchCountdown()/
+// finishCatchRound()), so besides the arrow keys this view only has two
+// real controls left: the "repeat this word" button and the music mute
+// toggle, plus starting/stopping the basket/collision loop and the
+// ambient hum for as long as the view is mounted. This is also where a
+// fresh visit to the tab gets its background picked and its first round
+// kicked off — status is only ever 'idle' (with no round and no advance
+// timer already running) right after mount or a Reset, so this can't
+// double-fire on every render() while the game is already going.
 function wireCatchGameEvents() {
   if (state.view !== 'game') {
     stopCatchGame();
@@ -2841,8 +2943,15 @@ function wireCatchGameEvents() {
   }
   startCatchLoop();
   if (state.musicOn) startCatchMusic();
-  const playButton = $('[data-catch-play]');
-  if (playButton) playButton.onclick = () => playCatchRound();
+  if (!state.game.backgroundId) state.game.backgroundId = pickRandomCatchBackground().id;
+  if (state.game.status === 'idle' && !state.game.round && !catchAdvanceTimer) playCatchRound();
+  const repeatButton = $('[data-catch-repeat]');
+  if (repeatButton) {
+    repeatButton.onclick = () => {
+      const target = state.game.round && state.game.round.target;
+      if (target) speak(target.say || target.word, 'en-US');
+    };
+  }
   const musicButton = $('[data-catch-music-toggle]');
   if (musicButton) {
     musicButton.onclick = () => {
@@ -2919,7 +3028,8 @@ function render() {
     state.done = {};
     state.badges = {};
     state.gameScore = 0;
-    state.game = { status: 'idle', round: null, basketPct: catchBasketCenterPct(), feedback: null };
+    stopCatchAdvanceTimer();
+    state.game = { status: 'idle', round: null, basketPct: catchBasketCenterPct(), feedback: null, countdown: 0, backgroundId: state.game.backgroundId };
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
     localStorage.removeItem('catchGameScore');
