@@ -257,6 +257,32 @@ const WORDS = [
   { word: 'terminate', arabic: 'يُنْهِي', hint: 'to bring something to an end', visual: 'terminate', level: 1, sentence: "The company decided to terminate the old contract." },
 ];
 
+// ---------- Catch the Sound: curated word pool ----------
+// Catch the Sound (the falling-spelling arcade game) draws from this fixed
+// sample instead of whatever sound group/level a learner currently has
+// selected in the Learn tab — the game is meant to be playable on its own,
+// independent of Learn tab pacing/lock state. The sample was picked by hand
+// across the three word-length tiers the game scores against (see
+// catchGamePoints()): 11 short (3-4 letter) words, 15 medium (5-6 letter)
+// words, and 10 long (7+ letter) words, favoring common, kid-familiar
+// vocabulary within each tier and skipping anything obscure or archived.
+// Each entry must exactly match a WORDS[].word so the game can reuse that
+// word's existing say/sentence/pronunciation data rather than duplicating
+// it — add or remove words here (keeping them real WORDS entries) to
+// rebalance the pool.
+const CATCH_GAME_WORD_LIST = [
+  // 3-4 letters (+1 point)
+  'ace', 'ape', 'cake', 'gate', 'lake', 'game', 'name', 'safe', 'tape', 'wave', 'make',
+  // 5-6 letters (+2 points)
+  'brave', 'chase', 'crane', 'flame', 'frame', 'grace', 'plate', 'shade', 'space', 'trade', 'create', 'donate', 'locate', 'rotate', 'update',
+  // 7+ letters (+3 points)
+  'mandate', 'vibrate', 'isolate', 'operate', 'radiate', 'translate', 'activate', 'dominate', 'motivate', 'participate',
+];
+
+function catchGameWordPool() {
+  return CATCH_GAME_WORD_LIST.map((word) => WORDS.find((entry) => entry.word === word)).filter(Boolean);
+}
+
 // Each row is [pattern, ipa, note, exampleWord]. exampleWord is what actually
 // gets spoken by the "hear" button: bare grapheme fragments (e.g. "th",
 // "-tion") aren't real words and TTS mispronounces or guesses at them, and
@@ -532,6 +558,145 @@ function awardBadgeIfLevelComplete(groupId, level) {
   return badgeForLevel(groupId, level);
 }
 
+// ---------- Catch the Sound: scoring, decoys, badge ----------
+// Points scale with word length: 3-4 letters is the shortest tier already
+// used for "N-Letter Words" groupings across the Learn tab (see
+// groupTierLengths()), 5-6 covers the next couple of tiers, and 7+ covers
+// everything from "create"-length words up through "participate" — the
+// same short/medium/long split a teacher would draw by eye. See the PR
+// description for more on this choice.
+function catchGamePoints(word) {
+  const length = word.length;
+  if (length <= 4) return 1;
+  if (length <= 6) return 2;
+  return 3;
+}
+
+// Tunable knobs for Catch the Sound's pacing — adjust these to rebalance
+// the game without touching any of the logic below.
+const CATCH_GAME_CONFIG = {
+  fallDurationMs: 7000, // how long a falling word takes to reach the ground
+  basketSpeedPctPerSec: 65, // how fast the basket moves, in % of field width per second
+  basketWidthPct: 20, // basket width, as % of field width — must match .catch-basket's CSS width
+  minOptions: 2,
+  maxOptions: 3,
+};
+
+function shuffle(list) {
+  const arr = [...list];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Generates a close misspelling of a word for a decoy option — a random
+// transposition, doubled letter, dropped letter, or single vowel swap
+// (e.g. "cake" -> "caek"/"caake"/"cke"/"coke"). Retries with a different
+// strategy if an attempt happens to reproduce the original word (e.g.
+// transposing two identical adjacent letters) or something already in
+// `avoid`, falling back to a guaranteed-distinct mangling in the
+// astronomically unlikely case every randomized attempt collides.
+function misspellWord(word, avoid) {
+  const strategies = [
+    (w) => {
+      if (w.length < 3) return null;
+      const i = 1 + Math.floor(Math.random() * (w.length - 2));
+      const chars = [...w];
+      [chars[i], chars[i + 1]] = [chars[i + 1], chars[i]];
+      return chars.join('');
+    },
+    (w) => {
+      const i = Math.floor(Math.random() * w.length);
+      return w.slice(0, i) + w[i] + w.slice(i);
+    },
+    (w) => {
+      if (w.length < 4) return null;
+      const i = 1 + Math.floor(Math.random() * (w.length - 1));
+      return w.slice(0, i) + w.slice(i + 1);
+    },
+    (w) => {
+      const vowels = 'aeiou';
+      const positions = [...w].map((c, i) => (vowels.includes(c) ? i : -1)).filter((i) => i !== -1);
+      if (!positions.length) return null;
+      const i = positions[Math.floor(Math.random() * positions.length)];
+      const replacements = [...vowels].filter((v) => v !== w[i]);
+      const replacement = replacements[Math.floor(Math.random() * replacements.length)];
+      return w.slice(0, i) + replacement + w.slice(i + 1);
+    },
+  ];
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const strategy = strategies[Math.floor(Math.random() * strategies.length)];
+    const candidate = strategy(word);
+    if (candidate && candidate !== word && !avoid.has(candidate)) return candidate;
+  }
+  return `${word}x`;
+}
+
+// Picks a different real word from the Catch the Sound pool as a decoy —
+// prefers one the same length as the target so the falling chips read as
+// similarly-shaped words, falling back to any other pool word if none
+// match that length.
+function realWordDecoy(target, pool, avoid) {
+  const sameLength = pool.filter((entry) => entry.word !== target.word && entry.word.length === target.word.length && !avoid.has(entry.word));
+  const anyOther = pool.filter((entry) => entry.word !== target.word && !avoid.has(entry.word));
+  const candidates = sameLength.length ? sameLength : anyOther;
+  if (!candidates.length) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)].word;
+}
+
+// Builds one round: a target word plus 1-2 decoys, each independently
+// either a close misspelling or a different real word from the pool, so
+// the decoy style varies from round to round instead of always being the
+// same kind of distractor. Options are shuffled before being assigned to
+// falling lanes so the correct spelling isn't predictably in one spot.
+function buildCatchRound() {
+  const pool = catchGameWordPool();
+  const target = pool[Math.floor(Math.random() * pool.length)];
+  const optionCount = Math.random() < 0.5 ? CATCH_GAME_CONFIG.minOptions : CATCH_GAME_CONFIG.maxOptions;
+  const used = new Set([target.word]);
+  const decoys = [];
+  for (let i = 0; i < optionCount - 1; i++) {
+    const useMisspelling = Math.random() < 0.5;
+    let decoyText = useMisspelling ? misspellWord(target.word, used) : realWordDecoy(target, pool, used);
+    if (!decoyText) decoyText = misspellWord(target.word, used);
+    used.add(decoyText);
+    decoys.push(decoyText);
+  }
+  const options = shuffle([{ text: target.word, correct: true }, ...decoys.map((text) => ({ text, correct: false }))]);
+  return { target, options };
+}
+
+// Catch the Sound's one badge — awarded once, the moment the persisted
+// total score reaches CATCH_GAME_BADGE_THRESHOLD, reusing the exact same
+// badge storage (state.badges), medal rendering (badgeMedalTemplate()),
+// and celebration-toast plumbing as every level badge (see
+// awardBadgeIfLevelComplete()/toggleDone()) rather than a separate reward
+// system. It isn't tied to a sound group/level like those badges are, so
+// it gets its own fixed id/shape instead of going through badgeForLevel().
+const CATCH_GAME_BADGE_THRESHOLD = 10;
+const CATCH_GAME_BADGE_ID = 'catch-the-sound::badge';
+
+function catchGameBadge() {
+  const colors = badgeColor(1, 1);
+  return {
+    id: CATCH_GAME_BADGE_ID,
+    label: 'Catch the Sound',
+    affirmation: 'Great ears!',
+    color: colors.base,
+    colorLight: colors.light,
+  };
+}
+
+function awardCatchGameBadgeIfEligible() {
+  if (state.gameScore < CATCH_GAME_BADGE_THRESHOLD) return null;
+  if (state.badges[CATCH_GAME_BADGE_ID]) return null;
+  state.badges[CATCH_GAME_BADGE_ID] = { earnedAt: Date.now() };
+  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  return catchGameBadge();
+}
+
 let state = {
   view: 'learn',
   soundGroup: SOUND_GROUPS[0].id,
@@ -558,6 +723,22 @@ let state = {
   groupCelebration: null,
   badgeShelfOpen: false,
   practice: {},
+  // Catch the Sound: `gameScore` is the persisted running total that feeds
+  // the badge threshold (see awardCatchGameBadgeIfEligible()), stored the
+  // same way `done`/`badges` are. `game` is the transient round state —
+  // never persisted, so a reload always lands back on an idle field —
+  // `status` is 'idle' (no round in flight) or 'playing' (words falling),
+  // `round` is the current buildCatchRound() result or null, `basketPct`
+  // is the basket's left-edge position as a % of the field's width (kept
+  // here so it survives the render() at the end of each round), and
+  // `feedback` is the last round's outcome message.
+  gameScore: Number(localStorage.catchGameScore) || 0,
+  game: {
+    status: 'idle',
+    round: null,
+    basketPct: 40,
+    feedback: null,
+  },
   // Reading Activity and Roll and Read — per-level alternatives to the
   // word-card grid (see learnModeToggleTemplate()/readingActivityTemplate()/
   // rollReadTemplate()). `learnMode` switches the Learn tab's main panel
@@ -634,6 +815,7 @@ const ICONS = {
   bolt: '<path d="M13 2 5 14h5l-1 8 8-12h-5z" fill="currentColor" stroke="none"/>',
   medal: '<path d="M8.5 3h7l-2.6 7.4h-1.8z"/><circle cx="12" cy="15" r="6"/><path d="M12 12.2l1.1 2.3 2.5.4-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.4z" fill="currentColor" stroke="none"/>',
   dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.3" fill="currentColor" stroke="none"/>',
+  basket: '<path d="M4 10h16l-1.6 9.3a2 2 0 0 1-2 1.7H7.6a2 2 0 0 1-2-1.7z"/><path d="M8 10l1-5h6l1 5"/><path d="M9 13.5v3.5M12 13.5v3.5M15 13.5v3.5"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -1770,6 +1952,55 @@ function practiceTemplate() {
   }).join('')}</section>`;
 }
 
+// ---------- Catch the Sound: view ----------
+// One falling-spelling option chip. `left` centers it on its lane (see
+// catchGameTemplate()) via a translateX(-50%) transform, and it starts at
+// top:-14% (just above the visible field) with no transition set inline —
+// the fall itself is kicked off afterward by startCatchFall(), which is
+// what actually assigns the CSS transition, so the very first paint always
+// shows every chip resting just above the field before any of them move.
+function catchWordChipTemplate(option, index) {
+  return `<div class="catch-word" data-catch-word data-index="${index}" style="left:${((index + 0.5) / state.game.round.options.length) * 100}%;top:-14%">${escapeHtml(option.text)}</div>`;
+}
+
+function catchGameTemplate() {
+  const { status, round, basketPct, feedback } = state.game;
+  return `
+    <section class="catch-game">
+      <div class="catch-game-top">
+        <button class="catch-play-btn" data-catch-play ${status === 'playing' ? 'disabled' : ''}>${icon('speaker')}${status === 'playing' ? 'Listening…' : 'Play a word'}</button>
+        <div class="catch-game-scoreboard">
+          <span class="catch-game-score-label">Total score</span>
+          <span class="catch-game-score-value">${state.gameScore}<span class="catch-game-score-goal">/${CATCH_GAME_BADGE_THRESHOLD}</span></span>
+        </div>
+      </div>
+      <div class="catch-game-field" data-catch-field>
+        ${round ? round.options.map((option, i) => catchWordChipTemplate(option, i)).join('') : ''}
+        <div class="catch-ground-line" aria-hidden="true"></div>
+        <div class="catch-basket" data-catch-basket style="left:${basketPct}%">${icon('basket')}</div>
+      </div>
+      <p class="catch-game-feedback ${feedback ? `is-${feedback.kind}` : ''}" data-catch-feedback aria-live="polite">${feedback ? escapeHtml(feedback.text) : 'Press "Play a word" to hear a word, then use the ← and → keys to catch its correct spelling before it lands.'}</p>
+    </section>`;
+}
+
+// The Catch the Sound badge, shown alongside every sound group's badge row
+// in the shelf even though it isn't tied to a sound group/level (see
+// catchGameBadge()).
+function catchGameBadgeShelfSectionTemplate() {
+  const badge = catchGameBadge();
+  const earned = !!state.badges[badge.id];
+  return `<section class="badge-shelf-group">
+    <h3>Catch the Sound</h3>
+    <div class="badge-shelf-grid">
+      <div class="badge-shelf-item ${earned ? '' : 'is-locked'}">
+        ${badgeMedalTemplate(badge, { size: 'md', earned })}
+        <span class="badge-shelf-item-label">${escapeHtml(badge.label)}</span>
+        <span class="badge-shelf-item-affirmation">${earned ? escapeHtml(badge.affirmation) : `Score ${CATCH_GAME_BADGE_THRESHOLD} points to unlock`}</span>
+      </div>
+    </div>
+  </section>`;
+}
+
 function instructionsTemplate() {
   if (state.view === 'practice') {
     return `<ol>
@@ -1777,6 +2008,15 @@ function instructionsTemplate() {
         <li>Press "Try it", allow microphone access, and say the word clearly.</li>
         <li>Feedback names which sound was off (the target vowel/digraph sound vs. the whole word), not just right or wrong.</li>
         <li>Some words share a spelling but not a sound (e.g. "ea" in "bread" vs. "beach") — each card is matched to its own word, not the letter pattern.</li>
+      </ol>`;
+  }
+  if (state.view === 'game') {
+    return `<ol>
+        <li>Press "Play a word" to hear its pronunciation.</li>
+        <li>2-3 spellings fall from the top — only one is the correct spelling of the word you heard.</li>
+        <li>Move the basket with the ← and → arrow keys, Pong-paddle style, to catch the correct spelling before it reaches the ground.</li>
+        <li>Catching the right word scores points based on its length; catching a wrong one, or letting the right one fall, ends the round with no points.</li>
+        <li>Score ${CATCH_GAME_BADGE_THRESHOLD} total points to earn the Catch the Sound badge.</li>
       </ol>`;
   }
   return `<ol>
@@ -1961,6 +2201,12 @@ function wireAdminEvents() {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (state.view === 'game' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    event.preventDefault();
+    if (event.key === 'ArrowLeft') catchKeys.left = true;
+    else catchKeys.right = true;
+    return;
+  }
   if (event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
     event.preventDefault();
     state.admin = !state.admin;
@@ -1976,6 +2222,10 @@ document.addEventListener('keydown', (event) => {
   } else if (event.key === 'Escape' && state.celebration) {
     dismissCelebration();
   }
+});
+document.addEventListener('keyup', (event) => {
+  if (event.key === 'ArrowLeft') catchKeys.left = false;
+  else if (event.key === 'ArrowRight') catchKeys.right = false;
 });
 
 // Keeps state.soundGroup/state.level pointing at something real and, for
@@ -2081,7 +2331,8 @@ function badgeShelfTemplate() {
         <h2>${icon('medal')}Badge shelf <span class="badge-shelf-total">${total} earned</span></h2>
         <button class="admin-icon-btn" data-close-badge-shelf aria-label="Close">${icon('close')}</button>
       </div>
-      ${groups.length ? groups.map(badgeShelfGroupTemplate).join('') : '<p class="hint">No badges yet — complete a level to earn your first one.</p>'}
+      ${groups.map(badgeShelfGroupTemplate).join('')}
+      ${catchGameBadgeShelfSectionTemplate()}
     </div>
   </div>`;
 }
@@ -2187,6 +2438,183 @@ function wireRollReadEvents() {
   };
 }
 
+// ---------- Catch the Sound: game loop ----------
+// Which arrow keys are currently held, updated by the keydown/keyup
+// listeners near the bottom of this file. Kept as plain module state
+// (not state.game) because it changes at keystroke rate and never needs
+// to survive a render() or a reload.
+const catchKeys = { left: false, right: false };
+let catchLoopHandle = null;
+// Whether the current round is still eligible to be caught. Set false the
+// instant any chip resolves the round, so the collision check in the loop
+// below stops looking for catches on chips that are about to be frozen
+// and removed by finishCatchRound().
+let catchRoundActive = false;
+
+function stopCatchGame() {
+  if (catchLoopHandle) {
+    cancelAnimationFrame(catchLoopHandle);
+    catchLoopHandle = null;
+  }
+  catchRoundActive = false;
+}
+
+// Runs continuously while the Catch the Sound view is mounted (started/
+// stopped by wireCatchGameEvents()), independent of whether a round is
+// actually in flight — the basket stays responsive to the arrow keys even
+// between rounds. Moves/reads the DOM directly rather than through
+// state+render() because it has to run at animation-frame rate; rebuilding
+// the whole app's innerHTML that often would be wasteful and would
+// visibly stutter the basket, the same reasoning as the Reading Activity
+// ball (see updateReadingWordHighlight()).
+function startCatchLoop() {
+  if (catchLoopHandle) return;
+  let last = performance.now();
+  const tick = (now) => {
+    const dt = (now - last) / 1000;
+    last = now;
+    stepCatchBasket(dt);
+    if (catchRoundActive) checkCatchCollisions();
+    catchLoopHandle = requestAnimationFrame(tick);
+  };
+  catchLoopHandle = requestAnimationFrame(tick);
+}
+
+function stepCatchBasket(dt) {
+  const basket = $('[data-catch-basket]');
+  if (!basket) return;
+  let pct = state.game.basketPct;
+  const delta = CATCH_GAME_CONFIG.basketSpeedPctPerSec * dt;
+  if (catchKeys.left) pct -= delta;
+  if (catchKeys.right) pct += delta;
+  const max = 100 - CATCH_GAME_CONFIG.basketWidthPct;
+  pct = Math.max(0, Math.min(max, pct));
+  state.game.basketPct = pct;
+  basket.style.left = `${pct}%`;
+}
+
+function checkCatchCollisions() {
+  const basket = $('[data-catch-basket]');
+  if (!basket) return;
+  const basketRect = basket.getBoundingClientRect();
+  document.querySelectorAll('[data-catch-word]').forEach((el) => {
+    if (el.dataset.resolved) return;
+    const rect = el.getBoundingClientRect();
+    const overlapsX = rect.right > basketRect.left && rect.left < basketRect.right;
+    const overlapsY = rect.bottom > basketRect.top && rect.top < basketRect.bottom;
+    if (overlapsX && overlapsY) resolveCatchWord(el, 'caught');
+  });
+}
+
+// Handles one falling chip either being caught by the basket or reaching
+// the ground (`reason` is 'caught' or 'landed'). A decoy simply landing
+// uninterrupted doesn't end the round — the target may still be falling —
+// so that's the one case that returns without resolving anything. Every
+// other case ends the round: freezes every remaining chip exactly where
+// it currently sits (rather than letting an in-flight CSS transition snap
+// it straight to its end position) and hands off to finishCatchRound()
+// after a short pause so the triggering chip's outcome color is visible.
+function resolveCatchWord(el, reason) {
+  if (el.dataset.resolved) return;
+  el.dataset.resolved = 'true';
+  const option = state.game.round.options[Number(el.dataset.index)];
+  if (reason === 'landed' && !option.correct) return;
+
+  let outcomeClass, feedback, points = 0;
+  if (reason === 'caught' && option.correct) {
+    points = catchGamePoints(option.text);
+    outcomeClass = 'is-correct';
+    feedback = { kind: 'correct', text: `Caught it! "${option.text}" is right — +${points} point${points === 1 ? '' : 's'}.` };
+  } else if (reason === 'caught') {
+    outcomeClass = 'is-wrong';
+    feedback = { kind: 'wrong', text: `"${option.text}" isn't the right spelling — that catch missed the mark.` };
+  } else {
+    outcomeClass = 'is-missed';
+    feedback = { kind: 'missed', text: `Missed it — the correct spelling was "${option.text}".` };
+  }
+  el.classList.add(outcomeClass);
+  catchRoundActive = false;
+  const field = $('[data-catch-field]');
+  const fieldRect = field ? field.getBoundingClientRect() : null;
+  document.querySelectorAll('[data-catch-word]').forEach((chip) => {
+    if (fieldRect) {
+      const chipRect = chip.getBoundingClientRect();
+      chip.style.top = `${((chipRect.top - fieldRect.top) / fieldRect.height) * 100}%`;
+    }
+    chip.style.transition = 'none';
+    chip.dataset.resolved = 'true';
+  });
+  setTimeout(() => finishCatchRound(feedback, points), 550);
+}
+
+function finishCatchRound(feedback, points) {
+  state.game.status = 'idle';
+  state.game.feedback = feedback;
+  state.game.round = null;
+  if (points > 0) awardCatchGamePoints(points);
+  else render();
+}
+
+// Adds points to the persisted score and, the moment the running total
+// first reaches the badge threshold, awards the badge and shows the same
+// celebration toast level-completion badges use (see toggleDone()) — they
+// share state.celebration/celebrationTimer, which is fine since both are
+// only ever triggered by an explicit player action, never concurrently.
+function awardCatchGamePoints(points) {
+  state.gameScore += points;
+  localStorage.catchGameScore = String(state.gameScore);
+  const badge = awardCatchGameBadgeIfEligible();
+  if (badge) {
+    clearTimeout(celebrationTimer);
+    state.celebration = badge;
+    celebrationTimer = setTimeout(() => {
+      state.celebration = null;
+      render();
+    }, 2200);
+  }
+  render();
+}
+
+// Kicks off one round: builds it, renders the shell with every chip
+// resting just above the field (see catchWordChipTemplate()), speaks the
+// target word aloud, then waits two animation frames before starting the
+// fall — one frame to guarantee the browser has painted the chips at
+// their starting position, a second to guarantee that paint has actually
+// happened, before the transition's end state is applied. Skipping this
+// (or using only one frame) risks the browser coalescing both style
+// changes into a single paint, which would skip the animation entirely.
+function playCatchRound() {
+  if (state.game.status === 'playing') return;
+  state.game.round = buildCatchRound();
+  state.game.status = 'playing';
+  state.game.feedback = null;
+  render();
+  speak(state.game.round.target.say || state.game.round.target.word, 'en-US');
+  requestAnimationFrame(() => requestAnimationFrame(startCatchFall));
+}
+
+function startCatchFall() {
+  catchRoundActive = true;
+  document.querySelectorAll('[data-catch-word]').forEach((el) => {
+    el.style.transition = `top ${CATCH_GAME_CONFIG.fallDurationMs}ms linear`;
+    el.style.top = '100%';
+    el.addEventListener('transitionend', () => resolveCatchWord(el, 'landed'), { once: true });
+  });
+}
+
+// The "Play a word" button is the only control besides the arrow keys, so
+// this only needs (re)binding it and starting/stopping the basket/
+// collision loop for as long as the Catch the Sound view is mounted.
+function wireCatchGameEvents() {
+  if (state.view !== 'game') {
+    stopCatchGame();
+    return;
+  }
+  startCatchLoop();
+  const playButton = $('[data-catch-play]');
+  if (playButton) playButton.onclick = () => playCatchRound();
+}
+
 function render() {
   normalizeSelection();
   const activeWords = WORDS.filter((word) => !word.archived);
@@ -2208,6 +2636,7 @@ function render() {
         <button data-view="learn" role="tab" aria-selected="${state.view === 'learn'}" class="${state.view === 'learn' ? 'active' : ''}">${icon('book')}Learn words</button>
         <button data-view="rules" role="tab" aria-selected="${state.view === 'rules'}" class="${state.view === 'rules' ? 'active' : ''}">${icon('eye')}Rules</button>
         <button data-view="practice" role="tab" aria-selected="${state.view === 'practice'}" class="${state.view === 'practice' ? 'active' : ''}">${icon('mic')}Sound Practice</button>
+        <button data-view="game" role="tab" aria-selected="${state.view === 'game'}" class="${state.view === 'game' ? 'active' : ''}">${icon('basket')}Catch the Sound</button>
       </div>
       <div class="controls-bar">
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
@@ -2224,7 +2653,7 @@ function render() {
     </section>
     <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
       ${state.view === 'learn' ? sidebarTemplate() : ''}
-      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : practiceTemplate()}</div>
+      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : practiceTemplate()}</div>
     </div>
     <footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
@@ -2238,6 +2667,7 @@ function render() {
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
     stopReadingPlayback();
     stopRollAnimation();
+    stopCatchGame();
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
     setState('view', button.dataset.view);
@@ -2248,8 +2678,11 @@ function render() {
   $('[data-reset]').onclick = () => {
     state.done = {};
     state.badges = {};
+    state.gameScore = 0;
+    state.game = { status: 'idle', round: null, basketPct: 40, feedback: null };
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
+    localStorage.removeItem('catchGameScore');
     render();
   };
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
@@ -2287,6 +2720,7 @@ function render() {
   wireAdminEvents();
   wireReadingEvents();
   wireRollReadEvents();
+  wireCatchGameEvents();
 }
 
 render();
