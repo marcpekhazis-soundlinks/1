@@ -79,7 +79,10 @@ const WORDS = [
   { word: 'lace', arabic: 'دَانْتِيلٌ / رِبَاطُ الْحِذَاءِ', hint: 'delicate patterned fabric, or a shoe string', visual: 'lace', level: 1, sentence: "Her dress was trimmed with lace." },
   { word: 'lade', arabic: 'يُحَمِّلُ (سَفِينَةً)', hint: 'to load a ship with cargo', visual: 'lade', level: 1, sentence: "Workers began to lade the ship with boxes." },
   { word: 'lake', arabic: 'بُحَيْرَةٌ', hint: 'a large body of water surrounded by land', visual: 'lake', level: 1, sentence: "We swam in the lake all afternoon." },
-  { word: 'lame', arabic: 'أَعْرَجُ', hint: 'having an injured leg that makes walking hard', visual: 'lame', level: 1, sentence: "He walked with a limp because his leg was lame." },
+  // say: 'laym' — TTS adds a spurious extra syllable to bare "lame"
+  // (reads like "lamy"); the respelling forces the plain one-syllable
+  // /leɪm/ that rhymes with "game".
+  { word: 'lame', arabic: 'أَعْرَجُ', hint: 'having an injured leg that makes walking hard', visual: 'lame', level: 1, say: 'laym', sentence: "He walked with a limp because his leg was lame." },
   { word: 'lane', arabic: 'مَمَرٌّ / حَارَةٌ', hint: 'a narrow road or path', visual: 'lane', level: 1, sentence: "Stay in your lane while driving." },
   { word: 'late', arabic: 'مُتَأَخِّرٌ', hint: 'after the right or expected time', visual: 'late', level: 1, sentence: "I was late for school this morning." },
   { word: 'lase', arabic: 'يُصْدِرُ شُعَاعَ لَيْزَرٍ', hint: 'to give off a beam of laser light', visual: 'lase', level: 1, sentence: "The device can lase a bright red beam." },
@@ -217,7 +220,13 @@ const WORDS = [
   { word: 'activate', arabic: 'يُنَشِّطُ / يُفَعِّلُ', hint: 'to make something start working', visual: 'activate', level: 1, sentence: "Press the button to activate the alarm." },
   { word: 'allocate', arabic: 'يُخَصِّصُ', hint: 'to give a share of something for a certain purpose', visual: 'allocate', level: 1, sentence: "The teacher will allocate time for each group." },
   { word: 'amputate', arabic: 'يَبْتُرُ', hint: 'to remove a body part by surgery', visual: 'amputate', level: 1, sentence: "The surgeon had to amputate the injured toe." },
-  { word: 'conflate', arabic: 'يَخْلِطُ / يَدْمُجُ خَطَأً', hint: 'to mistakenly treat two different things as one', visual: 'conflate', level: 1, sentence: "Don't conflate these two different problems." },
+  // say: 'konflate' — TTS reads bare "conflate" letter-by-letter
+  // ("C-O-N-F-late") instead of as one word; the leading "conf" is a
+  // recognized abbreviation (conference/confidential) to some
+  // text-normalizers, and swapping it for "konf" (identical /k/ sound)
+  // avoids that abbreviation match while forcing the normal word reading
+  // /kənˈfleɪt/.
+  { word: 'conflate', arabic: 'يَخْلِطُ / يَدْمُجُ خَطَأً', hint: 'to mistakenly treat two different things as one', visual: 'conflate', level: 1, say: 'konflate', sentence: "Don't conflate these two different problems." },
   { word: 'decorate', arabic: 'يُزَيِّنُ', hint: 'to make something look nicer by adding pretty things', visual: 'decorate', level: 1, sentence: "We decorate the tree every winter." },
   { word: 'dominate', arabic: 'يُهَيْمِنُ / يُسَيْطِرُ', hint: 'to have the most power or control over something', visual: 'dominate', level: 1, sentence: "The strong team began to dominate the game." },
   { word: 'elongate', arabic: 'يُطِيلُ / يُمَدِّدُ', hint: 'to make something longer', visual: 'elongate', level: 1, sentence: "Stretching can elongate your muscles." },
@@ -229,7 +238,11 @@ const WORDS = [
   // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
   // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
   // flags it too.
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, longAIndices: [5], sentence: "She will graduate from high school this year." },
+  // say: 'graduayt' — same noun/verb heteronym issue as "estimate"/
+  // "moderate": TTS defaults the isolated word to the noun's short final
+  // vowel /ˈɡrædʒuɪt/ ("a graduate"); the respelling forces the verb's
+  // long-a /ˈɡrædʒueɪt/ that this card is actually teaching.
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, longAIndices: [5], say: 'graduayt', sentence: "She will graduate from high school this year." },
   { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, sentence: "The teacher will initiate the new project today." },
   // Arabic hint corrected to the verb sense used here ("moderate a
   // debate"), not the adjective sense ("in the middle").
