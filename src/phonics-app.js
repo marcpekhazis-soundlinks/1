@@ -162,7 +162,11 @@ const WORDS = [
   { word: 'flame', arabic: 'لَهَبٌ', hint: 'the bright, hot part of a fire', visual: 'flame', level: 1, sentence: "The candle's flame flickered in the breeze." },
   { word: 'flare', arabic: 'وَهَجٌ / شُعْلَةٌ مُضِيئَةٌ', hint: 'a sudden bright burst of light', visual: 'flare', level: 1, archived: true, sentence: "A bright flare lit up the night sky." },
   { word: 'frame', arabic: 'إِطَارٌ', hint: 'a border that holds a picture', visual: 'frame', level: 1, sentence: "He hung the picture in a wooden frame." },
-  { word: 'glaze', arabic: 'طِلَاءٌ لَامِعٌ', hint: 'a shiny coating on food or pottery', visual: 'glaze', level: 1, sentence: "The baker added a sweet glaze to the donuts." },
+  // sentenceSay: donuts -> 'DOH-nuts' — TTS reads "donuts" in this
+  // sentence as "donets"; the respelling (see speechTextFor()) fixes just
+  // that incidental word's audio without touching the displayed sentence
+  // or glaze's own pronunciation.
+  { word: 'glaze', arabic: 'طِلَاءٌ لَامِعٌ', hint: 'a shiny coating on food or pottery', visual: 'glaze', level: 1, sentenceSay: { donuts: 'DOH-nuts' }, sentence: "The baker added a sweet glaze to the donuts." },
   { word: "grace", arabic: "رَشَاقَةٌ / نِعْمَةٌ", hint: "smooth and elegant movement", visual: "grace", level: 1, svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"205\" rx=\"70\" ry=\"10\"/><ellipse class=\"i-water\" cx=\"130\" cy=\"160\" rx=\"55\" ry=\"35\"/><ellipse class=\"i-line\" cx=\"130\" cy=\"160\" rx=\"55\" ry=\"35\" fill=\"none\"/><path class=\"i-water\" d=\"M150 135c10-45 30-70 55-75-5 20-15 30-10 40 8-5 18-5 25 2-20 15-45 25-70 33z\"/><path class=\"i-line\" d=\"M150 135c10-45 30-70 55-75-5 20-15 30-10 40 8-5 18-5 25 2-20 15-45 25-70 33z\" fill=\"none\"/><circle class=\"i-ink\" cx=\"198\" cy=\"72\" r=\"4\"/>", sentence: "The dancer moved with grace." },
   { word: 'grate', arabic: 'شَبَكَةٌ مَعْدِنِيَّةٌ', hint: 'a metal grid, like over a drain', visual: 'grate', level: 1, sentence: "Water drained through the metal grate." },
   { word: 'grave', arabic: 'قَبْرٌ', hint: 'the place where someone is buried', visual: 'grave', level: 1, sentence: "Flowers were placed by the grave." },
@@ -951,15 +955,29 @@ function tokenizeWords(text) {
 // respelling (see the pronunciation-fix comments throughout WORDS, e.g.
 // "vase" -> "vaze"), the same fix is applied inside the sentence so the
 // target word is spoken correctly there too — not just on the lone
-// word-card button. Every `say` respelling swaps exactly one word for
-// another single word, so the spoken text always has the same word count,
-// in the same order, as the displayed sentence. That's what lets
-// highlighting stay correct by *word index* below, without ever needing to
-// map character offsets between two differently-spelled strings.
+// word-card button. `sentenceSay` is the same idea for a *different* word
+// that merely appears in this item's own example sentence (e.g. "donuts"
+// in glaze's) — a {word: respelling} map, applied after the headword's
+// own `say` swap. Every respelling — `say` or an entry in `sentenceSay` —
+// swaps exactly one word for another single word (a hyphenated respelling
+// like "DOH-nuts" still counts as one token), so the spoken text always
+// has the same word count, in the same order, as the displayed sentence.
+// That's what lets highlighting stay correct by *word index* below,
+// without ever needing to map character offsets between two
+// differently-spelled strings.
 function speechTextFor(item) {
-  if (!item.say) return item.sentence;
-  const pattern = new RegExp(`\\b${item.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-  return item.sentence.replace(pattern, item.say);
+  let text = item.sentence;
+  if (item.say) {
+    const pattern = new RegExp(`\\b${item.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    text = text.replace(pattern, item.say);
+  }
+  if (item.sentenceSay) {
+    for (const [word, say] of Object.entries(item.sentenceSay)) {
+      const pattern = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      text = text.replace(pattern, say);
+    }
+  }
+  return text;
 }
 
 // Reading Activity speed control. Each step is *exactly* half the
