@@ -1431,6 +1431,7 @@ function startPractice(item) {
       const transcript = best.transcript.trim().toLowerCase();
       const comparison = PhonemeMatch.compare(item.word, transcript, item.targetIndex);
       const message = PhonemeMatch.feedbackFor(item, comparison);
+      console.debug(`[Sound Practice] target="${item.word}" heard="${transcript}" match=${comparison.match} closeMatch=${!!comparison.closeMatch} failingSound=${comparison.failingSound}`);
       state.practice[item.word] = {
         status: comparison.match ? 'correct' : 'incorrect',
         transcript,
