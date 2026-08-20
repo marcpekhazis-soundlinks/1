@@ -2069,7 +2069,11 @@ function practiceTemplate() {
         <button data-say="${item.word}" data-lang="en-US">${icon('speaker')}Hear it</button>
         <button data-practice="${item.word}" class="${status === 'listening' ? 'is-listening' : ''}" ${status === 'listening' ? 'disabled' : ''}>${icon('mic')}${status === 'listening' ? 'Listening…' : 'Try it'}</button>
       </div>
-      ${result ? `<p class="practice-feedback practice-${status}"><span class="feedback-icon" aria-hidden="true">${icon(FEEDBACK_ICON[status] || 'alert')}</span><span>${escapeHtml(result.message)}${result.transcript ? ` <em>(heard: "${escapeHtml(result.transcript)}")</em>` : ''}</span></p>` : ''}
+      ${result ? `<p class="practice-feedback practice-${status}"><span class="feedback-icon" aria-hidden="true">${icon(FEEDBACK_ICON[status] || 'alert')}</span><span>${escapeHtml(result.message)}</span></p>` : ''}
+      ${result && status !== 'listening' ? `<p class="practice-debug">
+        <span>Heard: <strong>${result.transcript ? `"${escapeHtml(result.transcript)}"` : '(nothing recognized)'}</strong></span>
+        <span>Comparing against: <strong>"${escapeHtml(item.word)}"</strong></span>
+      </p>` : ''}
     </article>`;
   }).join('')}</section>`;
 }
