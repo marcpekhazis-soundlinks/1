@@ -805,12 +805,11 @@ let state = {
   // like voiceMode so muting it sticks across reloads instead of coming
   // back on every time. See startCatchMusic()/stopCatchMusic().
   musicOn: localStorage.catchMusicOn !== 'off',
-  // Reading Activity and Roll and Read — per-level alternatives to the
-  // word-card grid (see learnModeToggleTemplate()/readingActivityTemplate()/
-  // rollReadTemplate()). `learnMode` switches the Learn tab's main panel
-  // between 'cards', 'reading', and 'roll'; `reading`/`rollRead` are each
-  // transient playback/navigation state, never persisted, so a reload
-  // always lands back on the card grid.
+  // Reading Activity — a per-level alternative to the word-card grid (see
+  // learnModeToggleTemplate()/readingActivityTemplate()). `learnMode`
+  // switches the Learn tab's main panel between 'cards' and 'reading';
+  // `reading` is transient playback/navigation state, never persisted, so
+  // a reload always lands back on the card grid.
   learnMode: 'cards',
   reading: {
     index: 0, // which word (within the current level's word list) is showing
@@ -825,21 +824,31 @@ let state = {
   readingHighlightStyle: localStorage.readingHighlightStyle || 'sweep', // 'sweep' | 'ball'
   readingLineFocus: localStorage.readingLineFocus !== 'off',
   readingSpeed: ['normal', 'slow', 'veryslow'].includes(localStorage.readingSpeed) ? localStorage.readingSpeed : 'normal', // 'normal' | 'slow' | 'veryslow'
-  // Roll and Read: a dice-driven "land on a word, read it aloud" board
-  // game over the same level word list. `boardKey` records which
-  // group/level `seen`/`row`/`col` currently belong to — rollReadTemplate()
-  // compares it against the level actually on screen and resets the rest
-  // of this object the moment they no longer match, so switching levels
-  // always starts a fresh board with no explicit reset wiring needed at
-  // every navigation call site. `seen` is a lightweight, session-only
-  // record of which words have already come up on the current board (see
-  // the PR description for why this is worth tracking).
+  // Roll and Read: its own tab, structured the same way Catch the Sound
+  // and Memory Match are (own transient round state here, own badge
+  // through the shared badge system — see the "Roll and Read" section
+  // below). `groupId`/`level` are this game's own level selector,
+  // independent of the Learn tab's sidebar — see rollReadLevelPickerTemplate().
+  // `boardKey` records which groupId/level `words`/`rows`/`cols` currently
+  // belong to, so a level switch always rebuilds a fresh board. `row` is
+  // the row the die last landed on (1-based); `targetWord` is the word
+  // currently playing aloud — read only by guessRollReadWord(), never
+  // rendered, so nothing on the board gives the answer away. `streak` is
+  // this session's run of consecutive correct picks, toward the badge at
+  // ROLL_READ_BADGE_THRESHOLD; never persisted (only the earned badge is).
   rollRead: {
+    groupId: SOUND_GROUPS[0].id,
+    level: groupLevels(SOUND_GROUPS[0].id)[0] || 1,
     boardKey: null,
-    seen: {},
-    row: null,
-    col: null,
+    words: [],
+    rows: 0,
+    cols: 0,
     rolling: false,
+    row: null,
+    targetWord: null,
+    status: 'idle', // 'idle' | 'rolling' | 'listening' | 'correct'
+    feedback: null, // { kind: 'correct' | 'incorrect', text }
+    streak: 0,
   },
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
@@ -1275,28 +1284,36 @@ function playReadingSentence(item) {
 }
 
 // ---------- Roll and Read ----------
-// A dice-driven board game over the same per-level word list the card grid
-// and Reading Activity already use: two dice pick a row and column, that
-// cell's word gets read aloud (by the student, or via "Hear it"), repeat.
-// Nothing here is specific to Long A or any one sound group — the board is
-// just whichever level's word list is currently selected, so a brand-new
-// sound group gets a working Roll and Read board for free the moment it
-// has words, the same way Reading Activity already does.
+// Its own tab, structured the same way Catch the Sound and Memory Match
+// are: a dedicated state.rollRead namespace (see its declaration above),
+// its own template + wiring functions below, and a badge earned through
+// the shared badge system (see ROLL_READ_BADGE_ID/awardRollReadBadgeIfEligible()).
+//
+// Board: a grid of words drawn from state.rollRead.groupId/level's word
+// list (this game's own level selector — see rollReadLevelPickerTemplate() —
+// independent of the Learn tab's sidebar, the same way Memory Match's
+// levels don't depend on it either), capped at 36 so a single six-sided
+// die can always address a row.
+//
+// Round: the die rolls on its own and narrows play to one row (see
+// rollReadRollDie()). The app then speaks one random word from that row
+// aloud (beginRollReadListening()) WITHOUT visually marking which cell it
+// is anywhere in the template — the student has to find it purely by
+// listening. A correct tap (guessRollReadWord()) scores the round,
+// extends the streak, and rolls a brand-new board automatically; a wrong
+// tap just resets the streak and prompts a retry on the exact same round.
 
-// Capped at 36 (a 6x6 board) so two ordinary six-sided dice can always
-// address every cell — a level with more words than that (most of them)
-// simply plays across its first 36 rather than needing bigger dice.
+// Capped at 36 (a 6x6 board) so an ordinary six-sided die can always
+// address every row — a level with more words than that (most of them)
+// simply plays across a freshly shuffled first 36 rather than needing a
+// bigger die.
 const ROLL_READ_MAX_CELLS = 36;
-
-function rollReadBoardWords(groupId, level) {
-  return wordsForGroupLevel(groupId, level).slice(0, ROLL_READ_MAX_CELLS);
-}
 
 // Chooses a rows x cols shape that's as close to square as the word count
 // allows, rather than hardcoding 6x6 — a 3-word level plays on a 2x2 board
-// (with one empty cell) instead of a mostly-empty 6x6 one, and the dice
-// themselves are sized to match (see rollReadTemplate()), so a roll can
-// never land on a row/column that doesn't exist.
+// (with one empty cell) instead of a mostly-empty 6x6 one, and the die
+// itself is capped to match (see rollReadRollDie()), so a roll can never
+// land on a row that doesn't exist.
 function rollReadGridShape(count) {
   if (!count) return { rows: 0, cols: 0 };
   const cols = Math.ceil(Math.sqrt(count));
@@ -1308,9 +1325,9 @@ function rollReadBoardKey(groupId, level) {
   return `${groupId}::${level}`;
 }
 
-// Standard six-sided die pip layouts, on a 0-100 face. Grid boards are
-// capped at 6x6 (see ROLL_READ_MAX_CELLS/rollReadGridShape()), so a rolled
-// row or column index never needs a face beyond 6.
+// Standard six-sided die pip layouts, on a 0-100 face. Boards are capped
+// at 6 rows (see ROLL_READ_MAX_CELLS/rollReadGridShape()), so a rolled row
+// never needs a face beyond 6.
 const DIE_PIPS = {
   1: [[50, 50]],
   2: [[27, 27], [73, 73]],
@@ -1329,44 +1346,175 @@ function dieFaceTemplate(value, label) {
   </div>`;
 }
 
+// Builds a fresh, freshly shuffled board for a group/level and resets the
+// round (but never the streak — see guessRollReadWord()). Called on the
+// tab's first mount, on a group/level switch, and after every correct
+// guess so "the whole board refreshes with a new set of words" (see the
+// PR description) needs no extra bookkeeping beyond calling this again.
+function newRollReadBoard(groupId, level) {
+  const words = shuffle(wordsForGroupLevel(groupId, level)).slice(0, ROLL_READ_MAX_CELLS);
+  const { rows, cols } = rollReadGridShape(words.length);
+  const rr = state.rollRead;
+  rr.groupId = groupId;
+  rr.level = level;
+  rr.boardKey = rollReadBoardKey(groupId, level);
+  rr.words = words;
+  rr.rows = rows;
+  rr.cols = cols;
+  rr.row = null;
+  rr.targetWord = null;
+  rr.status = 'idle';
+  rr.feedback = null;
+}
+
 // One in-flight roll's animation timer, if any. Module-scoped so
-// stopRollAnimation() can always reach it — from a level switch, a
-// learn-mode switch, or another Roll click landing mid-animation.
-let rollAnimationTimer = null;
-function stopRollAnimation() {
-  if (rollAnimationTimer) {
-    clearInterval(rollAnimationTimer);
-    rollAnimationTimer = null;
+// stopRollReadRoll() can always reach it — from a group/level switch, a
+// tab switch, or a new round starting mid-animation.
+let rollReadAnimationTimer = null;
+function stopRollReadRoll() {
+  if (rollReadAnimationTimer) {
+    clearInterval(rollReadAnimationTimer);
+    rollReadAnimationTimer = null;
   }
   state.rollRead.rolling = false;
 }
 
-// Rolls both dice: a brief cycling animation (random faces, re-rendered a
-// handful of times) that settles on a genuine random row/col within the
-// board's actual shape, highlights that cell, and marks its word seen.
-// `boardWords`/`rows`/`cols` are passed in (rather than recomputed here)
-// so this always rolls against the *exact* board currently on screen.
-function rollDice(boardWords, rows, cols) {
-  if (state.rollRead.rolling) return;
-  stopRollAnimation();
-  state.rollRead.rolling = true;
+// The pending "next round" timer between a correct guess and the fresh
+// board/re-roll that follows it (see guessRollReadWord()). Cleared by
+// stopRollReadGame() so leaving the tab mid-pause can never leave a timer
+// armed to silently roll (and speak a word) while unmounted.
+let rollReadAdvanceTimer = null;
+function stopRollReadAdvanceTimer() {
+  if (rollReadAdvanceTimer) {
+    clearTimeout(rollReadAdvanceTimer);
+    rollReadAdvanceTimer = null;
+  }
+}
+
+function stopRollReadGame() {
+  stopRollReadRoll();
+  stopRollReadAdvanceTimer();
+}
+
+// Rolls the die: a brief cycling animation (random faces, re-rendered a
+// handful of times) that settles on a genuine random row within the
+// board's actual row count, then immediately starts that row's listening
+// round (see beginRollReadListening()) — no separate click needed to hear
+// the word once the die has landed.
+function rollReadRollDie() {
+  const rr = state.rollRead;
+  if (rr.rolling || !rr.words.length) return;
+  stopRollReadRoll();
+  rr.rolling = true;
+  rr.status = 'rolling';
+  rr.feedback = null;
+  rr.row = null;
   render();
   let ticks = 0;
   const totalTicks = 8;
-  rollAnimationTimer = setInterval(() => {
+  rollReadAnimationTimer = setInterval(() => {
     ticks++;
-    state.rollRead.row = 1 + Math.floor(Math.random() * rows);
-    state.rollRead.col = 1 + Math.floor(Math.random() * cols);
+    rr.row = 1 + Math.floor(Math.random() * rr.rows);
     if (ticks >= totalTicks) {
-      clearInterval(rollAnimationTimer);
-      rollAnimationTimer = null;
-      state.rollRead.rolling = false;
-      const index = (state.rollRead.row - 1) * cols + (state.rollRead.col - 1);
-      const landed = boardWords[index];
-      if (landed) state.rollRead.seen[landed.word] = true;
+      clearInterval(rollReadAnimationTimer);
+      rollReadAnimationTimer = null;
+      rr.rolling = false;
+      beginRollReadListening();
+      return;
     }
     render();
   }, 90);
+}
+
+// Picks one random word from the just-rolled row as this round's target
+// and speaks it aloud. `targetWord` is read only by guessRollReadWord() —
+// rollReadGameTemplate() never renders it or marks its cell, so the
+// student has no visual shortcut, only the audio.
+function beginRollReadListening() {
+  const rr = state.rollRead;
+  const start = (rr.row - 1) * rr.cols;
+  const rowWords = rr.words.slice(start, start + rr.cols);
+  if (!rowWords.length) {
+    rr.status = 'idle';
+    render();
+    return;
+  }
+  const target = rowWords[Math.floor(Math.random() * rowWords.length)];
+  rr.targetWord = target.word;
+  rr.status = 'listening';
+  render();
+  speak(target.say || target.word, 'en-US');
+}
+
+// A tile in the rolled row was tapped. Correct: scores the round, extends
+// the streak, awards the badge the instant it first reaches
+// ROLL_READ_BADGE_THRESHOLD (reusing the same badge storage/celebration
+// plumbing every other badge in the app does — see toggleDone()), then
+// after a brief pause refreshes the whole board and rolls again on its
+// own. Incorrect: resets the streak and leaves the exact same round live —
+// same board, same rolled row, same target word — so the student can just
+// listen again and try another tile, the same "try again" shape as the
+// Sound Practice mic feedback.
+function guessRollReadWord(word) {
+  const rr = state.rollRead;
+  if (rr.status !== 'listening') return;
+  if (word === rr.targetWord) {
+    rr.status = 'correct';
+    rr.streak += 1;
+    rr.feedback = { kind: 'correct', text: 'Great listening — that was it!' };
+    const badge = awardRollReadBadgeIfEligible();
+    if (badge) {
+      clearTimeout(celebrationTimer);
+      state.celebration = badge;
+      celebrationTimer = setTimeout(() => {
+        state.celebration = null;
+        render();
+      }, 2200);
+    }
+    render();
+    rollReadAdvanceTimer = setTimeout(() => {
+      rollReadAdvanceTimer = null;
+      newRollReadBoard(rr.groupId, rr.level);
+      render();
+      rollReadRollDie();
+    }, 1100);
+  } else {
+    rr.streak = 0;
+    rr.feedback = { kind: 'incorrect', text: "Didn't catch that — listen again and try another tile." };
+    render();
+  }
+}
+
+// Roll and Read's one badge — awarded once, the moment a run of
+// consecutive correct picks first reaches ROLL_READ_BADGE_THRESHOLD,
+// reusing the exact same badge storage (state.badges), medal rendering
+// (badgeMedalTemplate()), and celebration-toast plumbing as every other
+// badge (see awardBadgeIfLevelComplete()/toggleDone()). Like Catch the
+// Sound's badge, it isn't tied to a sound group/level, so it gets its own
+// fixed id/shape instead of going through badgeForLevel(). A wrong guess
+// resets the streak (see guessRollReadWord()) but never revokes an
+// already-earned badge — the game stays fully playable/replayable after
+// unlocking it.
+const ROLL_READ_BADGE_THRESHOLD = 5;
+const ROLL_READ_BADGE_ID = 'roll-and-read::badge';
+
+function rollReadBadge() {
+  const colors = badgeColor(1, 1);
+  return {
+    id: ROLL_READ_BADGE_ID,
+    label: 'Roll and Read Streak',
+    affirmation: 'Great ears!',
+    color: colors.base,
+    colorLight: colors.light,
+  };
+}
+
+function awardRollReadBadgeIfEligible() {
+  if (state.rollRead.streak < ROLL_READ_BADGE_THRESHOLD) return null;
+  if (state.badges[ROLL_READ_BADGE_ID]) return null;
+  state.badges[ROLL_READ_BADGE_ID] = { earnedAt: Date.now() };
+  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  return rollReadBadge();
 }
 
 function setState(key, value) {
@@ -1895,7 +2043,6 @@ function learnModeToggleTemplate() {
   return `<div class="learn-mode-toggle" role="tablist" aria-label="Level view">
     <button data-learn-mode="cards" role="tab" aria-selected="${state.learnMode === 'cards'}" class="${state.learnMode === 'cards' ? 'active' : ''}">${icon('book')}Word cards</button>
     <button data-learn-mode="reading" role="tab" aria-selected="${state.learnMode === 'reading'}" class="${state.learnMode === 'reading' ? 'active' : ''}">${icon('chat')}Reading Activity</button>
-    <button data-learn-mode="roll" role="tab" aria-selected="${state.learnMode === 'roll'}" class="${state.learnMode === 'roll' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
   </div>`;
 }
 
@@ -1974,71 +2121,105 @@ function readingActivityTemplate(group, levelWords) {
     </div>`;
 }
 
-function rollReadGridCellTemplate(item, r, c, selected, seen) {
-  const classes = ['roll-read-cell'];
-  if (selected) classes.push('is-selected');
-  if (seen) classes.push('is-seen');
-  return `<div class="${classes.join(' ')}" role="gridcell" aria-label="Row ${r}, column ${c}: ${escapeHtml(item.word)}${seen ? ', already rolled' : ''}">
-    ${seen ? `<span class="roll-read-seen-mark" aria-hidden="true">${icon('check')}</span>` : ''}
-    <span class="roll-read-cell-word">${highlightWord(item)}</span>
+// ---------- Roll and Read: view ----------
+// This game's own compact group/level selector — independent of the Learn
+// tab's sidebar (see state.rollRead's comment) so the game is playable on
+// its own. Mirrors sidebarTemplate()'s group/level pairing but as a single
+// horizontal bar rather than a nested tree, since there's no sidebar here.
+function rollReadLevelPickerTemplate() {
+  const groupsWithContent = SOUND_GROUPS.filter((entry) => groupLevels(entry.id).length > 0);
+  const group = groupsWithContent.find((entry) => entry.id === state.rollRead.groupId) || groupsWithContent[0];
+  const levels = groupLevels(group.id);
+  return `<div class="roll-read-level-picker">
+    <div class="roll-read-group-tabs" role="tablist" aria-label="Roll and Read sound group">
+      ${groupsWithContent.map((entry) => `<button type="button" data-roll-read-group="${entry.id}" role="tab" aria-selected="${entry.id === group.id}" class="${entry.id === group.id ? 'active' : ''}">${escapeHtml(entry.label)}</button>`).join('')}
+    </div>
+    ${levels.length > 1 ? `<div class="roll-read-level-tabs" role="tablist" aria-label="Roll and Read level">
+      ${levels.map((level) => {
+        const unlocked = isLevelUnlocked(group.id, level);
+        const active = state.rollRead.groupId === group.id && state.rollRead.level === level;
+        return `<button type="button" data-roll-read-level="${level}" role="tab" aria-selected="${active}" class="${active ? 'active' : ''} ${unlocked ? '' : 'is-locked'}" ${unlocked ? '' : 'disabled aria-disabled="true"'}>${unlocked ? '' : icon('lock')}${escapeHtml(levelLabel(group.id, level))}</button>`;
+      }).join('')}
+    </div>` : ''}
   </div>`;
 }
 
-// A dice board over the current level's word list: Roll picks a random
-// row and column (each die capped to the board's own shape, so a roll can
-// never land off the grid), highlights that cell, and offers the same
-// "Hear it" TTS button the word cards use. `levelWords` is the same list
-// the card grid and Reading Activity already receive, so this needs no
-// per-group/per-level wiring of its own — nothing here names a specific
-// sound group or hardcodes a board size.
-//
-// state.rollRead persists across switching to another Learn mode and back
-// (so checking a word card mid-game doesn't reset your progress), but
-// resets the moment the underlying board itself changes — tracked via
-// `boardKey` — so a fresh level always starts from an empty, unrolled
-// board rather than showing stale dice/highlights from a different one.
-function rollReadTemplate(group, levelWords) {
-  const boardWords = levelWords.slice(0, ROLL_READ_MAX_CELLS);
-  if (!boardWords.length) {
-    return emptyGroupTemplate(`No words to roll yet in ${escapeHtml(group.label)} at this level.`);
-  }
-  const boardKey = rollReadBoardKey(group.id, state.level);
-  if (state.rollRead.boardKey !== boardKey) {
-    stopRollAnimation();
-    state.rollRead = { boardKey, seen: {}, row: null, col: null, rolling: false };
-  }
-  const { rows, cols } = rollReadGridShape(boardWords.length);
-  const { row, col, rolling, seen } = state.rollRead;
-  const selectedIndex = row && col && (row - 1) * cols + (col - 1) < boardWords.length ? (row - 1) * cols + (col - 1) : -1;
-  const selectedWord = selectedIndex >= 0 ? boardWords[selectedIndex] : null;
-  const seenCount = Object.keys(seen).length;
-  const emptyCells = rows * cols - boardWords.length;
+// Status pill + repeat button, the same shape catchStatusTemplate() uses:
+// a passive readout ('Rolling…'/'Listening…'/'Correct!') plus the one
+// manual control worth keeping — replaying the current round's word — only
+// shown while a round (and so a target word) actually exists.
+function rollReadStatusTemplate() {
+  const { status } = state.rollRead;
+  const label = status === 'rolling' ? 'Rolling…' : status === 'listening' ? 'Listening…' : status === 'correct' ? 'Correct!' : 'Get ready…';
+  return `<div class="roll-read-status-group">
+    <span class="roll-read-status-badge ${status === 'rolling' ? 'is-rolling' : ''} ${status === 'correct' ? 'is-correct' : ''}">${icon('speaker')}${label}</span>
+    ${status === 'listening' ? `<button class="roll-read-repeat-btn" data-roll-read-repeat aria-label="Replay this word's pronunciation">${icon('retry')}</button>` : ''}
+  </div>`;
+}
 
+// The streak scoreboard reads very differently before/after the badge is
+// earned, the same way catchScoreboardTemplate() does: a literal progress
+// fraction ("3/5") below threshold, an explicit "unlocked" statement (with
+// no denominator to look like a broken fraction) once the streak has
+// already cleared it at least once. A wrong guess still resets the live
+// streak back to 0/5 afterward — only the earned badge itself persists.
+function rollReadScoreboardTemplate() {
+  const earned = !!state.badges[ROLL_READ_BADGE_ID];
+  return `<div class="roll-read-scoreboard">
+    <span class="roll-read-score-label">${earned ? 'Badge unlocked! Streak' : 'Streak'}</span>
+    <span class="roll-read-score-value">${state.rollRead.streak}${earned ? '' : `<span class="roll-read-score-goal">/${ROLL_READ_BADGE_THRESHOLD}</span>`}</span>
+  </div>`;
+}
+
+function rollReadFeedbackTemplate() {
+  const { feedback } = state.rollRead;
+  return `<p class="roll-read-feedback ${feedback ? `is-${feedback.kind}` : ''}" aria-live="polite">${feedback ? escapeHtml(feedback.text) : 'Listen for the word, then tap the matching tile in the highlighted row.'}</p>`;
+}
+
+// One board tile. Only tiles in the just-rolled row are ever clickable,
+// and only while a round is actively listening for a guess — everywhere
+// else (mid-roll, right after a correct pick) every tile is inert. Nothing
+// here marks which tile in the active row is the real target — that's the
+// whole point (see the "Roll and Read: view" comment above).
+function rollReadCellTemplate(item, index, cols, activeRow, status) {
+  const row = Math.floor(index / cols) + 1;
+  const inActiveRow = activeRow != null && row === activeRow;
+  const clickable = inActiveRow && status === 'listening';
+  const classes = ['roll-read-cell'];
+  if (activeRow != null) classes.push(inActiveRow ? 'is-active-row' : 'is-dim');
+  return `<button type="button" class="${classes.join(' ')}" ${clickable ? `data-roll-read-guess="${escapeHtml(item.word)}"` : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(item.word)}">
+    <span class="roll-read-cell-word">${highlightWord(item)}</span>
+  </button>`;
+}
+
+// The audio-identification board: a status/repeat bar, the streak
+// scoreboard, this game's own group/level picker, a single row die, and
+// the word grid itself — see the "Roll and Read: view" comment above for
+// the round shape. `words`/`rows`/`cols` always describe the exact board
+// on screen (built by newRollReadBoard()), so this never recomputes them.
+function rollReadGameTemplate() {
+  const rr = state.rollRead;
+  const emptyCells = rr.words.length ? rr.rows * rr.cols - rr.words.length : 0;
   return `
-    <div class="roll-read">
-      <div class="roll-read-panel">
-        <div class="roll-read-dice" aria-live="polite" aria-atomic="true">
-          ${dieFaceTemplate(row, 'Row die')}
-          ${dieFaceTemplate(col, 'Column die')}
-        </div>
-        <button class="roll-read-roll-btn ${rolling ? 'is-rolling' : ''}" data-roll-dice ${rolling ? 'disabled' : ''}>${icon('dice')}${rolling ? 'Rolling…' : row ? 'Roll again' : 'Roll'}</button>
-        <div class="roll-read-result">
-          ${selectedWord && !rolling
-            ? `<p class="roll-read-result-word">${highlightWord(selectedWord)}</p>
-               <button data-say="${escapeHtml(selectedWord.say || selectedWord.word)}" data-lang="en-US" class="roll-read-hear-btn">${icon('speaker')}Hear it</button>`
-            : `<p class="roll-read-result-hint">${rolling ? 'Rolling…' : 'Press Roll to pick a word'}</p>`}
-        </div>
-        <p class="roll-read-progress">${seenCount}/${boardWords.length} words rolled this board</p>
+    <section class="roll-read-game">
+      <div class="roll-read-game-top">
+        ${rollReadStatusTemplate()}
+        ${rollReadScoreboardTemplate()}
       </div>
-      <div class="roll-read-grid" style="--roll-read-cols:${cols}" role="grid" aria-label="${escapeHtml(group.label)} Roll and Read board">
-        ${boardWords.map((item, index) => {
-          const r = Math.floor(index / cols) + 1;
-          const c = (index % cols) + 1;
-          return rollReadGridCellTemplate(item, r, c, r === row && c === col, !!seen[item.word]);
-        }).join('')}
-        ${Array.from({ length: emptyCells }, () => '<div class="roll-read-cell is-empty" aria-hidden="true"></div>').join('')}
-      </div>
-    </div>`;
+      ${rollReadLevelPickerTemplate()}
+      ${!rr.words.length
+        ? emptyGroupTemplate('No words to roll yet at this level.')
+        : `<div class="roll-read-board">
+            <div class="roll-read-die-panel" aria-live="polite" aria-atomic="true">
+              ${dieFaceTemplate(rr.row, 'Row die')}
+            </div>
+            <div class="roll-read-grid" style="--roll-read-cols:${rr.cols}" role="grid" aria-label="Roll and Read board">
+              ${rr.words.map((item, index) => rollReadCellTemplate(item, index, rr.cols, rr.row, rr.status)).join('')}
+              ${Array.from({ length: emptyCells }, () => '<div class="roll-read-cell is-empty" aria-hidden="true"></div>').join('')}
+            </div>
+          </div>`}
+      ${rollReadFeedbackTemplate()}
+    </section>`;
 }
 
 function learnTemplate() {
@@ -2052,8 +2233,6 @@ function learnTemplate() {
   let body;
   if (state.learnMode === 'reading') {
     body = readingActivityTemplate(group, filtered);
-  } else if (state.learnMode === 'roll') {
-    body = rollReadTemplate(group, filtered);
   } else if (!groupWords.length) {
     body = emptyGroupTemplate(`No "${group.label}" words yet — this sound group is ready for when it's added.`);
   } else if (!filtered.length) {
@@ -2243,6 +2422,16 @@ function instructionsTemplate() {
         <li>Match every pair before the timer runs out to win the level and earn a badge, then a fresh set of words starts automatically at the next level.</li>
         <li>Run out of time and the same level restarts with a new random word set — no penalty, just try again.</li>
         <li>Five levels get progressively bigger (4 pairs up to 12 pairs). Finish level 5 to earn the Memory Match Champion badge and replay any level you like.</li>
+      </ol>`;
+  }
+  if (state.view === 'rollread') {
+    return `<ol>
+        <li>Pick a sound group and level above — the board fills with words from that level's word list.</li>
+        <li>The die rolls on its own and narrows play to one row — every word in that row is in play.</li>
+        <li>Listen closely: one word from that row plays aloud, but nothing on the board shows which one it is.</li>
+        <li>Tap the tile you think matches what you heard.</li>
+        <li>Right pick? The board refreshes with a new set of words and the die rolls again automatically. Wrong pick? Listen again and try another tile in the same row — the round doesn't move on until you get it.</li>
+        <li>String together ${ROLL_READ_BADGE_THRESHOLD} correct picks in a row to earn the Roll and Read badge.</li>
       </ol>`;
   }
   return `<ol>
@@ -2560,6 +2749,7 @@ function badgeShelfTemplate() {
       ${groups.map(badgeShelfGroupTemplate).join('')}
       ${catchGameBadgeShelfSectionTemplate()}
       ${memoryBadgeShelfSectionTemplate()}
+      ${rollReadBadgeShelfSectionTemplate()}
     </div>
   </div>`;
 }
@@ -2571,7 +2761,6 @@ function badgeShelfTemplate() {
 function wireReadingEvents() {
   document.querySelectorAll('[data-learn-mode]').forEach((button) => button.onclick = () => {
     stopReadingPlayback();
-    stopRollAnimation();
     state.learnMode = button.dataset.learnMode;
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
@@ -2652,17 +2841,49 @@ function wireReadingEvents() {
 // "Hear it" reuses the existing global [data-say] binding (see render()),
 // the same way word cards' own audio buttons work, so there's no separate
 // TTS wiring to maintain here.
-function wireRollReadEvents() {
-  if (state.view !== 'learn' || state.learnMode !== 'roll') return;
-  const rollButton = $('[data-roll-dice]');
-  if (!rollButton) return;
-  rollButton.onclick = () => {
-    const group = SOUND_GROUPS.find((entry) => entry.id === state.soundGroup) || SOUND_GROUPS[0];
-    const boardWords = rollReadBoardWords(group.id, state.level);
-    const { rows, cols } = rollReadGridShape(boardWords.length);
-    if (!boardWords.length) return;
-    rollDice(boardWords, rows, cols);
-  };
+// This tab's only real controls are the group/level picker and the board
+// tiles themselves — rolling and re-rolling happen on their own (see
+// rollReadRollDie()/guessRollReadWord()), the same auto-advancing shape
+// Catch the Sound's rounds use. Mount detection follows
+// wireMemoryGameEvents()'s pattern: build (or rebuild, on a group/level
+// switch) the board the moment this tab is the one on screen, and start
+// the very first roll automatically so there's nothing to click before the
+// first word plays.
+function wireRollReadTabEvents() {
+  if (state.view !== 'rollread') {
+    stopRollReadGame();
+    return;
+  }
+  const rr = state.rollRead;
+  const boardKey = rollReadBoardKey(rr.groupId, rr.level);
+  if (rr.boardKey !== boardKey) newRollReadBoard(rr.groupId, rr.level);
+  if (rr.status === 'idle' && rr.words.length && !rollReadAnimationTimer && !rollReadAdvanceTimer) rollReadRollDie();
+
+  document.querySelectorAll('[data-roll-read-group]').forEach((button) => button.onclick = () => {
+    const groupId = button.dataset.rollReadGroup;
+    if (groupId === state.rollRead.groupId) return;
+    stopRollReadGame();
+    state.rollRead.groupId = groupId;
+    state.rollRead.level = groupLevels(groupId)[0] || 1;
+    state.rollRead.streak = 0;
+    render();
+  });
+  document.querySelectorAll('[data-roll-read-level]').forEach((button) => button.onclick = () => {
+    const level = Number(button.dataset.rollReadLevel);
+    if (level === state.rollRead.level || !isLevelUnlocked(state.rollRead.groupId, level)) return;
+    stopRollReadGame();
+    state.rollRead.level = level;
+    state.rollRead.streak = 0;
+    render();
+  });
+  document.querySelectorAll('[data-roll-read-guess]').forEach((button) => button.onclick = () => guessRollReadWord(button.dataset.rollReadGuess));
+  const repeatButton = $('[data-roll-read-repeat]');
+  if (repeatButton) {
+    repeatButton.onclick = () => {
+      const target = state.rollRead.words.find((item) => item.word === state.rollRead.targetWord);
+      if (target) speak(target.say || target.word, 'en-US');
+    };
+  }
 }
 
 // ---------- Catch the Sound: game loop ----------
@@ -3468,6 +3689,24 @@ function memoryBadgeShelfSectionTemplate() {
   </section>`;
 }
 
+// The Roll and Read badge, shown alongside every sound group's badge row
+// in the shelf even though it isn't tied to a sound group/level (same
+// pattern as catchGameBadgeShelfSectionTemplate() above).
+function rollReadBadgeShelfSectionTemplate() {
+  const badge = rollReadBadge();
+  const earned = !!state.badges[badge.id];
+  return `<section class="badge-shelf-group">
+    <h3>Roll and Read</h3>
+    <div class="badge-shelf-grid">
+      <div class="badge-shelf-item ${earned ? '' : 'is-locked'}">
+        ${badgeMedalTemplate(badge, { size: 'md', earned })}
+        <span class="badge-shelf-item-label">${escapeHtml(badge.label)}</span>
+        <span class="badge-shelf-item-affirmation">${earned ? escapeHtml(badge.affirmation) : `Get ${ROLL_READ_BADGE_THRESHOLD} correct picks in a row to unlock`}</span>
+      </div>
+    </div>
+  </section>`;
+}
+
 // This view only has the card grid as a real control besides its own
 // per-level replay buttons, plus starting the timer/first level for as
 // long as the view is mounted — status is only ever 'idle' right after
@@ -3505,6 +3744,7 @@ function render() {
         <button data-view="practice" role="tab" aria-selected="${state.view === 'practice'}" class="${state.view === 'practice' ? 'active' : ''}">${icon('mic')}Sound Practice</button>
         <button data-view="game" role="tab" aria-selected="${state.view === 'game'}" class="${state.view === 'game' ? 'active' : ''}">${icon('basket')}Catch the Sound</button>
         <button data-view="memory" role="tab" aria-selected="${state.view === 'memory'}" class="${state.view === 'memory' ? 'active' : ''}">${icon('cards')}Memory Match</button>
+        <button data-view="rollread" role="tab" aria-selected="${state.view === 'rollread'}" class="${state.view === 'rollread' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
       </div>
       <div class="controls-bar">
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
@@ -3521,7 +3761,7 @@ function render() {
     </section>
     <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
       ${state.view === 'learn' ? sidebarTemplate() : ''}
-      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : practiceTemplate()}</div>
+      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : practiceTemplate()}</div>
     </div>
     <footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
@@ -3535,7 +3775,7 @@ function render() {
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
     stopReadingPlayback();
-    stopRollAnimation();
+    stopRollReadGame();
     stopCatchGame();
     stopMemoryGame();
     state.reading.playing = false;
@@ -3554,6 +3794,8 @@ function render() {
     stopMemoryGame();
     state.memory = { status: 'idle', level: 1, cols: 4, cards: [], flipped: [], lock: false, matchedPairs: 0, totalPairs: 0, secondsLeft: 0, timeBonusFlash: false };
     state.memoryFinale = null;
+    stopRollReadGame();
+    state.rollRead = { groupId: SOUND_GROUPS[0].id, level: groupLevels(SOUND_GROUPS[0].id)[0] || 1, boardKey: null, words: [], rows: 0, cols: 0, rolling: false, row: null, targetWord: null, status: 'idle', feedback: null, streak: 0 };
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
     localStorage.removeItem('catchGameScore');
@@ -3576,7 +3818,6 @@ function render() {
     const level = Number(levelStr);
     if (!isLevelUnlocked(groupId, level)) return;
     stopReadingPlayback();
-    stopRollAnimation();
     state.soundGroup = groupId;
     state.level = level;
     state.expandedGroups[groupId] = true;
@@ -3598,9 +3839,9 @@ function render() {
   });
   wireAdminEvents();
   wireReadingEvents();
-  wireRollReadEvents();
   wireCatchGameEvents();
   wireMemoryGameEvents();
+  wireRollReadTabEvents();
 }
 
 render();
