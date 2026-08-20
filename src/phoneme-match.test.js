@@ -93,6 +93,49 @@ test('unrecognized transcript is reported distinctly, not fuzzy-matched', () => 
   assert.equal(result.failingSound, 'unrecognized');
 });
 
+for (const pattern of [
+  ['ship', 'shp'],  // dropped vowel letter
+  ['chip', 'chp'],  // dropped vowel letter
+  ['thin', 'thn'],  // dropped vowel letter
+  ['this', 'thi'],  // dropped trailing letter
+]) {
+  const [word, closeAttempt] = pattern;
+  test(`one-letter-off transcript for "${word}" ("${closeAttempt}") is treated as a close match`, () => {
+    const result = compare(word, closeAttempt, item(word).targetIndex);
+    assert.equal(result.match, true);
+    assert.equal(result.recognized, true);
+    assert.equal(result.closeMatch, true);
+  });
+}
+
+test('close-match fallback does not blur words that are already distinct dictionary entries', () => {
+  // "bed" vs "bad" are both real dictionary words one letter apart, but they
+  // must still fail via the real phoneme comparison, not the close-match
+  // string fallback (which only applies to *unrecognized* transcripts).
+  const bed = item('bed');
+  const result = compare('bed', 'bad', bed.targetIndex);
+  assert.equal(result.match, false);
+  assert.equal(result.closeMatch, undefined);
+  assert.equal(result.failingSound, 'target-sound');
+});
+
+test('transcripts more than one letter off the target stay unrecognized, not close-matched', () => {
+  const result = compare('chip', 'trip', item('chip').targetIndex);
+  assert.equal(result.match, false);
+  assert.equal(result.recognized, false);
+  assert.equal(result.failingSound, 'unrecognized');
+});
+
+test('feedbackFor calls out a close match distinctly from a spot-on match', () => {
+  const ship = item('ship');
+  const closeResult = compare('ship', 'shp', ship.targetIndex);
+  const spotOnResult = compare('ship', 'ship', ship.targetIndex);
+  const closeMessage = feedbackFor(ship, closeResult);
+  const spotOnMessage = feedbackFor(ship, spotOnResult);
+  assert.notEqual(closeMessage, spotOnMessage);
+  assert.match(closeMessage, /close/i);
+});
+
 test('every SOUND_PRACTICE entry resolves to a real dictionary word', () => {
   const { lookup } = require('./phoneme-match.js');
   for (const entry of SOUND_PRACTICE) {
