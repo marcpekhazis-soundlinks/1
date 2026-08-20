@@ -111,7 +111,7 @@ const WORDS = [
   { word: 'rake', arabic: 'مِجْرَفَةٌ', hint: 'a garden tool with teeth for gathering leaves', visual: 'rake', level: 1, image: 'src/assets/images/Long A/081-rake.png', sentence: "Use the rake to gather the leaves." },
   { word: 'rare', arabic: 'نَادِرٌ', hint: 'not common; unusual', visual: 'rare', level: 1, archived: true, sentence: "A blue diamond is very rare." },
   { word: 'rate', arabic: 'مُعَدَّلٌ / سِعْرٌ', hint: 'how fast something happens, or its price', visual: 'rate', level: 1, image: 'src/assets/images/Long A/083-rate.png', sentence: "The rate of growth surprised everyone." },
-  { word: 'rave', arabic: 'يَتَحَدَّثُ بِحَمَاسٍ', hint: 'to talk about something with wild excitement', visual: 'rave', level: 1, image: 'src/assets/images/Long A/084-rave.jpg', sentence: "Fans rave about the new movie." },
+  { word: 'rave', arabic: "يَتَحَدَّثُ بِحَمَاسٍ", hint: "To talk in a wild, crazy way.", visual: 'rave', level: 1, image: 'src/assets/images/Long A/084-rave.jpg', sentence: "Fans rave about the new movie." },
   { word: 'raze', arabic: 'يَهْدِمُ بِالْكَامِلِ', hint: 'to knock a building down completely', visual: 'raze', level: 1, image: 'src/assets/images/Long A/085-raze.png', sentence: "They plan to raze the old building." },
   { word: 'safe', arabic: 'آمِنٌ', hint: 'free from danger or harm', visual: 'safe', level: 1, image: 'src/assets/images/Long A/086-safe.png', sentence: "Keep your money in a safe place." },
   { word: 'sage', arabic: 'حَكِيمٌ / نَبْتَةُ الْمَرْيَمِيَّةِ', hint: 'a wise person, or an herb used in cooking', visual: 'sage', level: 1, image: 'src/assets/images/Long A/087-sage.png', sentence: "The old sage gave wise advice." },
