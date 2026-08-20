@@ -1235,6 +1235,21 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .practice-error { background: var(--warning-soft); color: var(--warning-dark); }
 .practice-listening { background: var(--primary-tint-100); color: var(--primary-dark); }
 
+/* Temporary debug visibility: what the recognizer actually heard vs. what
+   the target word being matched against was. Not styled as an alert (it's
+   diagnostic, not feedback), just a small muted line under the feedback. */
+.practice-debug {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ink-soft);
+}
+.practice-debug strong { color: var(--ink); font-weight: 700; }
+
 [data-practice].is-listening {
   background: var(--primary);
   color: #fff;
