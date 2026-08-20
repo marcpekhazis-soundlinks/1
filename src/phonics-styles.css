@@ -508,6 +508,12 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 
 .pic { border-radius: var(--radius-md); overflow: hidden; background: var(--primary-tint-50); }
 .word-image { width: 100%; display: block; }
+/* A real illustration photo (item.image), shown instead of .word-image
+   when a word has one — see wordCardPic() in JS. Matches .word-image's
+   own viewBox aspect ratio (300x230) via object-fit: cover so photo and
+   SVG cards stay the same height in the same grid, regardless of the
+   source photo's native dimensions. */
+.word-photo { width: 100%; aspect-ratio: 300 / 230; display: block; object-fit: cover; }
 .svgBg { fill: var(--primary-tint-50); }
 /* Legacy fallback for any icon not yet migrated to the .i-* illustration
    system below (kept only as a safety net, e.g. the generic "display"
