@@ -93,47 +93,34 @@ test('unrecognized transcript is reported distinctly, not fuzzy-matched', () => 
   assert.equal(result.failingSound, 'unrecognized');
 });
 
-for (const pattern of [
-  ['ship', 'shp'],  // dropped vowel letter
-  ['chip', 'chp'],  // dropped vowel letter
-  ['thin', 'thn'],  // dropped vowel letter
-  ['this', 'thi'],  // dropped trailing letter
-]) {
-  const [word, closeAttempt] = pattern;
-  test(`one-letter-off transcript for "${word}" ("${closeAttempt}") is treated as a close match`, () => {
-    const result = compare(word, closeAttempt, item(word).targetIndex);
-    assert.equal(result.match, true);
-    assert.equal(result.recognized, true);
-    assert.equal(result.closeMatch, true);
+// Regression coverage for a real bug: an earlier version of compare() fell
+// back to accepting any unrecognized transcript that was one LETTER away
+// from the target's SPELLING, on the theory that it would catch ASR typos
+// for short words. But spelling distance isn't phoneme distance -- "cook",
+// "boot", and "hook" don't sound anything like "book", yet were all being
+// marked correct for it. That fallback must never come back.
+for (const wrongWord of ['cook', 'boot', 'hook', 'look', 'moon']) {
+  test(`unrelated real word "${wrongWord}" is never accepted for target "book"`, () => {
+    const result = compare('book', wrongWord, item('book').targetIndex);
+    assert.equal(result.match, false);
   });
 }
 
-test('close-match fallback does not blur words that are already distinct dictionary entries', () => {
-  // "bed" vs "bad" are both real dictionary words one letter apart, but they
-  // must still fail via the real phoneme comparison, not the close-match
-  // string fallback (which only applies to *unrecognized* transcripts).
-  const bed = item('bed');
-  const result = compare('bed', 'bad', bed.targetIndex);
+test('transcripts one letter off the target spelling are NOT auto-accepted', () => {
+  // "chp" is a plausible ASR typo for "chip" but isn't a real recognized
+  // word -- it must be reported as unrecognized, not guessed into a match.
+  const result = compare('chip', 'chp', item('chip').targetIndex);
   assert.equal(result.match, false);
+  assert.equal(result.recognized, false);
+  assert.equal(result.failingSound, 'unrecognized');
   assert.equal(result.closeMatch, undefined);
-  assert.equal(result.failingSound, 'target-sound');
 });
 
-test('transcripts more than one letter off the target stay unrecognized, not close-matched', () => {
+test('transcripts more than one letter off the target stay unrecognized', () => {
   const result = compare('chip', 'trip', item('chip').targetIndex);
   assert.equal(result.match, false);
   assert.equal(result.recognized, false);
   assert.equal(result.failingSound, 'unrecognized');
-});
-
-test('feedbackFor calls out a close match distinctly from a spot-on match', () => {
-  const ship = item('ship');
-  const closeResult = compare('ship', 'shp', ship.targetIndex);
-  const spotOnResult = compare('ship', 'ship', ship.targetIndex);
-  const closeMessage = feedbackFor(ship, closeResult);
-  const spotOnMessage = feedbackFor(ship, spotOnResult);
-  assert.notEqual(closeMessage, spotOnMessage);
-  assert.match(closeMessage, /close/i);
 });
 
 test('every SOUND_PRACTICE entry resolves to a real dictionary word', () => {
