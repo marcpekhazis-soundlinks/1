@@ -852,25 +852,34 @@ let state = {
   // persisted — same convention as `game` above, so a reload or a fresh
   // visit to the tab always starts back at level 1 rather than resuming
   // mid-board. `status` is 'idle' (not started yet), 'playing', 'won'
-  // (this level's pairs are all matched, briefly shown before advancing),
-  // 'lost' (timer hit zero, briefly shown before retrying), or
-  // 'allComplete' (every level finished — see memoryAllCompleteTemplate()).
-  // `cards` is the current board (see buildMemoryCards()); `flipped` holds
-  // the index/indices currently face-up mid-turn (0, 1, or momentarily 2
-  // while a mismatched pair is shown before flipping back); `lock` blocks
-  // further flips while resolving a completed turn. Level badges
+  // (this level's pairs are all matched, briefly shown before advancing or
+  // — on level 5 — before the finale overlay takes over), or 'lost' (timer
+  // hit zero, briefly shown before retrying). `cards` is the current board
+  // (see buildMemoryCards()); `cols` fixes the grid's column count for a
+  // balanced layout (see MEMORY_LEVELS); `flipped` holds the index/indices
+  // currently face-up mid-turn (0, 1, or momentarily 2 while a mismatched
+  // pair is shown before flipping back); `lock` blocks further flips while
+  // resolving a completed turn; `timeBonusFlash` drives the "+10s" popup
+  // on a correct match (see flashMemoryTimeBonus()). Level badges
   // (state.badges) persist as usual — only the board/timer/level pointer
-  // here are session-only.
+  // here are session-only. `memoryFinale` is separate from this object
+  // (see below) since it's an overlay shown independently of the board.
   memory: {
     status: 'idle',
     level: 1,
+    cols: 4,
     cards: [],
     flipped: [],
     lock: false,
     matchedPairs: 0,
     totalPairs: 0,
     secondsLeft: 0,
+    timeBonusFlash: false,
   },
+  // The full-screen "finished every level" celebration — null until
+  // winMemoryLevel() sets it to the earned master badge on beating level
+  // 5, cleared by dismissMemoryFinale(). See memoryFinaleTemplate().
+  memoryFinale: null,
 };
 let voices = [];
 const $ = (selector) => document.querySelector(selector);
@@ -2230,6 +2239,7 @@ function instructionsTemplate() {
     return `<ol>
         <li>Flip two face-down cards at a time. If one shows a word and the other shows its matching picture, they stay face-up as a match.</li>
         <li>If they don't match, both flip back face-down after a moment — remember what you saw for next time.</li>
+        <li>Every correct match adds ${MEMORY_MATCH_TIME_BONUS_SECONDS} seconds back to the clock, so good matching keeps the timer topped up.</li>
         <li>Match every pair before the timer runs out to win the level and earn a badge, then a fresh set of words starts automatically at the next level.</li>
         <li>Run out of time and the same level restarts with a new random word set — no penalty, just try again.</li>
         <li>Five levels get progressively bigger (4 pairs up to 12 pairs). Finish level 5 to earn the Memory Match Champion badge and replay any level you like.</li>
@@ -3083,13 +3093,23 @@ function wireCatchGameEvents() {
 // memoryWordPool()) — never the .svg fallback icons, since two SVG cards
 // for different words are visually too similar for a fair memory match at
 // a glance, where a real photo is not.
+// `cols` fixes each level's grid to a clean, balanced rectangle rather than
+// however many columns happen to fit the container width: rows*cols always
+// equals that level's card count exactly (4x2, 4x3, 4x4, 5x4, 6x4).
+// `seconds` starts at 40 on level 1 and adds 15 per level after that — a
+// round, steadily-increasing base that scales with each level's extra
+// pairs. On top of the base, every correct match adds
+// MEMORY_MATCH_TIME_BONUS_SECONDS back to the clock (see flipMemoryCard()),
+// so a player who's actually finding matches rarely runs out even at level
+// 5's larger board.
 const MEMORY_LEVELS = [
-  { level: 1, pairs: 4, seconds: 20 },
-  { level: 2, pairs: 6, seconds: 40 },
-  { level: 3, pairs: 8, seconds: 60 },
-  { level: 4, pairs: 10, seconds: 80 },
-  { level: 5, pairs: 12, seconds: 100 },
+  { level: 1, pairs: 4, seconds: 40, cols: 4 },
+  { level: 2, pairs: 6, seconds: 55, cols: 4 },
+  { level: 3, pairs: 8, seconds: 70, cols: 4 },
+  { level: 4, pairs: 10, seconds: 85, cols: 5 },
+  { level: 5, pairs: 12, seconds: 100, cols: 6 },
 ];
+const MEMORY_MATCH_TIME_BONUS_SECONDS = 10;
 
 // Only long-a words with a real DALL-E photo (item.image) qualify — a word
 // still on the .svg fallback is skipped entirely rather than mixed in, so
@@ -3186,6 +3206,7 @@ function stopMemoryAdvanceTimer() {
 function stopMemoryGame() {
   stopMemoryTimer();
   stopMemoryAdvanceTimer();
+  clearTimeout(memoryTimeBonusTimer);
 }
 
 function startMemoryTimer() {
@@ -3212,33 +3233,38 @@ function startMemoryLevel(level) {
   state.memory = {
     status: 'playing',
     level,
+    cols: config.cols,
     cards: buildMemoryCards(config.pairs),
     flipped: [],
     lock: false,
     matchedPairs: 0,
     totalPairs: config.pairs,
     secondsLeft: config.seconds,
+    timeBonusFlash: false,
   };
   render();
   startMemoryTimer();
 }
 
-// All pairs matched before time ran out. Awards this level's badge (and,
-// on level 5, the master badge too) through the same celebration-toast
-// plumbing toggleDone()/applyCatchGameScore() use, then auto-advances to
-// the next level after a short pause — or, after level 5, shows the
-// full-screen "all levels complete" replay screen instead.
+// All pairs matched before time ran out. Awards this level's badge through
+// the same celebration-toast plumbing toggleDone()/applyCatchGameScore()
+// use, then auto-advances to the next level after a short pause — or,
+// after level 5, awards the master badge and sets state.memoryFinale to
+// trigger the full-screen finale overlay (see memoryFinaleTemplate())
+// instead of advancing. state.memory.status is deliberately left as 'won'
+// in that case (not reset to 'idle') so the board sitting behind the
+// finale overlay reads as "you just won this", and so
+// wireMemoryGameEvents()'s idle-check doesn't quietly spin up a new board
+// underneath the overlay.
 function winMemoryLevel() {
   stopMemoryTimer();
   const level = state.memory.level;
   state.memory.status = 'won';
   const isFinalLevel = level === MEMORY_LEVELS[MEMORY_LEVELS.length - 1].level;
   const levelBadge = awardMemoryBadgeIfEligible(level);
-  const masterBadge = isFinalLevel ? awardMemoryMasterBadgeIfEligible() : null;
-  const earnedBadge = masterBadge || levelBadge;
-  if (earnedBadge) {
+  if (levelBadge) {
     clearTimeout(celebrationTimer);
-    state.celebration = earnedBadge;
+    state.celebration = levelBadge;
     celebrationTimer = setTimeout(() => {
       state.celebration = null;
       render();
@@ -3247,7 +3273,7 @@ function winMemoryLevel() {
   render();
   memoryAdvanceTimer = setTimeout(() => {
     if (isFinalLevel) {
-      state.memory.status = 'allComplete';
+      state.memoryFinale = awardMemoryMasterBadgeIfEligible() || memoryMasterBadge();
       render();
     } else {
       startMemoryLevel(level + 1);
@@ -3261,6 +3287,26 @@ function loseMemoryLevel() {
   state.memory.status = 'lost';
   render();
   memoryAdvanceTimer = setTimeout(() => startMemoryLevel(state.memory.level), 2200);
+}
+
+// Briefly shows a "+10s" flash next to the big timer on a correct match
+// (see memoryTimerTemplate()). Since render() always rebuilds the whole
+// #app innerHTML rather than diffing, a plain disposable DOM element
+// (the pattern spawnCatchScorePopup() uses) would just get wiped out by
+// the very next render() before its animation ever painted. Driving it
+// through state instead means the popup element is part of the template
+// itself — freshly created each render, so its CSS animation always plays
+// from the start — and this timer is what clears the flag (and renders
+// again) once the animation has had time to finish.
+let memoryTimeBonusTimer = null;
+
+function flashMemoryTimeBonus() {
+  clearTimeout(memoryTimeBonusTimer);
+  state.memory.timeBonusFlash = true;
+  memoryTimeBonusTimer = setTimeout(() => {
+    state.memory.timeBonusFlash = false;
+    render();
+  }, 900);
 }
 
 // Flips one card. The third click of a turn is naturally impossible: `lock`
@@ -3289,6 +3335,8 @@ function flipMemoryCard(index) {
       m.flipped = [];
       m.lock = false;
       m.matchedPairs += 1;
+      m.secondsLeft += MEMORY_MATCH_TIME_BONUS_SECONDS;
+      flashMemoryTimeBonus();
       if (m.matchedPairs === m.totalPairs) {
         winMemoryLevel();
       } else {
@@ -3310,7 +3358,9 @@ function memoryCardTemplate(card) {
   const label = card.kind === 'word' ? `Word card: ${card.content}` : `Picture card for ${card.pairId}`;
   return `<button type="button" class="memory-card ${faceUp ? 'is-flipped' : ''} ${card.matched ? 'is-matched' : ''}" data-memory-card="${card.index}" ${faceUp ? 'disabled' : ''} aria-label="${faceUp ? escapeHtml(label) : 'Face-down card'}" aria-pressed="${faceUp}">
     <span class="memory-card-inner">
-      <span class="memory-card-face memory-card-back" aria-hidden="true">${icon('cards')}</span>
+      <span class="memory-card-face memory-card-back" aria-hidden="true">
+        <span class="memory-card-logo">soundlinks</span>
+      </span>
       <span class="memory-card-face memory-card-front">
         ${card.kind === 'word'
           ? `<span class="memory-card-word">${escapeHtml(card.content)}</span>`
@@ -3325,37 +3375,76 @@ function memoryStatusTemplate() {
   const label = m.status === 'won' ? 'Level complete!' : m.status === 'lost' ? "Time's up!" : `Level ${m.level} of ${MEMORY_LEVELS.length}`;
   return `<div class="memory-status-group">
     <span class="memory-status-badge ${m.status === 'won' ? 'is-won' : m.status === 'lost' ? 'is-lost' : ''}">${icon('cards')}${escapeHtml(label)}</span>
-    <span class="memory-timer ${m.status === 'playing' && m.secondsLeft <= 5 ? 'is-urgent' : ''}">${icon('bolt')}${Math.max(0, m.secondsLeft)}s</span>
     <span class="memory-pairs">${m.matchedPairs}/${m.totalPairs} pairs</span>
   </div>`;
 }
 
-function memoryAllCompleteTemplate() {
-  const badge = memoryMasterBadge();
-  const confetti = Array.from({ length: 16 }, (_, i) => `<span class="confetti-piece" style="--i:${i}"></span>`).join('');
-  return `<section class="memory-game memory-all-complete">
-    <div class="group-celebration-confetti" aria-hidden="true">${confetti}</div>
-    <div class="memory-all-complete-panel">
-      ${badgeMedalTemplate(badge, { size: 'lg' })}
-      <h2>All 5 levels complete!</h2>
-      <p>${escapeHtml(badge.affirmation)} Pick a level below to play again.</p>
-      <div class="memory-replay-levels">
-        ${MEMORY_LEVELS.map((entry) => `<button type="button" data-memory-replay-level="${entry.level}">${icon('cards')}Level ${entry.level}</button>`).join('')}
-      </div>
-    </div>
-  </section>`;
+// The countdown gets its own large, standalone display — not a small pill
+// buried next to the level label — since it's the thing a player needs to
+// track at a glance while their eyes are on the card grid. `timeBonusFlash`
+// drives the "+10s" popup awarded on every correct match (see
+// flashMemoryTimeBonus()); it's rendered here, as part of the template,
+// rather than injected as a one-off DOM node, because render() rebuilds
+// the whole #app innerHTML on every call and would otherwise wipe out a
+// directly-inserted element before its animation ever painted.
+function memoryTimerTemplate() {
+  const m = state.memory;
+  const urgent = m.status === 'playing' && m.secondsLeft <= 8;
+  return `<div class="memory-timer-display ${urgent ? 'is-urgent' : ''}">
+    <span class="memory-timer-icon">${icon('bolt')}</span>
+    <span class="memory-timer-value">${Math.max(0, m.secondsLeft)}</span>
+    <span class="memory-timer-unit">sec</span>
+    ${m.timeBonusFlash ? `<span class="memory-time-bonus-popup">+${MEMORY_MATCH_TIME_BONUS_SECONDS}s</span>` : ''}
+  </div>`;
 }
 
 function memoryGameTemplate() {
   const m = state.memory;
-  if (m.status === 'allComplete') return memoryAllCompleteTemplate();
   return `<section class="memory-game">
-    ${memoryStatusTemplate()}
-    <div class="memory-grid" data-memory-grid>${m.cards.map(memoryCardTemplate).join('')}</div>
+    <div class="memory-game-top">
+      ${memoryStatusTemplate()}
+      ${memoryTimerTemplate()}
+    </div>
+    <div class="memory-grid" data-memory-grid style="--memory-cols:${m.cols || 4}">${m.cards.map(memoryCardTemplate).join('')}</div>
     <p class="memory-feedback ${m.status === 'won' ? 'is-correct' : m.status === 'lost' ? 'is-wrong' : ''}" aria-live="polite">
       ${m.status === 'won' ? 'Great matching! Next level starting…' : m.status === 'lost' ? "Time's up — let's try that level again…" : 'Flip two cards: match a word to its picture.'}
     </p>
   </section>`;
+}
+
+// The grand finale for finishing every level — a full-screen fixed overlay
+// (same mechanism groupCelebrationTemplate() uses), rendered at the top
+// level of render() rather than inside memoryGameTemplate() so it isn't
+// tied to the memory view still being mounted. Deliberately bigger and
+// more dramatic than that group-completion screen too (an XL medal, a
+// larger confetti burst, its own springier scale-in) so finishing all 5
+// levels reads as a distinctly bigger moment than a single level's badge
+// toast. There's no backdrop-click-to-dismiss here on purpose — only the
+// explicit close (X) button and the replay-level buttons dismiss it, so an
+// excited player tapping around the confetti doesn't accidentally skip
+// past their own reward screen.
+function memoryFinaleTemplate() {
+  if (!state.memoryFinale) return '';
+  const badge = state.memoryFinale;
+  const confetti = Array.from({ length: 28 }, (_, i) => `<span class="confetti-piece" style="--i:${i}"></span>`).join('');
+  return `<div class="memory-finale-overlay" role="dialog" aria-label="All Memory Match levels complete">
+    <div class="memory-finale-confetti" aria-hidden="true">${confetti}</div>
+    <button class="memory-finale-close" data-dismiss-memory-finale aria-label="Close">${icon('close')}</button>
+    <div class="memory-finale-panel">
+      ${badgeMedalTemplate(badge, { size: 'xl' })}
+      <p class="memory-finale-kicker">Champion!</p>
+      <h2>All 5 levels complete!</h2>
+      <p>${escapeHtml(badge.affirmation)} You matched every pair across every level — pick one below to play again.</p>
+      <div class="memory-replay-levels">
+        ${MEMORY_LEVELS.map((entry) => `<button type="button" data-memory-finale-replay-level="${entry.level}">${icon('cards')}Level ${entry.level}</button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function dismissMemoryFinale() {
+  state.memoryFinale = null;
+  render();
 }
 
 // The Memory Match badges, shown alongside every sound group's badge row
@@ -3391,7 +3480,6 @@ function wireMemoryGameEvents() {
   }
   if (state.memory.status === 'idle') startMemoryLevel(state.memory.level || 1);
   document.querySelectorAll('[data-memory-card]').forEach((button) => button.onclick = () => flipMemoryCard(Number(button.dataset.memoryCard)));
-  document.querySelectorAll('[data-memory-replay-level]').forEach((button) => button.onclick = () => startMemoryLevel(Number(button.dataset.memoryReplayLevel)));
 }
 
 function render() {
@@ -3442,6 +3530,7 @@ function render() {
     ${state.admin && state.editingWord ? editModalTemplate() : ''}
     ${celebrationTemplate()}
     ${groupCelebrationTemplate()}
+    ${memoryFinaleTemplate()}
     ${badgeShelfTemplate()}`;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
@@ -3463,7 +3552,8 @@ function render() {
     stopCatchAdvanceTimer();
     state.game = { status: 'idle', round: null, basketPct: catchBasketCenterPct(), feedback: null, countdown: 0, backgroundId: state.game.backgroundId };
     stopMemoryGame();
-    state.memory = { status: 'idle', level: 1, cards: [], flipped: [], lock: false, matchedPairs: 0, totalPairs: 0, secondsLeft: 0 };
+    state.memory = { status: 'idle', level: 1, cols: 4, cards: [], flipped: [], lock: false, matchedPairs: 0, totalPairs: 0, secondsLeft: 0, timeBonusFlash: false };
+    state.memoryFinale = null;
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
     localStorage.removeItem('catchGameScore');
@@ -3501,6 +3591,11 @@ function render() {
   const celebrationToast = $('[data-dismiss-celebration]');
   if (celebrationToast) celebrationToast.onclick = () => dismissCelebration();
   document.querySelectorAll('[data-dismiss-group-celebration]').forEach((el) => el.onclick = () => dismissGroupCelebration());
+  document.querySelectorAll('[data-dismiss-memory-finale]').forEach((el) => el.onclick = () => dismissMemoryFinale());
+  document.querySelectorAll('[data-memory-finale-replay-level]').forEach((el) => el.onclick = () => {
+    state.memoryFinale = null;
+    startMemoryLevel(Number(el.dataset.memoryFinaleReplayLevel));
+  });
   wireAdminEvents();
   wireReadingEvents();
   wireRollReadEvents();

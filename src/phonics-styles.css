@@ -1204,25 +1204,72 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .memory-status-badge .icon { width: 1.1em; height: 1.1em; }
 .memory-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
 .memory-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
-.memory-timer {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-heading); font-weight: 800; font-size: 1.1rem;
-  color: var(--ink);
-}
-.memory-timer .icon { width: 1.1em; height: 1.1em; color: var(--warning); }
-.memory-timer.is-urgent { color: var(--incorrect-dark); animation: memory-timer-pulse 0.6s ease infinite; }
-.memory-timer.is-urgent .icon { color: var(--incorrect); }
 .memory-pairs { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+
+/* The countdown as a large, hard-to-miss display — deliberately its own
+   prominent element rather than a small pill, since it's the number a
+   player needs to track at a glance while looking at the card grid. */
+.memory-timer-display {
+  position: relative;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 8px 22px 8px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.memory-timer-icon { display: inline-flex; align-self: center; width: 1.6rem; height: 1.6rem; color: var(--warning); }
+.memory-timer-icon .icon { width: 100%; height: 100%; }
+.memory-timer-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 2.4rem; line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.memory-timer-unit { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.memory-timer-display.is-urgent { border-color: var(--incorrect); animation: memory-timer-pulse 0.6s ease infinite; }
+.memory-timer-display.is-urgent .memory-timer-value { color: var(--incorrect-dark); }
+.memory-timer-display.is-urgent .memory-timer-icon { color: var(--incorrect); }
 
 @keyframes memory-timer-pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.12); }
+  50% { transform: scale(1.06); }
 }
 
+/* Floating "+10s" reward on a correct match — rendered as part of the
+   template (see memoryTimerTemplate()) rather than a directly-inserted DOM
+   node, since render() rebuilds the whole page and would wipe out a
+   one-off element before its animation ever painted; a fresh element born
+   from a render always starts its animation from frame one. */
+.memory-time-bonus-popup {
+  position: absolute;
+  top: -6px; right: -10px;
+  background: var(--success);
+  color: #fff;
+  font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  animation: memory-time-bonus-rise 0.9s ease forwards;
+  pointer-events: none;
+}
+@keyframes memory-time-bonus-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  25% { transform: translateY(-6px) scale(1.1); opacity: 1; }
+  75% { transform: translateY(-14px) scale(1); opacity: 1; }
+  100% { transform: translateY(-24px) scale(1); opacity: 0; }
+}
+
+/* Explicit column count per level (see MEMORY_LEVELS' `cols`), set inline
+   as --memory-cols, so the board is always a clean, balanced rectangle —
+   never however many 120px-ish columns happen to fit the container. */
 .memory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(var(--memory-cols, 4), 1fr);
   gap: 14px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
   background: var(--primary-tint-50);
   border: 2px solid var(--primary-tint-200);
   border-radius: var(--radius-lg);
@@ -1258,11 +1305,22 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   backface-visibility: hidden;
   overflow: hidden;
 }
+/* Card back: solid blue with the "soundlinks" wordmark, standing in for a
+   logo — every face-down card reads as a branded card back, not a blank
+   placeholder. */
 .memory-card-back {
   background: var(--primary);
-  color: var(--primary-tint-100);
+  color: #fff;
 }
-.memory-card-back .icon { width: 2em; height: 2em; }
+.memory-card-logo {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(0.7rem, 1.7vw, 0.95rem);
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-align: center;
+  padding: 0 6px;
+}
 .memory-card-front {
   background: var(--surface);
   border: 2px solid var(--primary-tint-300);
@@ -1285,22 +1343,8 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .memory-feedback.is-correct { color: var(--success-dark); }
 .memory-feedback.is-wrong { color: var(--warning-dark); }
 
-.memory-all-complete { position: relative; display: grid; place-items: center; min-height: 420px; overflow: hidden; }
-.memory-all-complete-panel {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  text-align: center;
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 32px 28px;
-  max-width: 440px;
-}
-.memory-all-complete-panel h2 { margin: 6px 0 0; font-size: 1.5rem; color: var(--ink); }
-.memory-all-complete-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+/* Reused inside the finale overlay below (see .memory-finale-panel) — kept
+   as its own block since it isn't specific to the overlay's layout. */
 .memory-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
 .memory-replay-levels button {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1312,16 +1356,76 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .memory-replay-levels button:hover { background: var(--primary-dark); }
 .memory-replay-levels button .icon { width: 1.05em; height: 1.05em; }
 
+/* ---------- Memory Match: finale overlay ----------
+   The "finished every level" moment — a full-screen fixed overlay (the
+   same mechanism .group-celebration-overlay uses) but pushed further:
+   a bigger confetti burst, an XL medal, and its own springier scale-in
+   with a slight overshoot, so it reads as a bigger deal than either a
+   single-level badge toast or a sound-group's completion screen. */
+.memory-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.memory-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.memory-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.memory-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.memory-finale-close .icon { width: 1.1em; height: 1.1em; }
+.memory-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: memory-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.memory-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.memory-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.memory-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes memory-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
 .contrast .memory-status-badge { background: #fff; color: #000; }
 .contrast .memory-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
 .contrast .memory-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
-.contrast .memory-timer { color: #fff; }
-.contrast .memory-timer .icon { color: #fff; }
-.contrast .memory-timer.is-urgent { color: #ff8a80; }
-.contrast .memory-timer.is-urgent .icon { color: #ff5252; }
 .contrast .memory-pairs { color: #ccc; }
+.contrast .memory-timer-display { background: #000; border-color: #fff; }
+.contrast .memory-timer-value { color: #fff; }
+.contrast .memory-timer-unit { color: #ccc; }
+.contrast .memory-timer-icon { color: #fff; }
+.contrast .memory-timer-display.is-urgent { border-color: #ff5252; }
+.contrast .memory-timer-display.is-urgent .memory-timer-value { color: #ff8a80; }
+.contrast .memory-timer-display.is-urgent .memory-timer-icon { color: #ff5252; }
 .contrast .memory-grid { background: #000; border: 2px solid #fff; }
 .contrast .memory-card-back { background: #000; color: #fff; box-shadow: inset 0 0 0 2px #fff; }
+.contrast .memory-card-logo { color: #fff; }
 .contrast .memory-card-front { background: #000; color: #fff; border: 2px solid #fff; }
 .contrast .memory-card-word { color: #fff; }
 .contrast .memory-card.is-matched .memory-card-front { background: #001a12; border-color: #0f0; }
@@ -1329,15 +1433,19 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .contrast .memory-feedback { color: #ccc; }
 .contrast .memory-feedback.is-correct { color: #7cffb2; }
 .contrast .memory-feedback.is-wrong { color: #ffd27f; }
-.contrast .memory-all-complete-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
-.contrast .memory-all-complete-panel h2 { color: #fff; }
-.contrast .memory-all-complete-panel p { color: #ccc; }
 .contrast .memory-replay-levels button { background: #fff; color: #000; }
 .contrast .memory-replay-levels button:hover { background: #ccc; }
+.contrast .memory-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .memory-finale-kicker { color: #ffd27f; }
+.contrast .memory-finale-panel h2 { color: #fff; }
+.contrast .memory-finale-panel p { color: #ccc; }
+.contrast .memory-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
 
 @media (prefers-reduced-motion: reduce) {
   .memory-card-inner, .memory-card:hover .memory-card-inner { transition: none; }
-  .memory-timer.is-urgent { animation: none; }
+  .memory-timer-display.is-urgent { animation: none; }
+  .memory-time-bonus-popup { animation: none; opacity: 1; }
+  .memory-finale-panel { animation: none; }
 }
 
 /* ---------- Rules ---------- */
@@ -1843,6 +1951,10 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 .badge-medal-sm .icon { width: 1.3em; height: 1.3em; }
 .badge-medal-lg { width: 96px; height: 96px; }
 .badge-medal-lg .icon { width: 2.4em; height: 2.4em; }
+/* Only used by the Memory Match finale overlay (see memoryFinaleTemplate())
+   for a medal noticeably bigger than any other celebration moment. */
+.badge-medal-xl { width: 140px; height: 140px; }
+.badge-medal-xl .icon { width: 3.2em; height: 3.2em; }
 
 /* Persistent corner widget — present on every view, opens the badge
    shelf. Fixed positioning keeps it available regardless of scroll or
