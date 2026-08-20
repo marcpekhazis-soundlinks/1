@@ -1418,17 +1418,33 @@ function startPractice(item) {
   recognition.interimResults = false;
 
   recognition.onresult = (event) => {
-    const best = event.results[0][0];
-    const transcript = best.transcript.trim().toLowerCase();
-    const comparison = PhonemeMatch.compare(item.word, transcript, item.targetIndex);
-    const message = PhonemeMatch.feedbackFor(item, comparison);
-    state.practice[item.word] = {
-      status: comparison.match ? 'correct' : 'incorrect',
-      transcript,
-      confidence: best.confidence,
-      message,
-    };
-    render();
+    try {
+      const best = event.results && event.results[0] && event.results[0][0];
+      if (!best) {
+        state.practice[item.word] = {
+          status: 'error',
+          message: "Didn't catch that. Try again and speak clearly into the mic.",
+        };
+        render();
+        return;
+      }
+      const transcript = best.transcript.trim().toLowerCase();
+      const comparison = PhonemeMatch.compare(item.word, transcript, item.targetIndex);
+      const message = PhonemeMatch.feedbackFor(item, comparison);
+      state.practice[item.word] = {
+        status: comparison.match ? 'correct' : 'incorrect',
+        transcript,
+        confidence: best.confidence,
+        message,
+      };
+      render();
+    } catch (err) {
+      state.practice[item.word] = {
+        status: 'error',
+        message: "Something went wrong understanding that. Try again.",
+      };
+      render();
+    }
   };
   recognition.onerror = (event) => {
     state.practice[item.word] = {
@@ -1436,6 +1452,15 @@ function startPractice(item) {
       message: `Microphone error (${event.error}). Check mic permissions and try again.`,
     };
     render();
+  };
+  recognition.onend = () => {
+    if (state.practice[item.word] && state.practice[item.word].status === 'listening') {
+      state.practice[item.word] = {
+        status: 'error',
+        message: "Didn't catch that. Try again and speak clearly into the mic.",
+      };
+      render();
+    }
   };
   recognition.onspeechend = () => recognition.stop();
   recognition.start();
