@@ -92,37 +92,15 @@
     }
     var attempt = lookup(attemptWord);
     if (!attempt) {
-      // The recognizer's transcript isn't a word we have phonemes for at all
-      // (it's not in PHONEME_DICTIONARY, and isn't the target word itself).
-      // Short, consonant-heavy target words (e.g. "ship", "chip", "thin",
-      // "this") are the ones a free-form ASR is most likely to mis-transcribe
-      // by a single letter, since it isn't biased toward this small word
-      // list. Rather than fail those outright, allow a one-letter-edit
-      // "close match" against the target's own spelling: if the transcript
-      // is within a single insertion/deletion/substitution of the target
-      // word, treat it as a close-enough match instead of unrecognized. This
-      // is deliberately conservative (distance <= 1) so it doesn't blur
-      // words that are already modeled as distinct dictionary entries (e.g.
-      // "bed" vs "bad" still goes through the real phoneme comparison above,
-      // since both are dictionary words).
-      var targetLetters = normalize(targetWord).split('');
-      var attemptLetters = normalize(attemptWord).split('');
-      var letterEditDistance = attemptLetters.length
-        ? alignPhonemes(targetLetters, attemptLetters).filter(function (op) { return op.type !== 'equal'; }).length
-        : Infinity;
-
-      if (letterEditDistance <= 1) {
-        return {
-          match: true,
-          recognized: true,
-          closeMatch: true,
-          failingSound: null,
-          targetPhonemes: target.phonemes,
-          attemptPhonemes: null,
-          mismatches: []
-        };
-      }
-
+      // The recognizer's transcript isn't a word we have phonemes for at all.
+      // Deliberately NOT falling back to a spelling-distance "close enough"
+      // guess here: a transcript one letter away from the target in SPELLING
+      // (e.g. "cook", "boot", "hook" for target "book") is not necessarily
+      // one letter away in SOUND — English spelling isn't phonemic, so that
+      // kind of fallback accepts words that don't sound like the target at
+      // all. Only a transcript we have real phonemes for goes through the
+      // phoneme alignment below; anything else is honestly reported as
+      // unrecognized rather than guessed at.
       return {
         match: false,
         recognized: false,
@@ -177,9 +155,6 @@
    */
   function feedbackFor(practiceItem, result) {
     if (result.match) {
-      if (result.closeMatch) {
-        return 'Nice! "' + practiceItem.word + '" sounded right (the mic heard it slightly differently, but close enough).';
-      }
       return 'Nice! "' + practiceItem.word + '" was spot on.';
     }
     switch (result.failingSound) {
