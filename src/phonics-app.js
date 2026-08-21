@@ -2326,7 +2326,7 @@ function rollReadFeedbackTemplate() {
   if (rr.feedback) {
     return `<p class="roll-read-feedback is-${rr.feedback.kind}" aria-live="polite">${escapeHtml(rr.feedback.text)}</p>`;
   }
-  const hint = rr.status === 'rolling' ? 'Rolling the die…' : rr.status === 'listening' ? 'Listen for the word, then tap the matching tile in the highlighted row.' : 'Get ready…';
+  const hint = rr.status === 'rolling' ? 'Rolling the die…' : rr.status === 'listening' ? 'Listen for the word, then tap the matching tile anywhere on the board.' : 'Get ready…';
   return `<p class="roll-read-feedback" aria-live="polite">${hint}</p>`;
 }
 
