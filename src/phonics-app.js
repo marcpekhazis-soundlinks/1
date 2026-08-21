@@ -834,22 +834,24 @@ let state = {
   // shown before advancing or — on level 5 — before the finale overlay
   // takes over), or 'lost' (timer hit zero, briefly shown before retrying).
   // `words`/`rows`/`cols` describe the current board (see
-  // startRollReadLevel()/refreshRollReadBoard()); `row` is the row the die
-  // last landed on (1-based); `targetWord` is the word currently playing
-  // aloud — read only by guessRollReadWord(), never rendered, so nothing
-  // on the board gives the answer away. `roundsWon`/`roundsToWin` track
-  // progress within the current level (like Memory Match's matchedPairs/
-  // totalPairs); `secondsLeft` counts down the level's timer, topped up by
-  // `timeBonusFlash`'s "+10s" popup on every correct guess (see
-  // flashRollReadTimeBonus()). Level badges (state.badges) persist as
-  // usual — only the round/level state here is session-only.
+  // startRollReadLevel()/refreshRollReadBoard()) — every tile on it is
+  // live every round, never narrowed down to a subset. `dieValue` is the
+  // face the die last landed on (1-6) — purely decorative flavor, not
+  // read by any gameplay logic. `targetWord` is the word currently
+  // playing aloud — read only by guessRollReadWord(), never rendered, so
+  // nothing on the board gives the answer away. `roundsWon`/`roundsToWin`
+  // track progress within the current level (like Memory Match's
+  // matchedPairs/totalPairs); `secondsLeft` counts down the level's
+  // timer, topped up by `timeBonusFlash`'s "+10s" popup on every correct
+  // guess (see flashRollReadTimeBonus()). Level badges (state.badges)
+  // persist as usual — only the round/level state here is session-only.
   rollRead: {
     status: 'idle',
     level: 1,
     words: [],
     rows: 0,
     cols: 0,
-    row: null,
+    dieValue: null,
     targetWord: null,
     feedback: null, // { kind: 'correct' | 'incorrect', text }
     roundsWon: 0,
@@ -1307,19 +1309,20 @@ function playReadingSentence(item) {
 // Board: a grid of words drawn from rollReadWordPool() (every active word
 // across every sound group — a plain-text reading game has no need for
 // Memory Match's real-photo restriction), sized per level (see
-// ROLL_READ_LEVELS), capped at 36 so a single six-sided die can always
-// address a row.
+// ROLL_READ_LEVELS).
 //
-// Round: the die rolls on its own and narrows play to one row (see
-// rollReadRollDie()). The app then speaks one random word from that row
-// aloud (beginRollReadListening()) WITHOUT visually marking which cell it
-// is anywhere in the template — the student has to find it purely by
-// listening. A correct tap (guessRollReadWord()) counts toward the
-// level's roundsToWin, adds a time bonus, and either wins the level or
-// refreshes the board with a new word set and rolls again automatically.
-// A wrong tap costs no progress — it just leaves the exact same round
-// live so the student can listen again and try another tile — but the
-// timer keeps ticking regardless, so it isn't free.
+// Round: the die rolls on its own (see rollReadRollDie()) purely for
+// visual flavor — the value it lands on is decorative and never narrows
+// which tiles are in play. The app speaks one random word from the WHOLE
+// board aloud (beginRollReadListening()) WITHOUT visually marking which
+// cell it is anywhere in the template — every tile is live, and the
+// student has to find the right one purely by listening, not by looking
+// for a highlighted region first. A correct tap (guessRollReadWord())
+// counts toward the level's roundsToWin, adds a time bonus, and either
+// wins the level or refreshes the board with a new word set and rolls
+// again automatically. A wrong tap costs no progress — it just leaves the
+// exact same round live so the student can listen again and try another
+// tile — but the timer keeps ticking regardless, so it isn't free.
 
 // Five levels, each bigger and stricter than the last: `boardWords` grows
 // the grid (a 3x3 board up to a full 6x6), `roundsToWin` raises how many
@@ -1345,9 +1348,9 @@ function rollReadWordPool() {
 
 // Chooses a rows x cols shape that's as close to square as the word count
 // allows, rather than hardcoding 6x6 — a small level's 3x3 board looks
-// intentional rather than a mostly-empty 6x6 one, and the die itself is
-// capped to match (see rollReadRollDie()), so a roll can never land on a
-// row that doesn't exist.
+// intentional rather than a mostly-empty 6x6 one. Purely a layout choice
+// now (see .roll-read-grid's --roll-read-cols) — the die no longer
+// addresses a row/cell within it (see the "Roll and Read" comment above).
 function rollReadGridShape(count) {
   if (!count) return { rows: 0, cols: 0 };
   const cols = Math.ceil(Math.sqrt(count));
@@ -1355,9 +1358,9 @@ function rollReadGridShape(count) {
   return { rows, cols };
 }
 
-// Standard six-sided die pip layouts, on a 0-100 face. Every level's board
-// is capped at 6 rows (see ROLL_READ_LEVELS/rollReadGridShape()), so a
-// rolled row never needs a face beyond 6.
+// Standard six-sided die pip layouts, on a 0-100 face — used purely for
+// rollReadRollDie()'s decorative animation now, not to address a board
+// row/cell, so every ordinary die face (1-6) is fair game.
 const DIE_PIPS = {
   1: [[50, 50]],
   2: [[27, 27], [73, 73]],
@@ -1389,7 +1392,6 @@ function refreshRollReadBoard() {
   rr.words = words;
   rr.rows = rows;
   rr.cols = cols;
-  rr.row = null;
   rr.targetWord = null;
   rr.status = 'idle';
   rr.feedback = null;
@@ -1469,7 +1471,7 @@ function startRollReadLevel(level) {
     words,
     rows,
     cols,
-    row: null,
+    dieValue: null,
     targetWord: null,
     feedback: null,
     roundsWon: 0,
@@ -1483,23 +1485,24 @@ function startRollReadLevel(level) {
 }
 
 // Rolls the die: a brief cycling animation (random faces, re-rendered a
-// handful of times) that settles on a genuine random row within the
-// board's actual row count, then immediately starts that row's listening
-// round (see beginRollReadListening()) — no separate click needed to hear
-// the word once the die has landed.
+// handful of times) that settles on a genuine random 1-6 face, then
+// immediately starts the listening round (see beginRollReadListening()) —
+// no separate click needed to hear the word once the die has landed. The
+// face it lands on is purely decorative flourish now — it doesn't narrow
+// which tiles end up in play (see the "Roll and Read" comment above).
 function rollReadRollDie() {
   const rr = state.rollRead;
   if (rr.status === 'rolling' || !rr.words.length) return;
   stopRollReadRoll();
   rr.status = 'rolling';
   rr.feedback = null;
-  rr.row = null;
+  rr.dieValue = null;
   render();
   let ticks = 0;
   const totalTicks = 8;
   rollReadAnimationTimer = setInterval(() => {
     ticks++;
-    rr.row = 1 + Math.floor(Math.random() * rr.rows);
+    rr.dieValue = 1 + Math.floor(Math.random() * 6);
     if (ticks >= totalTicks) {
       clearInterval(rollReadAnimationTimer);
       rollReadAnimationTimer = null;
@@ -1510,20 +1513,19 @@ function rollReadRollDie() {
   }, 90);
 }
 
-// Picks one random word from the just-rolled row as this round's target
-// and speaks it aloud. `targetWord` is read only by guessRollReadWord() —
+// Picks one random word from the WHOLE board as this round's target and
+// speaks it aloud — every tile is live, none of them narrowed away by the
+// die. `targetWord` is read only by guessRollReadWord() —
 // rollReadGameTemplate() never renders it or marks its cell, so the
 // student has no visual shortcut, only the audio.
 function beginRollReadListening() {
   const rr = state.rollRead;
-  const start = (rr.row - 1) * rr.cols;
-  const rowWords = rr.words.slice(start, start + rr.cols);
-  if (!rowWords.length) {
+  if (!rr.words.length) {
     rr.status = 'idle';
     render();
     return;
   }
-  const target = rowWords[Math.floor(Math.random() * rowWords.length)];
+  const target = rr.words[Math.floor(Math.random() * rr.words.length)];
   rr.targetWord = target.word;
   rr.status = 'listening';
   render();
@@ -2324,31 +2326,29 @@ function rollReadFeedbackTemplate() {
   if (rr.feedback) {
     return `<p class="roll-read-feedback is-${rr.feedback.kind}" aria-live="polite">${escapeHtml(rr.feedback.text)}</p>`;
   }
-  const hint = rr.status === 'rolling' ? 'Rolling the die…' : rr.status === 'listening' ? 'Listen for the word, then tap the matching tile in the highlighted row.' : 'Get ready…';
+  const hint = rr.status === 'rolling' ? 'Rolling the die…' : rr.status === 'listening' ? 'Listen for the word, then tap the matching tile anywhere on the board.' : 'Get ready…';
   return `<p class="roll-read-feedback" aria-live="polite">${hint}</p>`;
 }
 
-// One board tile. Only tiles in the just-rolled row are ever clickable,
-// and only while a round is actively listening for a guess — everywhere
-// else (mid-roll, right after a correct pick, between levels) every tile
-// is inert. Nothing here marks which tile in the active row is the real
-// target — that's the whole point (see the "Roll and Read" comment above
-// its game-engine section).
-function rollReadCellTemplate(item, index, cols, activeRow, status) {
-  const row = Math.floor(index / cols) + 1;
-  const inActiveRow = activeRow != null && row === activeRow;
-  const clickable = inActiveRow && status === 'listening';
-  const classes = ['roll-read-cell'];
-  if (activeRow != null) classes.push(inActiveRow ? 'is-active-row' : 'is-dim');
-  return `<button type="button" class="${classes.join(' ')}" ${clickable ? `data-roll-read-guess="${escapeHtml(item.word)}"` : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(item.word)}">
+// One board tile. Every tile is clickable while a round is actively
+// listening for a guess — the die's roll is decorative flavor only (see
+// the "Roll and Read" comment above its game-engine section) and never
+// narrows the board down to a subset, so nothing here marks any tile as
+// more or less likely to be the target than any other. Outside a
+// listening round (mid-roll, right after a correct pick, between levels)
+// every tile is simply inert.
+function rollReadCellTemplate(item, status) {
+  const clickable = status === 'listening';
+  return `<button type="button" class="roll-read-cell" ${clickable ? `data-roll-read-guess="${escapeHtml(item.word)}"` : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(item.word)}">
     <span class="roll-read-cell-word">${highlightWord(item)}</span>
   </button>`;
 }
 
 // The audio-identification board: a status/rounds bar, the level timer, a
-// single row die, and the word grid itself. `words`/`rows`/`cols` always
-// describe the exact board on screen (built by startRollReadLevel()/
-// refreshRollReadBoard()), so this never recomputes them.
+// purely decorative die, and the word grid — every tile of which is live
+// every round. `words`/`rows`/`cols` always describe the exact board on
+// screen (built by startRollReadLevel()/refreshRollReadBoard()), so this
+// never recomputes them.
 function rollReadGameTemplate() {
   const rr = state.rollRead;
   const emptyCells = rr.words.length ? rr.rows * rr.cols - rr.words.length : 0;
@@ -2360,10 +2360,10 @@ function rollReadGameTemplate() {
       </div>
       <div class="roll-read-board">
         <div class="roll-read-die-panel" aria-live="polite" aria-atomic="true">
-          ${dieFaceTemplate(rr.row, 'Row die')}
+          ${dieFaceTemplate(rr.dieValue, 'Roll')}
         </div>
         <div class="roll-read-grid" style="--roll-read-cols:${rr.cols || 1}" role="grid" aria-label="Roll and Read board">
-          ${rr.words.map((item, index) => rollReadCellTemplate(item, index, rr.cols, rr.row, rr.status)).join('')}
+          ${rr.words.map((item) => rollReadCellTemplate(item, rr.status)).join('')}
           ${Array.from({ length: emptyCells }, () => '<div class="roll-read-cell is-empty" aria-hidden="true"></div>').join('')}
         </div>
       </div>
@@ -2603,8 +2603,8 @@ function instructionsTemplate() {
   }
   if (state.view === 'rollread') {
     return `<ol>
-        <li>The die rolls on its own and narrows play to one row — every word in that row is in play.</li>
-        <li>Listen closely: one word from that row plays aloud, but nothing on the board shows which one it is.</li>
+        <li>The die rolls on its own each round, just for flavor — every word on the board is in play.</li>
+        <li>Listen closely: one word from anywhere on the board plays aloud, but nothing on the board shows which one it is.</li>
         <li>Tap the tile you think matches what you heard. Right pick? The board refreshes with a new set of words and the die rolls again automatically. Wrong pick? Listen again and try another tile — no penalty besides the clock ticking.</li>
         <li>Every correct pick adds ${ROLL_READ_TIME_BONUS_SECONDS} seconds back to the clock, so good listening keeps the timer topped up.</li>
         <li>Win enough rounds before the timer runs out to win the level and earn a badge, then a fresh board starts automatically at the next level.</li>
@@ -3962,7 +3962,7 @@ function render() {
     state.memory = { status: 'idle', level: 1, cols: 4, cards: [], flipped: [], lock: false, matchedPairs: 0, totalPairs: 0, secondsLeft: 0, timeBonusFlash: false };
     state.memoryFinale = null;
     stopRollReadGame();
-    state.rollRead = { status: 'idle', level: 1, words: [], rows: 0, cols: 0, row: null, targetWord: null, feedback: null, roundsWon: 0, roundsToWin: 0, secondsLeft: 0, timeBonusFlash: false };
+    state.rollRead = { status: 'idle', level: 1, words: [], rows: 0, cols: 0, dieValue: null, targetWord: null, feedback: null, roundsWon: 0, roundsToWin: 0, secondsLeft: 0, timeBonusFlash: false };
     state.rollReadFinale = null;
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
