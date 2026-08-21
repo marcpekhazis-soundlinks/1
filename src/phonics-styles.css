@@ -810,12 +810,13 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
    Its own tab (see rollReadGameTemplate() in JS), structured like Memory
    Match: five levels, each with its own countdown timer (see
    .roll-read-timer-display, mirroring .memory-timer-display down to the
-   "+10s" bonus popup), a status/rounds bar up top, a single row die, and
-   the word grid. The die rolls and narrows play to one row on its own;
-   only that row's tiles are ever clickable, and nothing marks which one
-   is the audio's actual target — see .roll-read-cell.is-active-row/is-dim
-   below. Finishing all five levels triggers .roll-read-finale-overlay,
-   the same full-screen treatment as .memory-finale-overlay. */
+   "+10s" bonus popup), a status/rounds bar up top, a purely decorative
+   die, and the word grid. The die rolls on its own for visual flavor but
+   never narrows the board — every tile is live and clickable every round,
+   and nothing marks which one is the audio's actual target, so the
+   student has to listen rather than look. Finishing all five levels
+   triggers .roll-read-finale-overlay, the same full-screen treatment as
+   .memory-finale-overlay. */
 .roll-read-game { display: flex; flex-direction: column; gap: 16px; }
 .roll-read-game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
@@ -938,17 +939,16 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 }
 .roll-read-cell.is-empty { background: transparent; border: 2px dashed var(--primary-tint-100); box-shadow: none; }
 .roll-read-cell-word { font-family: var(--font-heading); font-weight: 700; font-size: clamp(0.85rem, 1.6vw, 1.1rem); color: var(--ink); text-align: center; }
-/* The active row is enabled and lifted forward; every other tile is
-   dimmed and inert (see rollReadCellTemplate() — non-active tiles render
-   `disabled`) — narrowing WHERE the target might be without ever marking
-   WHICH tile it is. */
-.roll-read-cell.is-active-row {
+/* Every tile gets identical treatment while a round is actively
+   listening (rollReadCellTemplate() renders every tile with `disabled`
+   otherwise) — no tile or region is ever visually distinguished from any
+   other, so the only way to find the right one is by listening. */
+.roll-read-cell:not(:disabled) { cursor: pointer; }
+.roll-read-cell:not(:disabled):hover {
   border-color: var(--rose);
   box-shadow: 0 0 0 4px var(--rose-soft), var(--shadow-md);
-  cursor: pointer;
+  transform: translateY(-2px) scale(1.03);
 }
-.roll-read-cell.is-active-row:hover { transform: translateY(-2px) scale(1.03); }
-.roll-read-cell.is-dim { opacity: 0.45; }
 
 .roll-read-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
 .roll-read-feedback.is-correct { color: var(--success-dark); }
@@ -1808,7 +1808,7 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .roll-read-cell { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .roll-read-cell.is-empty { border: 2px dashed #333; }
 .contrast .roll-read-cell-word { color: #fff; }
-.contrast .roll-read-cell.is-active-row { border-color: #ff5252; box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.35); }
+.contrast .roll-read-cell:not(:disabled):hover { border-color: #ff5252; box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.35); }
 .contrast .roll-read-feedback { color: #ccc; }
 .contrast .roll-read-feedback.is-correct { color: #7cffb2; }
 .contrast .roll-read-feedback.is-incorrect { color: #ffd27f; }
