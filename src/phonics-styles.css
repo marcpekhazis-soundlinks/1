@@ -181,6 +181,19 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .progress strong { display: block; font-family: var(--font-heading); font-size: 1.7rem; color: var(--ink); line-height: 1; }
 .progress span { display: block; margin-top: 4px; font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.02em; }
 
+/* Wraps the progress ring so the active-profile chip can sit under it
+   without disturbing the hero's 2-column grid (text block | this). */
+.hero-side { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.profile-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-50);
+  border-radius: var(--radius-pill);
+  padding: 5px 14px 5px 5px;
+  max-width: 100%;
+}
+.profile-chip-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; }
+.profile-chip-name { font-weight: 700; font-size: 0.85rem; color: var(--primary-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- Toolbar / navigation ---------- */
 .toolbar { position: sticky; top: 0; z-index: 5; padding: 16px 0 8px; background: linear-gradient(var(--cream) 78%, transparent); }
 .tabs {
@@ -2012,6 +2025,7 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; text-align: left; }
   .progress { justify-self: start; }
+  .hero-side { align-items: flex-start; }
   .app-layout.has-sidebar { grid-template-columns: 1fr; }
   .sidebar { position: static; }
 }
@@ -2037,12 +2051,183 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
   .rule ul { grid-template-columns: 1fr; }
 }
 
-/* ---------- Admin content-management mode ----------
-   Deliberately unobtrusive: a bare 6px dot in the footer is the only
-   always-present entry point, so a learner has nothing to notice or
-   stumble into. Everything else here only ever renders once admin mode
-   has been switched on. */
-.app-footer { display: flex; justify-content: flex-end; padding: 18px 4px 4px; }
+/* ---------- Profile picker ("Who's practicing today?") ----------
+   Netflix-style gate shown instead of the normal app whenever
+   state.showProfilePicker is true (see renderProfilePicker()). It's the
+   only thing in #app while it's up — no header/nav render alongside it —
+   so it just needs to fill the available height and center its content,
+   not escape the layout with position:fixed like the modal/finale
+   overlays do. */
+.profile-picker {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+}
+.profile-picker-panel {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+}
+.profile-picker-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  color: var(--ink);
+}
+
+.profile-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 22px;
+}
+.profile-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 130px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-md);
+}
+.profile-tile-avatar {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--primary-tint-100);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  place-items: center;
+  border: 3px solid transparent;
+  color: var(--primary);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.profile-tile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-tile:hover .profile-tile-avatar, .profile-tile:focus-visible .profile-tile-avatar { border-color: var(--primary); transform: translateY(-3px); }
+.profile-tile-name {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.95rem;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.profile-tile-avatar-add { border: 3px dashed var(--primary-tint-300); }
+.profile-tile-avatar-add .icon { width: 2.2em; height: 2.2em; }
+.profile-tile-add:hover .profile-tile-avatar-add, .profile-tile-add:focus-visible .profile-tile-avatar-add { border-color: var(--primary); border-style: dashed; }
+
+.profile-name-field {
+  display: grid;
+  gap: 6px;
+  width: min(320px, 100%);
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.profile-name-field input {
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 12px 14px;
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--primary-tint-50);
+  text-align: center;
+}
+
+.profile-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+}
+.avatar-tile {
+  border: 3px solid transparent;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: var(--primary-tint-100);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.avatar-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-tile:hover, .avatar-tile:focus-visible { transform: translateY(-2px); }
+.avatar-tile.is-selected { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint-200); }
+
+.profile-picker-error {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0;
+  color: var(--incorrect-dark);
+  background: var(--incorrect-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.profile-picker-actions { display: flex; gap: 10px; }
+.profile-picker-actions button {
+  display: inline-flex; align-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 11px 20px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.profile-picker-save { background: var(--primary); color: #fff; }
+.profile-picker-save:hover { background: var(--primary-dark); }
+.profile-picker-cancel { background: var(--primary-tint-100); color: var(--primary-dark); }
+.profile-picker-cancel:hover { background: var(--primary-tint-200); }
+
+@media (max-width: 480px) {
+  .profile-tile { width: 105px; }
+  .profile-tile-avatar { width: 90px; height: 90px; }
+  .profile-avatar-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.contrast .profile-picker-title { color: #fff; }
+.contrast .profile-tile-name { color: #fff; }
+.contrast .profile-name-field { color: #ccc; }
+.contrast .profile-name-field input { background: #111; border-color: #444; color: #fff; }
+.contrast .avatar-tile, .contrast .profile-tile-avatar { background: #111; }
+.contrast .profile-picker-cancel { background: #222; color: #fff; }
+
+/* ---------- Footer: switch profile + admin mode ----------
+   Switch profile sits on the left as a small, quiet pill — visible enough
+   for a learner to find on purpose, but not competing with the tabs above
+   it. Admin mode stays the deliberately unobtrusive bare 6px dot on the
+   right: the only always-present entry point, so a learner has nothing to
+   notice or stumble into there. Everything past the dot only ever renders
+   once admin mode has been switched on. */
+.app-footer { display: flex; align-items: center; justify-content: space-between; padding: 18px 4px 4px; }
+.switch-profile-btn {
+  display: inline-flex; align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.switch-profile-btn:hover, .switch-profile-btn:focus-visible { opacity: 1; background: var(--primary-tint-100); color: var(--primary-dark); }
+.switch-profile-btn .icon { width: 1.05em; height: 1.05em; }
 .admin-toggle-btn {
   width: 14px; height: 14px;
   padding: 0;
@@ -2238,6 +2423,19 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 .celebration-toast-text { display: grid; gap: 2px; }
 .celebration-toast-text strong { font-family: var(--font-heading); font-size: 1.05rem; color: var(--ink); }
 .celebration-toast-text span { font-size: 0.8rem; color: var(--ink-soft); }
+
+/* Avatar + name row dropped into every badge/celebration moment (toast,
+   sound-group panel, and each game's finale panel) — see
+   celebrationAvatarTemplate(). `xs` sits inline inside the toast's text
+   column; `md` centers as its own row above a full-screen panel's medal. */
+.celebration-avatar { display: flex; align-items: center; gap: 6px; }
+.celebration-avatar img { border-radius: 50%; object-fit: cover; flex: none; }
+.celebration-avatar span { font-weight: 700; }
+.celebration-avatar-xs { margin-top: 2px; }
+.celebration-avatar-xs img { width: 18px; height: 18px; }
+.celebration-avatar-xs span { font-size: 0.72rem; color: var(--ink-soft); }
+.celebration-avatar-md img { width: 32px; height: 32px; }
+.celebration-avatar-md span { font-size: 0.85rem; color: var(--ink-soft); }
 @keyframes celebration-pop {
   0% { transform: translateY(16px) scale(0.9); opacity: 0; }
   12% { transform: translateY(0) scale(1); opacity: 1; }
@@ -2328,6 +2526,7 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 .contrast .celebration-toast { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .celebration-toast-text strong { color: #fff; }
 .contrast .celebration-toast-text span { color: #ccc; }
+.contrast .celebration-avatar span { color: #ccc; }
 .contrast .group-celebration-panel { background: #000; color: #fff; border: 2px solid #fff; }
 .contrast .group-celebration-panel h2 { color: #fff; }
 .contrast .group-celebration-panel p { color: #ccc; }
