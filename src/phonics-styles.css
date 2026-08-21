@@ -807,70 +807,115 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 }
 
 /* ---------- Roll and Read ----------
-   A dice board over the current level's word list (see rollReadTemplate()
-   in JS): a control panel with two dice + a Roll button + the landed
-   word's "Hear it" button, next to a grid of every word on the board.
-   Reuses .reading-nav's icon-button visual language for the roll button
-   rather than inventing a third button style. */
-.roll-read { display: grid; gap: 22px; grid-template-columns: minmax(200px, 260px) 1fr; align-items: start; }
+   Its own tab (see rollReadGameTemplate() in JS), structured like Memory
+   Match: five levels, each with its own countdown timer (see
+   .roll-read-timer-display, mirroring .memory-timer-display down to the
+   "+10s" bonus popup), a status/rounds bar up top, a single row die, and
+   the word grid. The die rolls and narrows play to one row on its own;
+   only that row's tiles are ever clickable, and nothing marks which one
+   is the audio's actual target — see .roll-read-cell.is-active-row/is-dim
+   below. Finishing all five levels triggers .roll-read-finale-overlay,
+   the same full-screen treatment as .memory-finale-overlay. */
+.roll-read-game { display: flex; flex-direction: column; gap: 16px; }
+.roll-read-game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
-.roll-read-panel {
+.roll-read-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.roll-read-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.roll-read-status-badge .icon { width: 1.1em; height: 1.1em; }
+.roll-read-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.roll-read-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.roll-read-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+.roll-read-repeat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+.roll-read-repeat-btn:hover { background: var(--primary-tint-50); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.roll-read-repeat-btn .icon { width: 1.1em; height: 1.1em; margin: 0; }
+
+/* The countdown as a large, hard-to-miss display — deliberately its own
+   prominent element rather than a small pill, since it's the number a
+   player needs to track at a glance while listening for the next word.
+   Mirrors .memory-timer-display exactly. */
+.roll-read-timer-display {
+  position: relative;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 8px 22px 8px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.roll-read-timer-icon { display: inline-flex; align-self: center; width: 1.6rem; height: 1.6rem; color: var(--warning); }
+.roll-read-timer-icon .icon { width: 100%; height: 100%; }
+.roll-read-timer-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 2.4rem; line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.roll-read-timer-unit { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.roll-read-timer-display.is-urgent { border-color: var(--incorrect); animation: roll-read-timer-pulse 0.6s ease infinite; }
+.roll-read-timer-display.is-urgent .roll-read-timer-value { color: var(--incorrect-dark); }
+.roll-read-timer-display.is-urgent .roll-read-timer-icon { color: var(--incorrect); }
+@keyframes roll-read-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Floating "+10s" reward on a correct guess — rendered as part of the
+   template (see rollReadTimerTemplate()) rather than a directly-inserted
+   DOM node, for the same reason .memory-time-bonus-popup is: render()
+   rebuilds the whole page and would wipe out a one-off element before its
+   animation ever painted. */
+.roll-read-time-bonus-popup {
+  position: absolute;
+  top: -6px; right: -10px;
+  background: var(--success);
+  color: #fff;
+  font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  animation: roll-read-time-bonus-rise 0.9s ease forwards;
+  pointer-events: none;
+}
+@keyframes roll-read-time-bonus-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  25% { transform: translateY(-6px) scale(1.1); opacity: 1; }
+  75% { transform: translateY(-14px) scale(1); opacity: 1; }
+  100% { transform: translateY(-24px) scale(1); opacity: 0; }
+}
+
+.roll-read-board { display: grid; gap: 22px; grid-template-columns: minmax(140px, 180px) 1fr; align-items: start; }
+.roll-read-die-panel {
   display: grid;
   justify-items: center;
-  gap: 14px;
+  align-content: start;
+  gap: 8px;
   background: var(--surface);
   border: 1px solid var(--primary-tint-100);
   border-radius: var(--radius-lg);
-  padding: 24px 20px;
+  padding: 24px 16px;
   box-shadow: var(--shadow-md);
-  text-align: center;
 }
-
-.roll-read-dice { display: flex; gap: 14px; }
-.roll-die { width: 56px; height: 56px; }
+.roll-die { width: 64px; height: 64px; }
 .roll-die svg { width: 100%; height: 100%; }
 .roll-die rect { fill: var(--surface); stroke: var(--primary-tint-300); stroke-width: 4; }
 .roll-die circle { fill: var(--primary-dark); }
-
-.roll-read-roll-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: #fff;
-  padding: 12px 22px;
-  font-weight: 800;
-  font-family: var(--font-heading);
-  font-size: 0.95rem;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
-}
-.roll-read-roll-btn:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.roll-read-roll-btn:disabled { opacity: 0.7; cursor: default; }
-.roll-read-roll-btn.is-rolling .icon { animation: roll-read-spin 0.5s linear infinite; }
-@keyframes roll-read-spin { to { transform: rotate(360deg); } }
-
-.roll-read-result { min-height: 3.4em; display: grid; justify-items: center; gap: 8px; }
-.roll-read-result-word { margin: 0; font-family: var(--font-heading); font-size: clamp(1.4rem, 3vw, 1.8rem); font-weight: 800; color: var(--ink); }
-.roll-read-result-hint { margin: 0; color: var(--ink-soft); font-size: 0.9rem; }
-.roll-read-hear-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: var(--primary-tint-100);
-  color: var(--primary-dark);
-  padding: 8px 14px;
-  font-weight: 700;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.roll-read-hear-btn:hover { background: var(--primary); color: #fff; }
-
-.roll-read-progress { margin: 0; font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); }
 
 .roll-read-grid {
   display: grid;
@@ -887,38 +932,110 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   border: 2px solid var(--primary-tint-100);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  font: inherit;
+  cursor: default;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
 }
 .roll-read-cell.is-empty { background: transparent; border: 2px dashed var(--primary-tint-100); box-shadow: none; }
 .roll-read-cell-word { font-family: var(--font-heading); font-weight: 700; font-size: clamp(0.85rem, 1.6vw, 1.1rem); color: var(--ink); text-align: center; }
-.roll-read-cell.is-seen { background: var(--primary-tint-50); border-color: var(--primary-tint-200); }
-.roll-read-seen-mark {
-  position: absolute; top: -8px; right: -8px;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--success);
-  color: #fff;
-  display: grid; place-items: center;
-  box-shadow: var(--shadow-sm);
-}
-.roll-read-seen-mark .icon { width: 0.75em; height: 0.75em; margin: 0; }
-.roll-read-cell.is-selected {
+/* The active row is enabled and lifted forward; every other tile is
+   dimmed and inert (see rollReadCellTemplate() — non-active tiles render
+   `disabled`) — narrowing WHERE the target might be without ever marking
+   WHICH tile it is. */
+.roll-read-cell.is-active-row {
   border-color: var(--rose);
   box-shadow: 0 0 0 4px var(--rose-soft), var(--shadow-md);
-  transform: translateY(-2px) scale(1.04);
+  cursor: pointer;
+}
+.roll-read-cell.is-active-row:hover { transform: translateY(-2px) scale(1.03); }
+.roll-read-cell.is-dim { opacity: 0.45; }
+
+.roll-read-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
+.roll-read-feedback.is-correct { color: var(--success-dark); }
+.roll-read-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+/* Reused inside the finale overlay below (see .roll-read-finale-panel) —
+   kept as its own block since it isn't specific to the overlay's layout.
+   Visually identical to .memory-replay-levels. */
+.roll-read-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.roll-read-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.roll-read-replay-levels button:hover { background: var(--primary-dark); }
+.roll-read-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+/* ---------- Roll and Read: finale overlay ----------
+   The "finished every level" moment — the exact same mechanism
+   .memory-finale-overlay uses (full-screen fixed overlay, confetti burst
+   via the shared .confetti-piece, XL medal, springy scale-in), just
+   relabeled for this game. */
+.roll-read-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.roll-read-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.roll-read-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.roll-read-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.roll-read-finale-close .icon { width: 1.1em; height: 1.1em; }
+.roll-read-finale-panel {
+  position: relative;
   z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: roll-read-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.roll-read-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.roll-read-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.roll-read-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes roll-read-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
 @media (max-width: 780px) {
-  .roll-read { grid-template-columns: 1fr; }
+  .roll-read-board { grid-template-columns: 1fr; }
+  .roll-read-die-panel { flex-direction: row; justify-content: center; }
 }
 @media (max-width: 480px) {
   .roll-read-grid { gap: 7px; }
   .roll-read-cell { min-height: 52px; padding: 6px 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .roll-read-roll-btn.is-rolling .icon { animation: none !important; }
   .roll-read-cell { transition: none !important; }
+  .roll-read-timer-display.is-urgent { animation: none; }
+  .roll-read-time-bonus-popup { animation: none; opacity: 1; }
+  .roll-read-finale-panel { animation: none; }
 }
 
 /* ---------- Catch the Sound ----------
@@ -1672,21 +1789,36 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .reading-line-focus-toggle { background: #000; color: #fff; border-color: #fff; }
 .contrast .reading-line-focus-toggle.is-on { background: #fff; color: #000; }
 
-.contrast .roll-read-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-read-status-badge { background: #fff; color: #000; }
+.contrast .roll-read-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .roll-read-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .roll-read-rounds { color: #ccc; }
+.contrast .roll-read-repeat-btn { background: #000; color: #fff; border-color: #fff; }
+.contrast .roll-read-repeat-btn:hover { background: #222; }
+.contrast .roll-read-timer-display { background: #000; border-color: #fff; }
+.contrast .roll-read-timer-value { color: #fff; }
+.contrast .roll-read-timer-unit { color: #ccc; }
+.contrast .roll-read-timer-icon { color: #fff; }
+.contrast .roll-read-timer-display.is-urgent { border-color: #ff5252; }
+.contrast .roll-read-timer-display.is-urgent .roll-read-timer-value { color: #ff8a80; }
+.contrast .roll-read-timer-display.is-urgent .roll-read-timer-icon { color: #ff5252; }
+.contrast .roll-read-die-panel { background: #000; border: 2px solid #fff; box-shadow: none; }
 .contrast .roll-die rect { fill: #000; stroke: #fff; }
 .contrast .roll-die circle { fill: #fff; }
-.contrast .roll-read-roll-btn { background: #fff; color: #000; }
-.contrast .roll-read-roll-btn:hover:not(:disabled) { background: #ccc; }
-.contrast .roll-read-result-word { color: #fff; }
-.contrast .roll-read-result-hint, .contrast .roll-read-progress { color: #ccc; }
-.contrast .roll-read-hear-btn { background: #000; color: #fff; border: 2px solid #fff; }
-.contrast .roll-read-hear-btn:hover { background: #fff; color: #000; }
 .contrast .roll-read-cell { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .roll-read-cell.is-empty { border: 2px dashed #333; }
 .contrast .roll-read-cell-word { color: #fff; }
-.contrast .roll-read-cell.is-seen { background: #001a12; border-color: #0f0; }
-.contrast .roll-read-seen-mark { background: #0f0; color: #000; }
-.contrast .roll-read-cell.is-selected { border-color: #ff5252; box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.35); }
+.contrast .roll-read-cell.is-active-row { border-color: #ff5252; box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.35); }
+.contrast .roll-read-feedback { color: #ccc; }
+.contrast .roll-read-feedback.is-correct { color: #7cffb2; }
+.contrast .roll-read-feedback.is-incorrect { color: #ffd27f; }
+.contrast .roll-read-replay-levels button { background: #fff; color: #000; }
+.contrast .roll-read-replay-levels button:hover { background: #ccc; }
+.contrast .roll-read-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-read-finale-kicker { color: #ffd27f; }
+.contrast .roll-read-finale-panel h2 { color: #fff; }
+.contrast .roll-read-finale-panel p { color: #ccc; }
+.contrast .roll-read-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
 
 /* ---------- Dyslexia-friendly mode ----------
    Fully independent of Large text / High contrast and combinable with
@@ -1716,7 +1848,6 @@ body.dyslexia .hint,
 body.dyslexia .card h2,
 body.dyslexia .reading-target-word,
 body.dyslexia .reading-sentence,
-body.dyslexia .roll-read-result-word,
 body.dyslexia .roll-read-cell-word {
   letter-spacing: 0.02em;
   word-spacing: 0.12em;
@@ -1734,7 +1865,7 @@ body.dyslexia:not(.contrast) .card,
 body.dyslexia:not(.contrast) .rule,
 body.dyslexia:not(.contrast) .sidebar,
 body.dyslexia:not(.contrast) .reading-stage,
-body.dyslexia:not(.contrast) .roll-read-panel,
+body.dyslexia:not(.contrast) .roll-read-die-panel,
 body.dyslexia:not(.contrast) .roll-read-cell {
   background: var(--dyslexia-surface);
   color: var(--dyslexia-ink);
@@ -1748,7 +1879,6 @@ body.dyslexia:not(.contrast) .sidebar-group-header,
 body.dyslexia:not(.contrast) .level-heading h2,
 body.dyslexia:not(.contrast) .reading-target-word,
 body.dyslexia:not(.contrast) .reading-sentence,
-body.dyslexia:not(.contrast) .roll-read-result-word,
 body.dyslexia:not(.contrast) .roll-read-cell-word {
   color: var(--dyslexia-ink);
 }
@@ -1758,8 +1888,8 @@ body.dyslexia:not(.contrast) .ink-soft,
 body.dyslexia:not(.contrast) .instructions ol,
 body.dyslexia:not(.contrast) .sidebar-level-count,
 body.dyslexia:not(.contrast) .level-heading-progress,
-body.dyslexia:not(.contrast) .roll-read-result-hint,
-body.dyslexia:not(.contrast) .roll-read-progress {
+body.dyslexia:not(.contrast) .roll-read-feedback,
+body.dyslexia:not(.contrast) .roll-read-rounds {
   color: var(--dyslexia-ink-soft);
 }
 body.dyslexia:not(.contrast) .sidebar-level { background: var(--dyslexia-bg); color: var(--dyslexia-ink); }
