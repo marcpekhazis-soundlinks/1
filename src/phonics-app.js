@@ -571,7 +571,7 @@ function awardBadgeIfLevelComplete(groupId, level) {
   const id = badgeId(groupId, level);
   if (state.badges[id]) return null;
   state.badges[id] = { earnedAt: Date.now() };
-  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
   return badgeForLevel(groupId, level);
 }
 
@@ -749,8 +749,52 @@ function awardCatchGameBadgeIfEligible() {
   if (state.gameScore < CATCH_GAME_BADGE_THRESHOLD) return null;
   if (state.badges[CATCH_GAME_BADGE_ID]) return null;
   state.badges[CATCH_GAME_BADGE_ID] = { earnedAt: Date.now() };
-  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
   return catchGameBadge();
+}
+
+// ---------- Per-profile progress storage ----------
+// Progress (known words, earned badges, and anything derived from them
+// like level-locking) is namespaced per learner profile so it can't bleed
+// between profiles once profiles exist. There's no profile UI yet, so
+// everyone reads/writes through one placeholder profile — every learner
+// behaves exactly as before. Non-progress preferences (voice, reading
+// speed, etc.) intentionally stay global/shared and don't go through this.
+const DEFAULT_PROFILE_ID = 'default';
+const ACTIVE_PROFILE_STORAGE_KEY = 'activeProfileId';
+
+function getActiveProfileId() {
+  return localStorage[ACTIVE_PROFILE_STORAGE_KEY] || DEFAULT_PROFILE_ID;
+}
+
+function progressStorageKey(key, profileId = getActiveProfileId()) {
+  return `${key}::${profileId}`;
+}
+
+// One-time migration so learners who already had progress under the old,
+// un-namespaced keys don't appear to lose it: copy each legacy key into
+// the default profile's namespaced slot the first time it's missing there.
+// Leaves the legacy key in place (harmless, and simpler than coordinating
+// a delete across every progress key at once).
+function migrateLegacyProgressKey(key) {
+  const scopedKey = progressStorageKey(key, DEFAULT_PROFILE_ID);
+  if (localStorage[scopedKey] === undefined && localStorage[key] !== undefined) {
+    localStorage[scopedKey] = localStorage[key];
+  }
+}
+['donePhonics', 'badgesPhonics', 'catchGameScore'].forEach(migrateLegacyProgressKey);
+
+function readProgress(key, fallback) {
+  const raw = localStorage[progressStorageKey(key)];
+  return raw === undefined ? fallback : raw;
+}
+
+function writeProgress(key, value) {
+  localStorage[progressStorageKey(key)] = value;
+}
+
+function removeProgress(key) {
+  localStorage.removeItem(progressStorageKey(key));
 }
 
 let state = {
@@ -771,11 +815,12 @@ let state = {
   // 'game'/'memory'/'rollread' views (every other view's instructions stay
   // English-only, no toggle shown).
   instructionsLang: localStorage.instructionsLang === 'ar' ? 'ar' : 'en',
-  done: JSON.parse(localStorage.donePhonics || '{}'),
+  done: JSON.parse(readProgress('donePhonics', '{}')),
   // Earned badges, keyed by badgeId ("<groupId>::<level>"). Persisted the
-  // same way `done` is — a plain JSON blob in localStorage — so it needs no
-  // storage mechanism of its own. See awardBadgeIfLevelComplete().
-  badges: JSON.parse(localStorage.badgesPhonics || '{}'),
+  // same way `done` is — a plain JSON blob, namespaced per profile via
+  // readProgress()/writeProgress() — so it needs no storage mechanism of
+  // its own. See awardBadgeIfLevelComplete().
+  badges: JSON.parse(readProgress('badgesPhonics', '{}')),
   // Transient celebration UI, never persisted: `celebration` is the brief
   // per-level toast (cleared by its own timeout in toggleDone()),
   // `groupCelebration` is the bigger full-screen moment shown once a whole
@@ -805,7 +850,7 @@ let state = {
   // whole seconds left until the next round auto-starts; `backgroundId`
   // is the CATCH_BACKGROUNDS entry picked for this visit to the tab (see
   // wireCatchGameEvents()/stopCatchGame()).
-  gameScore: Number(localStorage.catchGameScore) || 0,
+  gameScore: Number(readProgress('catchGameScore', '0')) || 0,
   // Whether the player has pressed "Start Game" (and its Ready/Set/Go
   // countdown has finished) this session — see gameStartPromptTemplate()/
   // beginGameCountdown(). Never persisted, so a reload always lands back
@@ -1693,14 +1738,14 @@ function awardRollReadBadgeIfEligible(level) {
   const id = rollReadBadgeId(level);
   if (state.badges[id]) return null;
   state.badges[id] = { earnedAt: Date.now() };
-  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
   return rollReadBadgeForLevel(level);
 }
 
 function awardRollReadMasterBadgeIfEligible() {
   if (state.badges[ROLL_READ_MASTER_BADGE_ID]) return null;
   state.badges[ROLL_READ_MASTER_BADGE_ID] = { earnedAt: Date.now() };
-  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
   return rollReadMasterBadge();
 }
 
@@ -1813,7 +1858,7 @@ function gameStartCountdownTemplate() {
 function toggleDone(word) {
   const item = WORDS.find((entry) => entry.word === word);
   state.done[word] = !state.done[word];
-  localStorage.donePhonics = JSON.stringify(state.done);
+  writeProgress('donePhonics', JSON.stringify(state.done));
   if (state.done[word] && item) {
     const { groupId, level } = levelForWord(item);
     const badge = level !== undefined ? awardBadgeIfLevelComplete(groupId, level) : null;
@@ -3550,7 +3595,7 @@ function beginCatchCountdown(seconds = 3) {
 // back to "not known" after its level was already completed.
 function applyCatchGameScore(delta) {
   state.gameScore = Math.max(0, state.gameScore + delta);
-  localStorage.catchGameScore = String(state.gameScore);
+  writeProgress('catchGameScore', String(state.gameScore));
   if (delta > 0) {
     const badge = awardCatchGameBadgeIfEligible();
     if (badge) {
@@ -3725,14 +3770,14 @@ function awardMemoryBadgeIfEligible(level) {
   const id = memoryBadgeId(level);
   if (state.badges[id]) return null;
   state.badges[id] = { earnedAt: Date.now() };
-  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
   return memoryBadgeForLevel(level);
 }
 
 function awardMemoryMasterBadgeIfEligible() {
   if (state.badges[MEMORY_MASTER_BADGE_ID]) return null;
   state.badges[MEMORY_MASTER_BADGE_ID] = { earnedAt: Date.now() };
-  localStorage.badgesPhonics = JSON.stringify(state.badges);
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
   return memoryMasterBadge();
 }
 
@@ -4143,9 +4188,9 @@ function render() {
     state.rollReadFinale = null;
     state.rollReadStarted = false;
     stopStartCountdown();
-    localStorage.removeItem('donePhonics');
-    localStorage.removeItem('badgesPhonics');
-    localStorage.removeItem('catchGameScore');
+    removeProgress('donePhonics');
+    removeProgress('badgesPhonics');
+    removeProgress('catchGameScore');
     render();
   };
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
