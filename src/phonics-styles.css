@@ -437,12 +437,13 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   box-shadow: var(--shadow-md);
 }
 .instructions { margin: 18px 0 30px; }
-.instructions h2 { font-size: 1.25rem; color: var(--ink); }
+.instructions-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.instructions h2 { font-size: 1.25rem; color: var(--ink); margin: 0; }
 .instructions ol {
   line-height: 1.85;
   color: var(--ink-soft);
   padding-left: 0;
-  margin: 0;
+  margin: 12px 0 0;
   list-style: none;
   counter-reset: step;
 }
@@ -465,6 +466,104 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   font-size: 0.8rem;
   display: grid;
   place-items: center;
+}
+/* Arabic instructions (see GAME_INSTRUCTIONS/instructionsTemplate() in
+   JS) render the list right-to-left via dir="rtl" — mirror the numbered
+   badge and its indent onto the right edge instead of the left. */
+.instructions ol[dir="rtl"] li { padding-left: 0; padding-right: 38px; }
+.instructions ol[dir="rtl"] li::before { left: auto; right: 0; }
+
+/* The small "English / العربية" pill next to a game's instructions (see
+   instructionsLangToggleTemplate()) — same pill-toggle visual language as
+   .reading-style-toggle, reused rather than duplicated. */
+.instructions-lang-toggle { display: inline-flex; gap: 4px; padding: 3px; background: var(--primary-tint-50); border-radius: var(--radius-pill); }
+.instructions-lang-toggle button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 7px 13px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.instructions-lang-toggle button.active { background: var(--primary); color: #fff; }
+
+/* ---------- Start Game flow (shared by Catch the Sound, Memory Match,
+   and Roll and Read) ----------
+   gameStartPromptTemplate()'s gate, shown in place of a game's own
+   board/field until state.<game>Started flips true, and
+   gameStartCountdownTemplate()'s brief "Ready… Set… Go!" flourish that
+   follows a click — see beginGameCountdown() in JS. Both replace the
+   game's whole <section>, so they inherit that section's normal width;
+   only the fixed height keeps every game's panel from jumping around as
+   it swaps between the prompt/countdown/live board. */
+.game-start-prompt {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  min-height: 320px;
+  align-content: center;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  box-shadow: var(--shadow-md);
+}
+.game-start-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+}
+.game-start-icon .icon { width: 1.8em; height: 1.8em; }
+.game-start-hint { margin: 0; color: var(--ink-soft); font-size: 0.95rem; max-width: 40ch; }
+.game-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  padding: 14px 28px;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.game-start-btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.game-start-btn .icon { width: 1.1em; height: 1.1em; margin: 0; }
+
+.game-start-countdown {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.game-start-countdown-word {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(2.4rem, 8vw, 4rem);
+  color: #fff;
+  animation: game-start-countdown-pop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.game-start-countdown-word.is-go { color: var(--success); }
+@keyframes game-start-countdown-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-start-countdown-word { animation: none !important; }
 }
 
 /* ---------- Tier grouping (by letter count, within a sound tab) ---------- */
@@ -1708,6 +1807,16 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .tier-dot { background: #fff; color: #000; }
 .contrast .tier-heading::after { background: #fff; }
 .contrast .instructions ol li::before { background: #fff; color: #000; }
+.contrast .instructions-lang-toggle { background: #111; }
+.contrast .instructions-lang-toggle button { color: #ccc; }
+.contrast .instructions-lang-toggle button.active { background: #fff; color: #000; }
+.contrast .game-start-prompt { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .game-start-icon { background: #fff; color: #000; }
+.contrast .game-start-hint { color: #ccc; }
+.contrast .game-start-btn { background: #fff; color: #000; }
+.contrast .game-start-btn:hover { background: #ccc; }
+.contrast .game-start-countdown { background: #000; border: 2px solid #fff; box-shadow: none; }
+.contrast .game-start-countdown-word.is-go { color: #7cffb2; }
 .contrast .group-progress, .contrast .empty-group { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .group-progress-label { color: #ccc; }
 .contrast .group-progress-value { color: #fff; }
@@ -1866,7 +1975,8 @@ body.dyslexia:not(.contrast) .rule,
 body.dyslexia:not(.contrast) .sidebar,
 body.dyslexia:not(.contrast) .reading-stage,
 body.dyslexia:not(.contrast) .roll-read-die-panel,
-body.dyslexia:not(.contrast) .roll-read-cell {
+body.dyslexia:not(.contrast) .roll-read-cell,
+body.dyslexia:not(.contrast) .game-start-prompt {
   background: var(--dyslexia-surface);
   color: var(--dyslexia-ink);
 }
@@ -1889,7 +1999,8 @@ body.dyslexia:not(.contrast) .instructions ol,
 body.dyslexia:not(.contrast) .sidebar-level-count,
 body.dyslexia:not(.contrast) .level-heading-progress,
 body.dyslexia:not(.contrast) .roll-read-feedback,
-body.dyslexia:not(.contrast) .roll-read-rounds {
+body.dyslexia:not(.contrast) .roll-read-rounds,
+body.dyslexia:not(.contrast) .game-start-hint {
   color: var(--dyslexia-ink-soft);
 }
 body.dyslexia:not(.contrast) .sidebar-level { background: var(--dyslexia-bg); color: var(--dyslexia-ink); }
