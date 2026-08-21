@@ -1,20 +1,24 @@
 #!/usr/bin/env node
 // Local dev server for the SoundLinks phonics app.
 //
-// It does two things:
+// It does three things:
 //   1. Serves the static app, same as `npx serve` or `python3 -m http.server`.
 //   2. Exposes a tiny write-back API (POST /__admin/save-word) that the
 //      in-app admin content-management mode (see the "ADMIN MODE" section
 //      of src/phonics-app.js) uses to persist word edits, archives, and
 //      restores straight into src/phonics-app.js on disk — real, permanent,
 //      git-diffable file changes instead of browser-only localStorage.
+//   3. Answers GET /__admin/ping, a capability probe the client uses to
+//      decide whether admin mode's entry points (the footer dot,
+//      Ctrl+Alt+A) should even exist — see checkAdminAvailability() in
+//      src/phonics-app.js.
 //
 // Run with `npm run admin` (or `node scripts/dev-server.js`) instead of
 // `npx serve` while curating content, then open http://localhost:5173.
-// Admin mode is hidden by default; toggle it with the small dot in the
-// footer or the Ctrl+Alt+A shortcut. Everything works with plain
-// `npx serve` too — only the write-back requests will fail there, which
-// admin mode reports on screen rather than silently losing edits.
+// Admin mode's entry points only appear when this server is the one
+// answering — a learner running the app via plain `npx serve`,
+// `python3 -m http.server`, or any static host never sees the toggle at
+// all, since none of those serve /__admin/ping.
 
 const http = require('http');
 const fs = require('fs');
@@ -144,6 +148,17 @@ function handleSaveWord(req, res) {
 const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/__admin/save-word') {
     handleSaveWord(req, res);
+    return;
+  }
+  // Capability probe the client uses to decide whether admin mode's entry
+  // points (the footer dot, Ctrl+Alt+A) should exist at all — see
+  // checkAdminAvailability() in src/phonics-app.js. Only this dev server
+  // answers it; a plain `npx serve`/`python3 -m http.server` (or any
+  // static host) has no such route and returns 404, which is exactly how
+  // the client tells the two apart.
+  if (req.method === 'GET' && req.url === '/__admin/ping') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {

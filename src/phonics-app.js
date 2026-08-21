@@ -1064,8 +1064,14 @@ let state = {
   rollReadFinale: null,
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
-  // "ADMIN MODE" section near the end of this file.
+  // "ADMIN MODE" section near the end of this file. `adminAvailable` gates
+  // whether admin mode's entry points (the footer dot, Ctrl+Alt+A) exist
+  // at all — starts false and only ever flips true once
+  // checkAdminAvailability() confirms the admin dev server (not a plain
+  // static host) is what's actually serving the app, so `admin` itself
+  // can never become true in a regular learner build.
   admin: false,
+  adminAvailable: false,
   showArchived: false,
   editingWord: null,
   adminError: '',
@@ -2961,16 +2967,37 @@ function instructionsLangToggleTemplate() {
 // ---------- ADMIN MODE ----------
 // A curriculum-author-only mode, off by default and never persisted, so a
 // learner who reloads the page (or opens it fresh) always sees the plain
-// app. Turn it on via the small dot button in the footer, or the keyboard
-// shortcut Ctrl+Alt+A.
+// app. Its entry points — the small dot button in the footer, and the
+// keyboard shortcut Ctrl+Alt+A — only exist at all once
+// checkAdminAvailability() has confirmed the admin dev server (not a
+// plain static host) is serving the app; see state.adminAvailable and the
+// gating in render()/wireAdminEvents()/the keydown handler below.
 //
 // Edits are written straight to src/phonics-app.js on disk through the
 // local dev server's /__admin/save-word endpoint (see scripts/dev-server.js)
 // so they become real, permanent, git-diffable file changes — never
-// localStorage. If that endpoint isn't reachable (e.g. a static host like
-// GitHub Pages, or the plain `npx serve`/`python3 -m http.server` without
-// the admin dev server), every write simply fails with an on-screen error
-// and nothing is changed — admin mode is effectively read-only there.
+// localStorage.
+
+// Probes for the admin dev server by requesting a route only it answers
+// (see scripts/dev-server.js). A plain static host — `npx serve`,
+// `python3 -m http.server`, GitHub Pages, whatever — has no such route
+// and 404s (or the fetch just fails outright, e.g. under file://), which
+// this treats identically to "not available": fails closed, so admin
+// mode's entry points stay absent unless the probe actively succeeds.
+// Fire-and-forget at startup; a successful probe re-renders once to reveal
+// the now-available footer dot.
+function checkAdminAvailability() {
+  fetch('/__admin/ping')
+    .then((response) => (response.ok ? response.json() : null))
+    .then((result) => {
+      if (result && result.ok) {
+        state.adminAvailable = true;
+        render();
+      }
+    })
+    .catch(() => {});
+}
+
 function adminBannerTemplate() {
   const archivedCount = WORDS.filter((word) => word.archived).length;
   return `
@@ -3102,7 +3129,8 @@ function closeAdminPanels() {
 }
 
 function wireAdminEvents() {
-  $('[data-admin-toggle]').onclick = () => { state.admin = !state.admin; state.adminError = ''; render(); };
+  const toggleButton = $('[data-admin-toggle]');
+  if (toggleButton) toggleButton.onclick = () => { state.admin = !state.admin; state.adminError = ''; render(); };
   if (!state.admin) return;
   const banner = $('.admin-banner');
   if (banner) {
@@ -3137,7 +3165,7 @@ document.addEventListener('keydown', (event) => {
     else catchKeys.right = true;
     return;
   }
-  if (event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
+  if (state.adminAvailable && event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
     event.preventDefault();
     state.admin = !state.admin;
     state.adminError = '';
@@ -4417,9 +4445,9 @@ function render() {
       ${state.view === 'learn' ? sidebarTemplate() : ''}
       <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : practiceTemplate()}</div>
     </div>
-    <footer class="app-footer">
+    ${state.adminAvailable ? `<footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
-    </footer>
+    </footer>` : ''}
     ${state.admin && state.showArchived ? archivedPanelTemplate() : ''}
     ${state.admin && state.editingWord ? editModalTemplate() : ''}
     ${celebrationTemplate()}
@@ -4523,3 +4551,4 @@ function render() {
 }
 
 render();
+checkAdminAvailability();
