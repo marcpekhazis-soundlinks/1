@@ -2211,8 +2211,24 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
    it. Admin mode stays the deliberately unobtrusive bare 6px dot on the
    right: the only always-present entry point, so a learner has nothing to
    notice or stumble into there. Everything past the dot only ever renders
-   once admin mode has been switched on. */
-.app-footer { display: flex; align-items: center; justify-content: space-between; padding: 18px 4px 4px; }
+   once admin mode has been switched on.
+   The bar itself is sticky to the bottom of the viewport rather than
+   sitting after all page content — the Learn tab's sidebar (every level
+   of every sound group) routinely pushes the footer well past one
+   screen's worth of scrolling, which made "Switch profile" effectively
+   unreachable without hunting for the literal end of the page. Sticky
+   keeps it one glance away on every tab, the same way the badge-shelf
+   widget (fixed, top-right) is always in reach. */
+.app-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 18px;
+  padding: 10px 4px;
+  background: var(--cream);
+  box-shadow: 0 -6px 14px -8px rgba(12, 40, 80, 0.18);
+}
 .switch-profile-btn {
   display: inline-flex; align-items: center;
   border: 0;
