@@ -1142,7 +1142,6 @@ const ICONS = {
   cards: '<rect x="3" y="7" width="12" height="15" rx="2" transform="rotate(-8 9 14.5)"/><rect x="9" y="3" width="12" height="15" rx="2"/>',
   play: '<path d="M7 4l14 8-14 8z" fill="currentColor" stroke="none"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -3202,18 +3201,20 @@ function badgeShelfWidgetTemplate() {
   </button>`;
 }
 
-// Small header chip showing who's currently practicing — purely a display
-// (switching profiles happens through the footer's Switch profile button,
-// see wireProfilePickerEvents()/openProfilePicker()), so it's never empty
-// once the picker has gated entry into the app.
-function profileChipTemplate() {
+// Small persistent corner widget, right next to the badge shelf toggle,
+// showing who's currently practicing — doubles as the Switch profile
+// trigger (see the data-switch-profile wiring in render()) so there's one
+// obvious, always-visible way back to the picker instead of a separate
+// control buried elsewhere. Fixed positioning (via its .header-widgets
+// wrapper) keeps it reachable regardless of scroll or which tab is
+// active, same as the badge shelf toggle beside it.
+function profileAvatarButtonTemplate() {
   const profile = activeProfile();
   if (!profile) return '';
   const avatar = avatarById(profile.avatarId);
-  return `<div class="profile-chip" title="${escapeHtml(profile.name)}">
-    <img class="profile-chip-avatar" src="${avatarSrc(avatar)}" alt="">
-    <span class="profile-chip-name">${escapeHtml(profile.name)}</span>
-  </div>`;
+  return `<button class="header-avatar-btn" data-switch-profile aria-label="Switch profile (currently ${escapeHtml(profile.name)})" title="Switch profile (${escapeHtml(profile.name)})">
+    <img src="${avatarSrc(avatar)}" alt="">
+  </button>`;
 }
 
 // Small avatar+name row dropped into badge/celebration moments (the
@@ -4375,17 +4376,17 @@ function render() {
   const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
   document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''} ${state.dyslexia ? 'dyslexia' : ''}`;
   $('#app').innerHTML = `
-    ${badgeShelfWidgetTemplate()}
+    <div class="header-widgets">
+      ${profileAvatarButtonTemplate()}
+      ${badgeShelfWidgetTemplate()}
+    </div>
     <header class="hero">
       <div>
         <p class="eyebrow">SoundLinks / روابط الأصوات</p>
         <h1>Interactive English Phonics for Arabic Speakers</h1>
         <p>Self-paced lessons highlight vowel teams in red, connect English sounds to Arabic cues, and let learners listen in English or Arabic, repeat, view pictures, and mark progress.</p>
       </div>
-      <div class="hero-side">
-        <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${activeWords.length}</strong><span>words done overall</span></div></div>
-        ${profileChipTemplate()}
-      </div>
+      <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${activeWords.length}</strong><span>words done overall</span></div></div>
     </header>
     <nav class="toolbar" aria-label="Learning controls">
       <div class="tabs" role="tablist">
@@ -4417,7 +4418,6 @@ function render() {
       <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : practiceTemplate()}</div>
     </div>
     <footer class="app-footer">
-      <button class="switch-profile-btn" data-switch-profile>${icon('user')}Switch profile</button>
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
     </footer>
     ${state.admin && state.showArchived ? archivedPanelTemplate() : ''}
@@ -4440,7 +4440,8 @@ function render() {
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
   $('[data-dyslexia]').onclick = () => setState('dyslexia', !state.dyslexia);
-  $('[data-switch-profile]').onclick = () => {
+  const switchProfileButton = $('[data-switch-profile]');
+  if (switchProfileButton) switchProfileButton.onclick = () => {
     stopReadingPlayback();
     stopRollReadGame();
     stopCatchGame();
