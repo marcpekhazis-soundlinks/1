@@ -638,6 +638,34 @@ function pickRandomCatchBackground() {
   return CATCH_BACKGROUNDS[Math.floor(Math.random() * CATCH_BACKGROUNDS.length)];
 }
 
+// The 10 profile avatars offered in the "Add profile" picker — same
+// id/file/label shape as CATCH_BACKGROUNDS above, so avatarSrc() builds a
+// path the same way catch backgrounds do.
+const AVATARS = [
+  { id: 'fox-hoodie', file: '01-fox-hoodie.jpg', label: 'Fox in a hoodie' },
+  { id: 'fox-samurai', file: '02-fox-samurai.jpg', label: 'Fox samurai' },
+  { id: 'falcon-adventurer', file: '03-falcon-desert-adventurer.jpg', label: 'Falcon desert adventurer' },
+  { id: 'falcon-cyborg', file: '04-falcon-cyborg.jpg', label: 'Falcon cyborg' },
+  { id: 'dragon-wizard', file: '05-dragon-wizard.jpg', label: 'Dragon wizard' },
+  { id: 'dragon-knight', file: '06-dragon-knight.jpg', label: 'Dragon knight' },
+  { id: 'cat-hoodie', file: '07-cat-hoodie.jpg', label: 'Cat in a hoodie' },
+  { id: 'cat-space-explorer', file: '08-cat-space-explorer.jpg', label: 'Cat space explorer' },
+  { id: 'panda-samurai', file: '09-panda-samurai.jpg', label: 'Panda samurai' },
+  { id: 'panda-cyborg', file: '10-panda-cyborg.jpg', label: 'Panda cyborg' },
+];
+
+function avatarSrc(avatar) {
+  return `src/assets/avatars/${avatar.file}`;
+}
+
+function avatarById(avatarId) {
+  return AVATARS.find((avatar) => avatar.id === avatarId) || AVATARS[0];
+}
+
+function randomAvatarId() {
+  return AVATARS[Math.floor(Math.random() * AVATARS.length)].id;
+}
+
 function shuffle(list) {
   const arr = [...list];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -756,10 +784,8 @@ function awardCatchGameBadgeIfEligible() {
 // ---------- Per-profile progress storage ----------
 // Progress (known words, earned badges, and anything derived from them
 // like level-locking) is namespaced per learner profile so it can't bleed
-// between profiles once profiles exist. There's no profile UI yet, so
-// everyone reads/writes through one placeholder profile — every learner
-// behaves exactly as before. Non-progress preferences (voice, reading
-// speed, etc.) intentionally stay global/shared and don't go through this.
+// between profiles. Non-progress preferences (voice, reading speed, etc.)
+// intentionally stay global/shared and don't go through this.
 const DEFAULT_PROFILE_ID = 'default';
 const ACTIVE_PROFILE_STORAGE_KEY = 'activeProfileId';
 
@@ -797,10 +823,115 @@ function removeProgress(key) {
   localStorage.removeItem(progressStorageKey(key));
 }
 
+// ---------- Profiles ----------
+// The profile registry itself (name + chosen avatar per profile) is its
+// own small localStorage blob, separate from the per-profile progress
+// keys above — it's metadata about the profiles, not progress belonging
+// to any one of them.
+const PROFILES_STORAGE_KEY = 'phonicsProfiles';
+
+function getProfiles() {
+  return JSON.parse(localStorage[PROFILES_STORAGE_KEY] || '[]');
+}
+
+function saveProfiles(profiles) {
+  localStorage[PROFILES_STORAGE_KEY] = JSON.stringify(profiles);
+}
+
+function activeProfile() {
+  return getProfiles().find((profile) => profile.id === state.activeProfileId) || null;
+}
+
+function generateProfileId() {
+  return `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// One-time seed: a browser that already had progress under the default
+// profile (from before profiles existed) but has never registered any
+// profile gets that progress registered as a real "Player 1" profile, so
+// it shows up as a pickable tile on the picker screen instead of quietly
+// becoming unreachable behind it.
+function seedDefaultProfileIfNeeded() {
+  if (getProfiles().length) return;
+  const hasLegacyProgress = ['donePhonics', 'badgesPhonics', 'catchGameScore']
+    .some((key) => localStorage[progressStorageKey(key, DEFAULT_PROFILE_ID)] !== undefined);
+  if (!hasLegacyProgress) return;
+  saveProfiles([{ id: DEFAULT_PROFILE_ID, name: 'Player 1', avatarId: AVATARS[0].id, createdAt: Date.now() }]);
+}
+seedDefaultProfileIfNeeded();
+
+// Reloads state.done/state.badges/state.gameScore from whichever profile
+// is now active — called on initial load (see state.done et al. below)
+// and again by selectProfile() whenever the active profile changes, so
+// the in-memory state always matches getActiveProfileId().
+function loadActiveProfileProgress() {
+  state.done = JSON.parse(readProgress('donePhonics', '{}'));
+  state.badges = JSON.parse(readProgress('badgesPhonics', '{}'));
+  state.gameScore = Number(readProgress('catchGameScore', '0')) || 0;
+}
+
+// Only trust a stored activeProfileId if it still names a real profile —
+// a registry wiped by hand (or a stale id from a since-deleted profile)
+// should fall back to the picker rather than silently loading nothing.
+const storedActiveProfileId = localStorage[ACTIVE_PROFILE_STORAGE_KEY];
+const storedActiveProfileIsValid = !!storedActiveProfileId && getProfiles().some((profile) => profile.id === storedActiveProfileId);
+
+function selectProfile(id) {
+  localStorage[ACTIVE_PROFILE_STORAGE_KEY] = id;
+  state.activeProfileId = id;
+  loadActiveProfileProgress();
+  state.showProfilePicker = false;
+  state.profilePickerMode = 'select';
+  state.view = 'learn';
+  state.soundGroup = SOUND_GROUPS[0].id;
+  state.level = groupLevels(SOUND_GROUPS[0].id)[0] || 1;
+  stopReadingPlayback();
+  stopCatchGame();
+  stopMemoryGame();
+  stopRollReadGame();
+  stopStartCountdown();
+  render();
+}
+
+function createProfile() {
+  const name = state.newProfileName.trim();
+  if (!name) {
+    state.profilePickerError = 'Please enter a name.';
+    render();
+    return;
+  }
+  const profile = { id: generateProfileId(), name, avatarId: state.newProfileAvatarId || AVATARS[0].id, createdAt: Date.now() };
+  saveProfiles([...getProfiles(), profile]);
+  selectProfile(profile.id);
+}
+
+function openProfilePicker() {
+  state.showProfilePicker = true;
+  state.profilePickerMode = 'select';
+  state.profilePickerError = '';
+  render();
+}
+
 let state = {
   view: 'learn',
   soundGroup: SOUND_GROUPS[0].id,
   level: groupLevels(SOUND_GROUPS[0].id)[0] || 1,
+  // Which profile is active, and whether the "Who's practicing today?"
+  // picker screen should show instead of the normal app — true whenever
+  // there's no valid stored activeProfileId, so render() takes over with
+  // renderProfilePicker() until selectProfile()/createProfile() sets one.
+  // See the "Profiles" section above.
+  activeProfileId: storedActiveProfileIsValid ? storedActiveProfileId : null,
+  showProfilePicker: !storedActiveProfileIsValid,
+  // Which picker screen shows: 'select' (profile grid + Add profile tile)
+  // or 'add' (name input + avatar grid). `newProfileName`/
+  // `newProfileAvatarId` are the in-progress Add-profile form fields;
+  // `profilePickerError` is a validation message (e.g. empty name),
+  // cleared on every fresh attempt.
+  profilePickerMode: 'select',
+  newProfileName: '',
+  newProfileAvatarId: randomAvatarId(),
+  profilePickerError: '',
   // Sidebar group expand/collapse, keyed by group id. A group not present
   // here defaults to expanded only while it's the active soundGroup — see
   // isGroupExpanded().
@@ -1010,6 +1141,8 @@ const ICONS = {
   musicNote: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="3"/><circle cx="17.5" cy="16" r="3"/>',
   cards: '<rect x="3" y="7" width="12" height="15" rx="2" transform="rotate(-8 9 14.5)"/><rect x="9" y="3" width="12" height="15" rx="2"/>',
   play: '<path d="M7 4l14 8-14 8z" fill="currentColor" stroke="none"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -2539,6 +2672,7 @@ function rollReadFinaleTemplate() {
     <div class="roll-read-finale-confetti" aria-hidden="true">${confetti}</div>
     <button class="roll-read-finale-close" data-dismiss-roll-read-finale aria-label="Close">${icon('close')}</button>
     <div class="roll-read-finale-panel">
+      ${celebrationAvatarTemplate('md')}
       ${badgeMedalTemplate(badge, { size: 'xl' })}
       <p class="roll-read-finale-kicker">Champion!</p>
       <h2>All ${ROLL_READ_LEVELS.length} levels complete!</h2>
@@ -3018,6 +3152,9 @@ document.addEventListener('keydown', (event) => {
     dismissGroupCelebration();
   } else if (event.key === 'Escape' && state.celebration) {
     dismissCelebration();
+  } else if (event.key === 'Escape' && state.showProfilePicker && state.profilePickerMode === 'add' && getProfiles().length) {
+    state.profilePickerMode = 'select';
+    render();
   }
 });
 document.addEventListener('keyup', (event) => {
@@ -3065,6 +3202,34 @@ function badgeShelfWidgetTemplate() {
   </button>`;
 }
 
+// Small header chip showing who's currently practicing — purely a display
+// (switching profiles happens through the footer's Switch profile button,
+// see wireProfilePickerEvents()/openProfilePicker()), so it's never empty
+// once the picker has gated entry into the app.
+function profileChipTemplate() {
+  const profile = activeProfile();
+  if (!profile) return '';
+  const avatar = avatarById(profile.avatarId);
+  return `<div class="profile-chip" title="${escapeHtml(profile.name)}">
+    <img class="profile-chip-avatar" src="${avatarSrc(avatar)}" alt="">
+    <span class="profile-chip-name">${escapeHtml(profile.name)}</span>
+  </div>`;
+}
+
+// Small avatar+name row dropped into badge/celebration moments (the
+// per-level toast, sound-group completion, and each game's full-clear
+// finale) so the celebration reads as "you did this", not a generic app
+// message. `size` matches the celebration it's embedded in.
+function celebrationAvatarTemplate(size = 'md') {
+  const profile = activeProfile();
+  if (!profile) return '';
+  const avatar = avatarById(profile.avatarId);
+  return `<div class="celebration-avatar celebration-avatar-${size}">
+    <img src="${avatarSrc(avatar)}" alt="">
+    <span>${escapeHtml(profile.name)}</span>
+  </div>`;
+}
+
 // The brief per-level celebration: icon + affirmation, shown as a small
 // corner toast (never a full-screen takeover) and cleared automatically by
 // the timer started in toggleDone().
@@ -3076,6 +3241,7 @@ function celebrationTemplate() {
     <div class="celebration-toast-text">
       <strong>${escapeHtml(badge.affirmation)}</strong>
       <span>${escapeHtml(badge.label)} badge earned</span>
+      ${celebrationAvatarTemplate('xs')}
     </div>
   </div>`;
 }
@@ -3091,6 +3257,7 @@ function groupCelebrationTemplate() {
   return `<div class="group-celebration-overlay" data-dismiss-group-celebration role="dialog" aria-label="${escapeHtml(group.label)} complete">
     <div class="group-celebration-confetti" aria-hidden="true">${confetti}</div>
     <div class="group-celebration-panel">
+      ${celebrationAvatarTemplate('md')}
       ${badgeMedalTemplate(badge, { size: 'lg' })}
       <h2>${escapeHtml(group.label)} complete!</h2>
       <p>${escapeHtml(badge.affirmation)} You've earned all ${badgeCount} badge${badgeCount === 1 ? '' : 's'} in ${escapeHtml(group.label)}.</p>
@@ -4029,6 +4196,7 @@ function memoryFinaleTemplate() {
     <div class="memory-finale-confetti" aria-hidden="true">${confetti}</div>
     <button class="memory-finale-close" data-dismiss-memory-finale aria-label="Close">${icon('close')}</button>
     <div class="memory-finale-panel">
+      ${celebrationAvatarTemplate('md')}
       ${badgeMedalTemplate(badge, { size: 'xl' })}
       <p class="memory-finale-kicker">Champion!</p>
       <h2>All 5 levels complete!</h2>
@@ -4104,7 +4272,103 @@ function wireMemoryGameEvents() {
   document.querySelectorAll('[data-memory-card]').forEach((button) => button.onclick = () => flipMemoryCard(Number(button.dataset.memoryCard)));
 }
 
+// ---------- Profile picker screen ----------
+// The Netflix-style "Who's practicing today?" gate — shown instead of the
+// normal app whenever state.showProfilePicker is true (see render()).
+// `select` mode is a grid of existing profile tiles plus an "Add profile"
+// tile; `add` mode swaps in a name field + avatar grid. Both stay inside
+// one full-screen section so switching between them is just a render(),
+// no separate overlay/dismiss plumbing to manage.
+function profilePickerTemplate() {
+  return `<section class="profile-picker">
+    <div class="profile-picker-panel">
+      ${state.profilePickerMode === 'add' ? addProfileScreenTemplate() : selectProfileScreenTemplate()}
+    </div>
+  </section>`;
+}
+
+function profileTileTemplate(profile) {
+  const avatar = avatarById(profile.avatarId);
+  return `<button class="profile-tile" data-select-profile="${escapeHtml(profile.id)}">
+    <span class="profile-tile-avatar"><img src="${avatarSrc(avatar)}" alt=""></span>
+    <span class="profile-tile-name">${escapeHtml(profile.name)}</span>
+  </button>`;
+}
+
+function selectProfileScreenTemplate() {
+  const profiles = getProfiles();
+  return `<h1 class="profile-picker-title">Who's practicing today?</h1>
+    <div class="profile-picker-grid">
+      ${profiles.map(profileTileTemplate).join('')}
+      <button class="profile-tile profile-tile-add" data-add-profile>
+        <span class="profile-tile-avatar profile-tile-avatar-add">${icon('plus')}</span>
+        <span class="profile-tile-name">Add profile</span>
+      </button>
+    </div>`;
+}
+
+function avatarTileTemplate(avatar) {
+  const selected = state.newProfileAvatarId === avatar.id;
+  return `<button type="button" class="avatar-tile ${selected ? 'is-selected' : ''}" data-select-avatar="${avatar.id}" role="radio" aria-checked="${selected}" aria-label="${escapeHtml(avatar.label)}">
+    <img src="${avatarSrc(avatar)}" alt="">
+  </button>`;
+}
+
+function addProfileScreenTemplate() {
+  const canCancel = getProfiles().length > 0;
+  return `<h1 class="profile-picker-title">Add a profile</h1>
+    <label class="profile-name-field">
+      <span>Name</span>
+      <input type="text" data-profile-name-input value="${escapeHtml(state.newProfileName)}" placeholder="Enter a name" maxlength="24">
+    </label>
+    <div class="profile-avatar-grid" role="radiogroup" aria-label="Choose an avatar">
+      ${AVATARS.map(avatarTileTemplate).join('')}
+    </div>
+    ${state.profilePickerError ? `<p class="profile-picker-error">${icon('alert')}${escapeHtml(state.profilePickerError)}</p>` : ''}
+    <div class="profile-picker-actions">
+      ${canCancel ? `<button type="button" class="profile-picker-cancel" data-cancel-add-profile>${icon('close')}Cancel</button>` : ''}
+      <button type="button" class="profile-picker-save" data-save-profile>${icon('check')}Create profile</button>
+    </div>`;
+}
+
+function renderProfilePicker() {
+  document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''} ${state.dyslexia ? 'dyslexia' : ''}`;
+  $('#app').innerHTML = profilePickerTemplate();
+  wireProfilePickerEvents();
+}
+
+function wireProfilePickerEvents() {
+  document.querySelectorAll('[data-select-profile]').forEach((button) => button.onclick = () => selectProfile(button.dataset.selectProfile));
+  const addButton = $('[data-add-profile]');
+  if (addButton) addButton.onclick = () => {
+    state.profilePickerMode = 'add';
+    state.newProfileName = '';
+    state.newProfileAvatarId = randomAvatarId();
+    state.profilePickerError = '';
+    render();
+  };
+  const cancelButton = $('[data-cancel-add-profile]');
+  if (cancelButton) cancelButton.onclick = () => { state.profilePickerMode = 'select'; render(); };
+  const nameInput = $('[data-profile-name-input]');
+  if (nameInput) {
+    nameInput.focus();
+    nameInput.selectionStart = nameInput.selectionEnd = nameInput.value.length;
+    nameInput.oninput = (event) => { state.newProfileName = event.target.value; };
+    nameInput.onkeydown = (event) => { if (event.key === 'Enter') createProfile(); };
+  }
+  document.querySelectorAll('[data-select-avatar]').forEach((button) => button.onclick = () => {
+    state.newProfileAvatarId = button.dataset.selectAvatar;
+    render();
+  });
+  const saveButton = $('[data-save-profile]');
+  if (saveButton) saveButton.onclick = () => createProfile();
+}
+
 function render() {
+  if (state.showProfilePicker) {
+    renderProfilePicker();
+    return;
+  }
   normalizeSelection();
   const activeWords = WORDS.filter((word) => !word.archived);
   const score = activeWords.filter((word) => state.done[word.word]).length;
@@ -4118,7 +4382,10 @@ function render() {
         <h1>Interactive English Phonics for Arabic Speakers</h1>
         <p>Self-paced lessons highlight vowel teams in red, connect English sounds to Arabic cues, and let learners listen in English or Arabic, repeat, view pictures, and mark progress.</p>
       </div>
-      <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${activeWords.length}</strong><span>words done overall</span></div></div>
+      <div class="hero-side">
+        <div class="progress" style="--pct:${pct}"><div class="progress-inner"><strong>${score}/${activeWords.length}</strong><span>words done overall</span></div></div>
+        ${profileChipTemplate()}
+      </div>
     </header>
     <nav class="toolbar" aria-label="Learning controls">
       <div class="tabs" role="tablist">
@@ -4150,6 +4417,7 @@ function render() {
       <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : practiceTemplate()}</div>
     </div>
     <footer class="app-footer">
+      <button class="switch-profile-btn" data-switch-profile>${icon('user')}Switch profile</button>
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
     </footer>
     ${state.admin && state.showArchived ? archivedPanelTemplate() : ''}
@@ -4172,6 +4440,13 @@ function render() {
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
   $('[data-dyslexia]').onclick = () => setState('dyslexia', !state.dyslexia);
+  $('[data-switch-profile]').onclick = () => {
+    stopReadingPlayback();
+    stopRollReadGame();
+    stopCatchGame();
+    stopMemoryGame();
+    openProfilePicker();
+  };
   $('[data-reset]').onclick = () => {
     state.done = {};
     state.badges = {};
