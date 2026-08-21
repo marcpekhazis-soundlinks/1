@@ -181,19 +181,6 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .progress strong { display: block; font-family: var(--font-heading); font-size: 1.7rem; color: var(--ink); line-height: 1; }
 .progress span { display: block; margin-top: 4px; font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.02em; }
 
-/* Wraps the progress ring so the active-profile chip can sit under it
-   without disturbing the hero's 2-column grid (text block | this). */
-.hero-side { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.profile-chip {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: var(--primary-tint-50);
-  border-radius: var(--radius-pill);
-  padding: 5px 14px 5px 5px;
-  max-width: 100%;
-}
-.profile-chip-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; }
-.profile-chip-name { font-weight: 700; font-size: 0.85rem; color: var(--primary-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 /* ---------- Toolbar / navigation ---------- */
 .toolbar { position: sticky; top: 0; z-index: 5; padding: 16px 0 8px; background: linear-gradient(var(--cream) 78%, transparent); }
 .tabs {
@@ -2025,7 +2012,6 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; text-align: left; }
   .progress { justify-self: start; }
-  .hero-side { align-items: flex-start; }
   .app-layout.has-sidebar { grid-template-columns: 1fr; }
   .sidebar { position: static; }
 }
@@ -2205,45 +2191,16 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 .contrast .avatar-tile, .contrast .profile-tile-avatar { background: #111; }
 .contrast .profile-picker-cancel { background: #222; color: #fff; }
 
-/* ---------- Footer: switch profile + admin mode ----------
-   Switch profile sits on the left as a small, quiet pill — visible enough
-   for a learner to find on purpose, but not competing with the tabs above
-   it. Admin mode stays the deliberately unobtrusive bare 6px dot on the
-   right: the only always-present entry point, so a learner has nothing to
-   notice or stumble into there. Everything past the dot only ever renders
-   once admin mode has been switched on.
-   The bar itself is sticky to the bottom of the viewport rather than
-   sitting after all page content — the Learn tab's sidebar (every level
-   of every sound group) routinely pushes the footer well past one
-   screen's worth of scrolling, which made "Switch profile" effectively
-   unreachable without hunting for the literal end of the page. Sticky
-   keeps it one glance away on every tab, the same way the badge-shelf
-   widget (fixed, top-right) is always in reach. */
-.app-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 12;
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: 18px;
-  padding: 10px 4px;
-  background: var(--cream);
-  box-shadow: 0 -6px 14px -8px rgba(12, 40, 80, 0.18);
-}
-.switch-profile-btn {
-  display: inline-flex; align-items: center;
-  border: 0;
-  background: transparent;
-  color: var(--ink-soft);
-  padding: 6px 10px;
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  font-size: 0.82rem;
-  cursor: pointer;
-  opacity: 0.55;
-  transition: opacity 0.15s ease, background 0.15s ease;
-}
-.switch-profile-btn:hover, .switch-profile-btn:focus-visible { opacity: 1; background: var(--primary-tint-100); color: var(--primary-dark); }
-.switch-profile-btn .icon { width: 1.05em; height: 1.05em; }
+/* ---------- Admin content-management mode ----------
+   Deliberately unobtrusive: a bare 6px dot in the footer is the only
+   always-present entry point, so a learner has nothing to notice or
+   stumble into. Everything else here only ever renders once admin mode
+   has been switched on. (Switch profile used to live here too, but a
+   footer that sits after all page content — including the Learn tab's
+   full level list — was routinely a couple of screens below the fold, so
+   it moved to the fixed .header-widgets corner instead; see
+   profileAvatarButtonTemplate().) */
+.app-footer { display: flex; justify-content: flex-end; padding: 18px 4px 4px; }
 .admin-toggle-btn {
   width: 14px; height: 14px;
   padding: 0;
@@ -2398,13 +2355,32 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 .badge-medal-xl { width: 140px; height: 140px; }
 .badge-medal-xl .icon { width: 3.2em; height: 3.2em; }
 
-/* Persistent corner widget — present on every view, opens the badge
-   shelf. Fixed positioning keeps it available regardless of scroll or
-   which tab (Learn/Rules/Practice) is active. */
-.badge-shelf-toggle {
+/* Persistent corner cluster — present on every view, fixed regardless of
+   scroll or which tab (Learn/Rules/Practice) is active: the active
+   profile's avatar (also the Switch profile trigger) beside the badge
+   shelf toggle, in that order so the "who" reads before the "how many
+   badges". */
+.header-widgets {
   position: fixed;
   top: 16px; right: 16px;
   z-index: 15;
+  display: flex; align-items: center; gap: 10px;
+}
+.header-avatar-btn {
+  width: 44px; height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  flex: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.header-avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.header-avatar-btn:hover, .header-avatar-btn:focus-visible { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.badge-shelf-toggle {
   display: inline-flex; align-items: center; gap: 6px;
   border: 0;
   padding: 8px 14px 8px 10px;
@@ -2539,6 +2515,7 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 
 .contrast .badge-shelf-toggle { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .badge-shelf-toggle .icon { color: #fff; }
+.contrast .header-avatar-btn { border: 2px solid #fff; box-shadow: none; }
 .contrast .celebration-toast { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
 .contrast .celebration-toast-text strong { color: #fff; }
 .contrast .celebration-toast-text span { color: #ccc; }
