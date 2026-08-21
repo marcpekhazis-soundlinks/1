@@ -765,6 +765,12 @@ let state = {
   contrast: false,
   dyslexia: false,
   voiceMode: localStorage.voiceMode || 'female',
+  // Which language each of the three game tabs' instructions display in —
+  // persisted like voiceMode, and only ever read/written by
+  // instructionsLangToggleTemplate()/instructionsTemplate() for the
+  // 'game'/'memory'/'rollread' views (every other view's instructions stay
+  // English-only, no toggle shown).
+  instructionsLang: localStorage.instructionsLang === 'ar' ? 'ar' : 'en',
   done: JSON.parse(localStorage.donePhonics || '{}'),
   // Earned badges, keyed by badgeId ("<groupId>::<level>"). Persisted the
   // same way `done` is — a plain JSON blob in localStorage — so it needs no
@@ -778,6 +784,13 @@ let state = {
   celebration: null,
   groupCelebration: null,
   badgeShelfOpen: false,
+  // The shared "Ready, Set, Go!" flourish between a Start Game click and a
+  // round/timer actually beginning, reused by all three game tabs (see
+  // beginGameCountdown()/gameStartCountdownTemplate()) rather than one
+  // implementation per game. `view` names which tab it belongs to
+  // ('game'/'memory'/'rollread') so a stray render from another tab never
+  // shows it; `phase` steps through 'ready' -> 'set' -> 'go' -> null.
+  startCountdown: null,
   practice: {},
   // Catch the Sound: `gameScore` is the persisted running total that feeds
   // the badge threshold (see awardCatchGameBadgeIfEligible()), stored the
@@ -793,6 +806,12 @@ let state = {
   // is the CATCH_BACKGROUNDS entry picked for this visit to the tab (see
   // wireCatchGameEvents()/stopCatchGame()).
   gameScore: Number(localStorage.catchGameScore) || 0,
+  // Whether the player has pressed "Start Game" (and its Ready/Set/Go
+  // countdown has finished) this session — see gameStartPromptTemplate()/
+  // beginGameCountdown(). Never persisted, so a reload always lands back
+  // on the Start Game gate. Not reset just by switching away from the tab
+  // and back, only by Reset — see wireCatchGameEvents().
+  catchStarted: false,
   game: {
     status: 'idle',
     round: null,
@@ -845,6 +864,9 @@ let state = {
   // timer, topped up by `timeBonusFlash`'s "+10s" popup on every correct
   // guess (see flashRollReadTimeBonus()). Level badges (state.badges)
   // persist as usual — only the round/level state here is session-only.
+  // `rollReadStarted` is this tab's own Start Game gate — see
+  // `catchStarted`'s comment above for the full pattern.
+  rollReadStarted: false,
   rollRead: {
     status: 'idle',
     level: 1,
@@ -887,6 +909,9 @@ let state = {
   // (state.badges) persist as usual — only the board/timer/level pointer
   // here are session-only. `memoryFinale` is separate from this object
   // (see below) since it's an overlay shown independently of the board.
+  // `memoryStarted` is this tab's own Start Game gate — see
+  // `catchStarted`'s comment above for the full pattern.
+  memoryStarted: false,
   memory: {
     status: 'idle',
     level: 1,
@@ -939,6 +964,7 @@ const ICONS = {
   basket: '<path d="M4 10h16l-1.6 9.3a2 2 0 0 1-2 1.7H7.6a2 2 0 0 1-2-1.7z"/><path d="M8 10l1-5h6l1 5"/><path d="M9 13.5v3.5M12 13.5v3.5M15 13.5v3.5"/>',
   musicNote: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="3"/><circle cx="17.5" cy="16" r="3"/>',
   cards: '<rect x="3" y="7" width="12" height="15" rx="2" transform="rotate(-8 9 14.5)"/><rect x="9" y="3" width="12" height="15" rx="2"/>',
+  play: '<path d="M7 4l14 8-14 8z" fill="currentColor" stroke="none"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -1450,6 +1476,7 @@ function stopRollReadGame() {
   stopRollReadTimer();
   stopRollReadAdvanceTimer();
   clearTimeout(rollReadTimeBonusTimer);
+  stopStartCountdown();
 }
 
 // Starts (or restarts) one level with a fresh random board and a full
@@ -1694,6 +1721,88 @@ function dismissCelebration() {
 function dismissGroupCelebration() {
   state.groupCelebration = null;
   render();
+}
+
+// ---------- Start Game flow (shared by Catch the Sound, Memory Match, and
+// Roll and Read) ----------
+// Each of the three game tabs gates its round/timer behind an explicit
+// "Start Game" click rather than auto-starting on mount: gameStartPromptTemplate()
+// is what each game's own template function renders in place of its
+// normal board/field while `state.<game>Started` is still false (see
+// catchStarted/memoryStarted/rollReadStarted's comments above), and each
+// game's own wire*Events() function wires that button's click to
+// beginGameCountdown(). The countdown itself — a brief "Ready… Set… Go!"
+// flourish — is the one piece actually shared across all three, since
+// it's identical regardless of which game it's gating; each game's own
+// start function (playCatchRound()/startMemoryLevel()/startRollReadLevel())
+// is untouched and only ever gets called once the countdown finishes, so
+// none of the three games' round/timer/badge/finale logic needed to
+// change at all.
+const START_COUNTDOWN_STEPS = ['ready', 'set', 'go'];
+let startCountdownTimer = null;
+
+// Cancels any in-flight countdown and clears its display — called from
+// every stop*Game() (i.e. whenever a game tab is left or the app is
+// Reset), so a countdown started on one tab can never keep ticking (and
+// then silently flip a *Started flag) after the player has navigated
+// away from it.
+function stopStartCountdown() {
+  if (startCountdownTimer) {
+    clearTimeout(startCountdownTimer);
+    startCountdownTimer = null;
+  }
+  state.startCountdown = null;
+}
+
+function beginGameCountdown(view) {
+  stopStartCountdown();
+  let index = 0;
+  state.startCountdown = { view, phase: START_COUNTDOWN_STEPS[index] };
+  render();
+  const tick = () => {
+    index += 1;
+    if (index < START_COUNTDOWN_STEPS.length) {
+      state.startCountdown = { view, phase: START_COUNTDOWN_STEPS[index] };
+      render();
+      startCountdownTimer = setTimeout(tick, 650);
+      return;
+    }
+    startCountdownTimer = null;
+    state.startCountdown = null;
+    if (view === 'game') state.catchStarted = true;
+    else if (view === 'memory') state.memoryStarted = true;
+    else if (view === 'rollread') state.rollReadStarted = true;
+    // render() re-runs every wire*Events(), whose own idle-mount check
+    // (e.g. wireMemoryGameEvents()'s `if (state.memory.status === 'idle')
+    // startMemoryLevel(...)`) is what actually kicks the round off now
+    // that *Started is true — the same pattern each already used for a
+    // fresh tab visit, just gated one click later.
+    render();
+  };
+  startCountdownTimer = setTimeout(tick, 650);
+}
+
+// Shown by each game's own template function in place of its board/field
+// while state.<game>Started is false — the instructions section above
+// already explains how to play, so this is just the gate plus a short
+// nudge to read them, not a duplicate of that content.
+function gameStartPromptTemplate() {
+  return `<section class="game-start-prompt">
+    <span class="game-start-icon" aria-hidden="true">${icon('play')}</span>
+    <p class="game-start-hint">Read the instructions above, then start whenever you're ready.</p>
+    <button type="button" class="game-start-btn" data-start-game>${icon('play')}Start Game</button>
+  </section>`;
+}
+
+// The brief "Ready… Set… Go!" flourish itself, shown in place of the
+// Start Game prompt between the click and the round/timer actually
+// beginning (see beginGameCountdown()).
+function gameStartCountdownTemplate() {
+  const phase = state.startCountdown.phase;
+  const label = phase === 'ready' ? 'Ready…' : phase === 'set' ? 'Set…' : 'Go!';
+  return `<section class="game-start-countdown" role="status" aria-live="assertive">
+    <span class="game-start-countdown-word is-${phase}">${escapeHtml(label)}</span>
+  </section>`;
 }
 
 // Marking a word known can complete its level (awarding that level's
@@ -2350,6 +2459,8 @@ function rollReadCellTemplate(item, status) {
 // screen (built by startRollReadLevel()/refreshRollReadBoard()), so this
 // never recomputes them.
 function rollReadGameTemplate() {
+  if (state.startCountdown && state.startCountdown.view === 'rollread') return gameStartCountdownTemplate();
+  if (!state.rollReadStarted) return gameStartPromptTemplate();
   const rr = state.rollRead;
   const emptyCells = rr.words.length ? rr.rows * rr.cols - rr.words.length : 0;
   return `
@@ -2538,6 +2649,8 @@ function catchStatusTemplate() {
 }
 
 function catchGameTemplate() {
+  if (state.startCountdown && state.startCountdown.view === 'game') return gameStartCountdownTemplate();
+  if (!state.catchStarted) return gameStartPromptTemplate();
   const { round, basketPct, feedback, backgroundId } = state.game;
   const background = CATCH_BACKGROUNDS.find((entry) => entry.id === backgroundId) || CATCH_BACKGROUNDS[0];
   return `
@@ -2573,43 +2686,78 @@ function catchGameBadgeShelfSectionTemplate() {
   </section>`;
 }
 
+// English/Arabic instruction text for the three game tabs — the only
+// views with a language toggle (see instructionsLangToggleTemplate()).
+// Each entry is a function so it can interpolate the same live game
+// constants (badge thresholds, time bonuses, etc.) the English text
+// always has, in both languages, rather than the Arabic side drifting out
+// of sync with a hardcoded number.
+const GAME_INSTRUCTIONS = {
+  game: {
+    en: () => [
+      'A word plays automatically — 2-3 spellings then fall from the top, only one of them correct. Missed the word? Tap the small repeat icon to hear it again.',
+      'Move the basket with the ← and → arrow keys, Pong-paddle style, to catch the correct spelling before it reaches the ground.',
+      `Catching the right word scores points based on its length; catching a wrong one costs you ${CATCH_GAME_CONFIG.wrongCatchPenalty} point${CATCH_GAME_CONFIG.wrongCatchPenalty === 1 ? '' : 's'}, and letting the right one fall ends the round with no points either way.`,
+      'The next word starts on its own a few seconds after each round ends — no need to click anything between rounds.',
+      `Score ${CATCH_GAME_BADGE_THRESHOLD} total points to earn the Catch the Sound badge — the game keeps going afterward, so every catch still counts.`,
+    ],
+    ar: () => [
+      'تُنطق كلمة تلقائيًا، ثم تسقط تهجئتان أو ثلاث من أعلى الشاشة، واحدة منها فقط صحيحة. فاتتك الكلمة؟ اضغط على أيقونة التكرار الصغيرة لسماعها مرة أخرى.',
+      'حرّك السلة بمفتاحي الأسهم ← و → كما في لعبة البونغ، لالتقاط التهجئة الصحيحة قبل وصولها إلى الأرض.',
+      `التقاط الكلمة الصحيحة يمنحك نقاطًا حسب طولها؛ والتقاط كلمة خاطئة يكلفك ${CATCH_GAME_CONFIG.wrongCatchPenalty} نقطة، وسقوط الكلمة الصحيحة دون التقاطها ينهي الجولة دون أي نقاط.`,
+      'تبدأ الكلمة التالية تلقائيًا بعد ثوانٍ قليلة من انتهاء كل جولة — لا حاجة لضغط أي شيء بين الجولات.',
+      `اجمع ${CATCH_GAME_BADGE_THRESHOLD} نقطة إجمالًا للحصول على وسام «التقط الصوت» — وتستمر اللعبة بعد ذلك، فكل التقاطة لا تزال تُحتسب.`,
+    ],
+  },
+  memory: {
+    en: () => [
+      'Flip two face-down cards at a time. If one shows a word and the other shows its matching picture, they stay face-up as a match.',
+      "If they don't match, both flip back face-down after a moment — remember what you saw for next time.",
+      `Every correct match adds ${MEMORY_MATCH_TIME_BONUS_SECONDS} seconds back to the clock, so good matching keeps the timer topped up.`,
+      'Match every pair before the timer runs out to win the level and earn a badge, then a fresh set of words starts automatically at the next level.',
+      'Run out of time and the same level restarts with a new random word set — no penalty, just try again.',
+      'Five levels get progressively bigger (4 pairs up to 12 pairs). Finish level 5 to earn the Memory Match Champion badge and replay any level you like.',
+    ],
+    ar: () => [
+      'اقلب بطاقتين مقلوبتين في كل مرة. إذا كانت إحداهما تعرض كلمة والأخرى تعرض صورتها المطابقة، تبقيان مكشوفتين كتطابق صحيح.',
+      'إذا لم تتطابقا، تعودان مقلوبتين بعد لحظة — تذكّر ما رأيته للمرة القادمة.',
+      `كل تطابق صحيح يضيف ${MEMORY_MATCH_TIME_BONUS_SECONDS} ثوانٍ إلى الساعة، فالتطابق الجيد يبقي الوقت المتبقي وافرًا.`,
+      'طابق كل الأزواج قبل نفاد الوقت للفوز بالمستوى والحصول على وسام، ثم تبدأ مجموعة جديدة من الكلمات تلقائيًا في المستوى التالي.',
+      'إذا نفد الوقت، يُعاد المستوى نفسه بمجموعة كلمات عشوائية جديدة — بلا أي عقوبة، فقط حاول مجددًا.',
+      'خمسة مستويات تكبر تدريجيًا (من 4 أزواج إلى 12 زوجًا). أنهِ المستوى الخامس للحصول على وسام «بطل الذاكرة» وأعد لعب أي مستوى تشاء.',
+    ],
+  },
+  // Roll and Read's instructions are deliberately the shortest of the
+  // three — the game itself has the fewest moving parts (listen, tap,
+  // repeat), so a long numbered list here would be padding, not clarity.
+  rollread: {
+    en: () => [
+      "Listen for the word — it isn't shown or highlighted anywhere on the board.",
+      'Tap the matching tile. Correct: the board refreshes and the next word plays. Wrong: just listen again and try another tile.',
+      `Every correct pick adds ${ROLL_READ_TIME_BONUS_SECONDS} seconds to the clock; run out of time and the level restarts fresh.`,
+      'Win enough rounds to clear each of the 5 levels, earning a badge along the way — finish level 5 for the Roll and Read Champion badge.',
+    ],
+    ar: () => [
+      'استمع إلى الكلمة — فهي غير معروضة أو مميزة في أي مكان على اللوحة.',
+      'اضغط على البلاطة المطابقة. إن كانت صحيحة: تتجدد اللوحة وتُنطق الكلمة التالية. وإن كانت خاطئة: استمع مرة أخرى وجرّب بلاطة أخرى.',
+      `كل اختيار صحيح يضيف ${ROLL_READ_TIME_BONUS_SECONDS} ثوانٍ إلى الساعة؛ وإذا نفد الوقت، يُعاد المستوى من جديد.`,
+      'اربح جولات كافية لاجتياز كل من المستويات الخمسة، وتحصل على وسام في كل مرة — أنهِ المستوى الخامس للحصول على وسام «بطل ارمِ واقرأ».',
+    ],
+  },
+};
+
 function instructionsTemplate() {
+  if (GAME_INSTRUCTIONS[state.view]) {
+    const isAr = state.instructionsLang === 'ar';
+    const items = (isAr ? GAME_INSTRUCTIONS[state.view].ar : GAME_INSTRUCTIONS[state.view].en)();
+    return `<ol dir="${isAr ? 'rtl' : 'ltr'}">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`;
+  }
   if (state.view === 'practice') {
     return `<ol>
         <li>Press "Hear it" to listen to the target word and sound.</li>
         <li>Press "Try it", allow microphone access, and say the word clearly.</li>
         <li>Feedback names which sound was off (the target vowel/digraph sound vs. the whole word), not just right or wrong.</li>
         <li>Some words share a spelling but not a sound (e.g. "ea" in "bread" vs. "beach") — each card is matched to its own word, not the letter pattern.</li>
-      </ol>`;
-  }
-  if (state.view === 'game') {
-    return `<ol>
-        <li>A word plays automatically — 2-3 spellings then fall from the top, only one of them correct. Missed the word? Tap the small repeat icon to hear it again.</li>
-        <li>Move the basket with the ← and → arrow keys, Pong-paddle style, to catch the correct spelling before it reaches the ground.</li>
-        <li>Catching the right word scores points based on its length; catching a wrong one costs you ${CATCH_GAME_CONFIG.wrongCatchPenalty} point${CATCH_GAME_CONFIG.wrongCatchPenalty === 1 ? '' : 's'}, and letting the right one fall ends the round with no points either way.</li>
-        <li>The next word starts on its own a few seconds after each round ends — no need to click anything between rounds.</li>
-        <li>Score ${CATCH_GAME_BADGE_THRESHOLD} total points to earn the Catch the Sound badge — the game keeps going afterward, so every catch still counts.</li>
-      </ol>`;
-  }
-  if (state.view === 'memory') {
-    return `<ol>
-        <li>Flip two face-down cards at a time. If one shows a word and the other shows its matching picture, they stay face-up as a match.</li>
-        <li>If they don't match, both flip back face-down after a moment — remember what you saw for next time.</li>
-        <li>Every correct match adds ${MEMORY_MATCH_TIME_BONUS_SECONDS} seconds back to the clock, so good matching keeps the timer topped up.</li>
-        <li>Match every pair before the timer runs out to win the level and earn a badge, then a fresh set of words starts automatically at the next level.</li>
-        <li>Run out of time and the same level restarts with a new random word set — no penalty, just try again.</li>
-        <li>Five levels get progressively bigger (4 pairs up to 12 pairs). Finish level 5 to earn the Memory Match Champion badge and replay any level you like.</li>
-      </ol>`;
-  }
-  if (state.view === 'rollread') {
-    return `<ol>
-        <li>The die rolls on its own each round, just for flavor — every word on the board is in play.</li>
-        <li>Listen closely: one word from anywhere on the board plays aloud, but nothing on the board shows which one it is.</li>
-        <li>Tap the tile you think matches what you heard. Right pick? The board refreshes with a new set of words and the die rolls again automatically. Wrong pick? Listen again and try another tile — no penalty besides the clock ticking.</li>
-        <li>Every correct pick adds ${ROLL_READ_TIME_BONUS_SECONDS} seconds back to the clock, so good listening keeps the timer topped up.</li>
-        <li>Win enough rounds before the timer runs out to win the level and earn a badge, then a fresh board starts automatically at the next level.</li>
-        <li>Run out of time and the same level restarts with a new random word set — no penalty, just try again.</li>
-        <li>Five levels get progressively bigger and stricter (a 3x3 board up to a full 6x6, with more rounds required each time). Finish level 5 to earn the Roll and Read Champion badge and replay any level you like.</li>
       </ol>`;
   }
   return `<ol>
@@ -2619,6 +2767,17 @@ function instructionsTemplate() {
         <li>Look at the picture, read the Arabic meaning, and repeat the highlighted red letter.</li>
         <li>Use Large text, High contrast, or Dyslexia-friendly mode for inclusion and accessibility — combine them freely.</li>
       </ol>`;
+}
+
+// The small "English / العربية" pill next to a game's instructions —
+// only rendered for the three game tabs (see render()'s instructions
+// section), since every other view's instructions stay English-only.
+function instructionsLangToggleTemplate() {
+  const isAr = state.instructionsLang === 'ar';
+  return `<div class="instructions-lang-toggle" role="radiogroup" aria-label="Instructions language">
+    <button type="button" data-instructions-lang="en" class="${!isAr ? 'active' : ''}" aria-pressed="${!isAr}">English</button>
+    <button type="button" data-instructions-lang="ar" class="${isAr ? 'active' : ''}" aria-pressed="${isAr}">العربية</button>
+  </div>`;
 }
 
 // ---------- ADMIN MODE ----------
@@ -3038,6 +3197,9 @@ function wireRollReadTabEvents() {
     stopRollReadGame();
     return;
   }
+  const startButton = $('[data-start-game]');
+  if (startButton) startButton.onclick = () => beginGameCountdown('rollread');
+  if (!state.rollReadStarted) return;
   if (state.rollRead.status === 'idle' && !state.rollRead.words.length) startRollReadLevel(state.rollRead.level || 1);
   document.querySelectorAll('[data-roll-read-guess]').forEach((button) => button.onclick = () => guessRollReadWord(button.dataset.rollReadGuess));
   const repeatButton = $('[data-roll-read-repeat]');
@@ -3088,6 +3250,7 @@ function stopCatchGame() {
   // across sessions while a background never changes out from under the
   // player mid-round (see catchGameTemplate()/CATCH_BACKGROUNDS).
   state.game.backgroundId = null;
+  stopStartCountdown();
 }
 
 // ---------- Catch the Sound: ambient music ----------
@@ -3445,6 +3608,9 @@ function wireCatchGameEvents() {
     stopCatchGame();
     return;
   }
+  const startButton = $('[data-start-game]');
+  if (startButton) startButton.onclick = () => beginGameCountdown('game');
+  if (!state.catchStarted) return;
   startCatchLoop();
   if (state.musicOn) startCatchMusic();
   if (!state.game.backgroundId) state.game.backgroundId = pickRandomCatchBackground().id;
@@ -3591,6 +3757,7 @@ function stopMemoryGame() {
   stopMemoryTimer();
   stopMemoryAdvanceTimer();
   clearTimeout(memoryTimeBonusTimer);
+  stopStartCountdown();
 }
 
 function startMemoryTimer() {
@@ -3783,6 +3950,8 @@ function memoryTimerTemplate() {
 }
 
 function memoryGameTemplate() {
+  if (state.startCountdown && state.startCountdown.view === 'memory') return gameStartCountdownTemplate();
+  if (!state.memoryStarted) return gameStartPromptTemplate();
   const m = state.memory;
   return `<section class="memory-game">
     <div class="memory-game-top">
@@ -3883,6 +4052,9 @@ function wireMemoryGameEvents() {
     stopMemoryGame();
     return;
   }
+  const startButton = $('[data-start-game]');
+  if (startButton) startButton.onclick = () => beginGameCountdown('memory');
+  if (!state.memoryStarted) return;
   if (state.memory.status === 'idle') startMemoryLevel(state.memory.level || 1);
   document.querySelectorAll('[data-memory-card]').forEach((button) => button.onclick = () => flipMemoryCard(Number(button.dataset.memoryCard)));
 }
@@ -3922,7 +4094,10 @@ function render() {
     </nav>
     ${state.admin ? adminBannerTemplate() : ''}
     <section class="instructions">
-      <h2>How to use / طريقة الاستخدام</h2>
+      <div class="instructions-header">
+        <h2>How to use / طريقة الاستخدام</h2>
+        ${GAME_INSTRUCTIONS[state.view] ? instructionsLangToggleTemplate() : ''}
+      </div>
       ${instructionsTemplate()}
     </section>
     <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
@@ -3958,18 +4133,27 @@ function render() {
     state.gameScore = 0;
     stopCatchAdvanceTimer();
     state.game = { status: 'idle', round: null, basketPct: catchBasketCenterPct(), feedback: null, countdown: 0, backgroundId: state.game.backgroundId };
+    state.catchStarted = false;
     stopMemoryGame();
     state.memory = { status: 'idle', level: 1, cols: 4, cards: [], flipped: [], lock: false, matchedPairs: 0, totalPairs: 0, secondsLeft: 0, timeBonusFlash: false };
     state.memoryFinale = null;
+    state.memoryStarted = false;
     stopRollReadGame();
     state.rollRead = { status: 'idle', level: 1, words: [], rows: 0, cols: 0, dieValue: null, targetWord: null, feedback: null, roundsWon: 0, roundsToWin: 0, secondsLeft: 0, timeBonusFlash: false };
     state.rollReadFinale = null;
+    state.rollReadStarted = false;
+    stopStartCountdown();
     localStorage.removeItem('donePhonics');
     localStorage.removeItem('badgesPhonics');
     localStorage.removeItem('catchGameScore');
     render();
   };
   $('[data-voice]').onchange = (event) => setState('voiceMode', event.target.value);
+  document.querySelectorAll('[data-instructions-lang]').forEach((button) => button.onclick = () => {
+    state.instructionsLang = button.dataset.instructionsLang;
+    localStorage.instructionsLang = state.instructionsLang;
+    render();
+  });
   document.querySelectorAll('[data-say]').forEach((button) => button.onclick = () => speak(button.dataset.say, button.dataset.lang));
   document.querySelectorAll('[data-toggle]').forEach((button) => button.onclick = () => toggleDone(button.dataset.toggle));
   document.querySelectorAll('[data-practice]').forEach((button) => button.onclick = () => {
