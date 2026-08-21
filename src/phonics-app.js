@@ -1062,6 +1062,45 @@ let state = {
   // beating level 5, cleared by dismissRollReadFinale(). See
   // rollReadFinaleTemplate() — same mechanism as state.memoryFinale.
   rollReadFinale: null,
+  // Word Run: a two-level lane runner, own tab, structured like the other
+  // three games (own transient round state here, its own Start Game gate,
+  // badges through the shared badge system). `status` steps through
+  // 'speaking' (the word plays) -> 'approaching' (lane images close in,
+  // steerable) -> 'resolved' (brief right/wrong pause) -> 'hazard' (an
+  // optional coin/obstacle between words, also steerable) -> back to
+  // 'speaking' for the next word, or 'won'/'lost' at a round/level
+  // boundary. See the "Word Run" section below for the full state
+  // machine (startWordRunWord()/resolveWordRunWord()/
+  // maybeSpawnWordRunHazard()). `roundWords` is fixed for the whole round
+  // (even across a round-failed retry — see loseWordRunRound()); `lanes`
+  // is rebuilt fresh for whichever word is current. `phaseStartedAt` is a
+  // wall-clock timestamp the lane-track/hazard templates use to compute a
+  // negative `animation-delay`, so a lane-switch re-render mid-approach
+  // resumes the CSS animation from the right point instead of restarting
+  // it (see wordRunPhaseAnimationStyle()). `coins` is a session-only bonus
+  // tally (not persisted — only level-completion badges are, through the
+  // usual state.badges/writeProgress() path).
+  wordRunStarted: false,
+  wordRun: {
+    status: 'idle',
+    level: 1,
+    round: 1,
+    wordIndex: 0,
+    roundWords: [],
+    lanes: [],
+    playerLane: 0,
+    lives: 3,
+    coins: 0,
+    coinFlash: false,
+    hazard: null,
+    jumping: false,
+    ducking: false,
+    feedback: null,
+    phaseStartedAt: 0,
+  },
+  // The full-screen "finished every level" celebration for Word Run —
+  // same mechanism as state.memoryFinale/state.rollReadFinale.
+  wordRunFinale: null,
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file. `adminAvailable` gates
@@ -1148,6 +1187,7 @@ const ICONS = {
   cards: '<rect x="3" y="7" width="12" height="15" rx="2" transform="rotate(-8 9 14.5)"/><rect x="9" y="3" width="12" height="15" rx="2"/>',
   play: '<path d="M7 4l14 8-14 8z" fill="currentColor" stroke="none"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  heart: '<path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4.5c2 0 3.6 1.1 4.4 2.7.8-1.6 2.4-2.7 4.4-2.7C18 4.5 19.6 8 18 11.7 15.5 16.4 12 21 12 21z"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -1906,21 +1946,429 @@ function dismissGroupCelebration() {
   render();
 }
 
-// ---------- Start Game flow (shared by Catch the Sound, Memory Match, and
-// Roll and Read) ----------
-// Each of the three game tabs gates its round/timer behind an explicit
+// ---------- Word Run ----------
+// A lane-runner tab: a word plays aloud, 2 (level 1) or 3 (level 2) lane
+// images approach, and the player steers into the one matching the word.
+// The round/level bookkeeping (how a right/wrong pick affects lives and
+// when a round/level is won or failed) is pure logic lifted out into
+// word-run-logic.js — WordRunLogic.advanceAfterWord() — specifically so
+// it's unit-testable without a browser; everything here is the DOM/timer/
+// audio glue around that.
+//
+// A round is WordRunLogic.WORDS_PER_ROUND (4) words; clearing
+// WordRunLogic.ROUNDS_PER_LEVEL (3) rounds without running out of lives
+// completes the level. A wrong pick costs a life but still advances to
+// the next word — only hitting 0 lives sends the player back to the
+// start of the CURRENT round (same 4 words, freshly redrawn lane
+// distractors — see loseWordRunRound()). Level 2 only ever becomes
+// reachable by clearing level 1 (see startWordRunLevel()'s
+// WordRunLogic.isLevelUnlocked() guard) — the same "first is always open,
+// each next needs the one before it" shape as the Learn tab's
+// isLevelUnlocked(), just with no lock-icon list UI since (like Memory
+// Match/Roll and Read) this game is played level-by-level in sequence,
+// not picked from a list.
+const WORD_RUN_SPEAK_PAUSE_MS = 700;
+const WORD_RUN_APPROACH_MS = 2600;
+const WORD_RUN_FEEDBACK_PAUSE_MS = 1100;
+const WORD_RUN_HAZARD_MS = 1600;
+const WORD_RUN_HAZARD_CHANCE = 0.6;
+const WORD_RUN_HAZARD_COIN_CHANCE = 0.65;
+const WORD_RUN_JUMP_MS = 550;
+const WORD_RUN_DUCK_MS = 550;
+const WORD_RUN_COIN_FLASH_MS = 700;
+const WORD_RUN_ROUND_FAIL_PAUSE_MS = 2200;
+const WORD_RUN_LEVEL_ADVANCE_PAUSE_MS = 2400;
+
+// The statuses during which the player can steer — lane-switch/jump/duck
+// do nothing outside these (e.g. during the brief 'resolved'/'won'/'lost'
+// pauses, or before Start Game), same "controls only live while something
+// is actually happening" rule Catch the Sound's basket follows implicitly
+// by only reacting to catchKeys while a round is active.
+const WORD_RUN_ACTIVE_STATUSES = ['speaking', 'approaching', 'hazard'];
+
+// Every non-archived word with a real photo, across every sound group —
+// unlike Memory Match's memoryWordPool() (long-a only), Word Run draws
+// from the whole active WORDS list, per spec.
+function wordRunWordPool() {
+  return WordRunLogic.filterImageWords(WORDS.filter((word) => !word.archived));
+}
+
+// One badge per level (word-run::1, word-run::2), plus a master badge for
+// finishing both — same id/storage convention as Memory Match's
+// memoryBadgeId()/memoryBadgeForLevel()/memoryMasterBadge().
+const WORD_RUN_BADGE_PREFIX = 'word-run';
+const WORD_RUN_MASTER_BADGE_ID = `${WORD_RUN_BADGE_PREFIX}::master`;
+
+function wordRunBadgeId(level) {
+  return `${WORD_RUN_BADGE_PREFIX}::${level}`;
+}
+
+function wordRunBadgeForLevel(level) {
+  const colors = badgeColor(level, WordRunLogic.LEVELS.length);
+  return {
+    id: wordRunBadgeId(level),
+    label: `Word Run ${level}`,
+    affirmation: badgeAffirmation(level),
+    color: colors.base,
+    colorLight: colors.light,
+  };
+}
+
+// Same warm gold as Memory Match/Roll and Read's master badges, for the
+// same reason — a visually distinct "finished everything" tier.
+function wordRunMasterBadge() {
+  return {
+    id: WORD_RUN_MASTER_BADGE_ID,
+    label: 'Word Run Champion',
+    affirmation: 'You outran every level!',
+    color: 'hsl(42 88% 48%)',
+    colorLight: 'hsl(42 88% 88%)',
+  };
+}
+
+function awardWordRunBadgeIfEligible(level) {
+  const id = wordRunBadgeId(level);
+  if (state.badges[id]) return null;
+  state.badges[id] = { earnedAt: Date.now() };
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
+  return wordRunBadgeForLevel(level);
+}
+
+function awardWordRunMasterBadgeIfEligible() {
+  if (state.badges[WORD_RUN_MASTER_BADGE_ID]) return null;
+  state.badges[WORD_RUN_MASTER_BADGE_ID] = { earnedAt: Date.now() };
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
+  return wordRunMasterBadge();
+}
+
+// One phase timer drives the whole speak -> approach -> resolve -> pause
+// -> (hazard ->) next-word sequence — only one phase is ever "in flight"
+// at a time, so a single module-scoped handle (mirroring
+// memoryAdvanceTimer/rollReadAdvanceTimer) is enough. Jump/duck poses and
+// the coin-collected flash are independent of that sequence (they can
+// happen mid-approach), so they get their own timers.
+let wordRunPhaseTimer = null;
+let wordRunJumpTimer = null;
+let wordRunDuckTimer = null;
+let wordRunCoinFlashTimer = null;
+
+function stopWordRunGame() {
+  clearTimeout(wordRunPhaseTimer);
+  wordRunPhaseTimer = null;
+  clearTimeout(wordRunJumpTimer);
+  clearTimeout(wordRunDuckTimer);
+  clearTimeout(wordRunCoinFlashTimer);
+  stopStartCountdown();
+}
+
+// True session start — called once Start Game's countdown finishes (see
+// wireWordRunTabEvents()). Resets the session-only coin tally, then
+// begins level 1.
+function startWordRunSession() {
+  state.wordRun.coins = 0;
+  startWordRunLevel(1);
+}
+
+// Starts (or re-enters, e.g. a finale replay button) one level at round 1
+// with fresh lives and a fresh word draw. Never touches coins — those are
+// a running session total, not scoped to any one level. Guards against
+// landing on a level that isn't actually unlocked yet (e.g. a stray call)
+// by falling back to level 1, the same defensive spirit as
+// isLevelUnlocked() being checked before acting on a sidebar level click.
+function startWordRunLevel(level) {
+  if (!WordRunLogic.isLevelUnlocked(level, (lvl) => !!state.badges[wordRunBadgeId(lvl)])) level = 1;
+  stopWordRunGame();
+  state.wordRun.level = level;
+  state.wordRunFinale = null;
+  startWordRunRound(1, false);
+}
+
+// Starts round `round`. Draws a fresh 4-word set unless `keepWords` is
+// true — the round-failed retry path (see loseWordRunRound()), which
+// reuses the exact same 4 words but still gets entirely fresh lane
+// distractors per word, since startWordRunWord() rebuilds lanes from
+// scratch every time regardless.
+function startWordRunRound(round, keepWords) {
+  const wr = state.wordRun;
+  wr.round = round;
+  wr.lives = WordRunLogic.STARTING_LIVES;
+  if (!keepWords) {
+    wr.roundWords = WordRunLogic.pickRandom(wordRunWordPool(), WordRunLogic.WORDS_PER_ROUND);
+  }
+  startWordRunWord(0);
+}
+
+// Speaks the word for `index`, builds its lane options, and — after a
+// short pause so the word has room to be heard before anything starts
+// moving — flips to 'approaching' and arms the timer that resolves the
+// pick once the runner "reaches" the lanes.
+function startWordRunWord(index) {
+  clearTimeout(wordRunPhaseTimer);
+  const wr = state.wordRun;
+  wr.wordIndex = index;
+  wr.feedback = null;
+  wr.hazard = null;
+  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
+  const correctItem = wr.roundWords[index];
+  const distractorPool = wordRunWordPool().filter((word) => word.word !== correctItem.word);
+  wr.lanes = WordRunLogic.buildLaneOptions(correctItem, distractorPool, laneCount);
+  wr.playerLane = Math.floor(laneCount / 2);
+  wr.status = 'speaking';
+  render();
+  speak(correctItem.word);
+  wordRunPhaseTimer = setTimeout(() => {
+    wr.status = 'approaching';
+    wr.phaseStartedAt = Date.now();
+    render();
+    wordRunPhaseTimer = setTimeout(resolveWordRunWord, WORD_RUN_APPROACH_MS);
+  }, WORD_RUN_SPEAK_PAUSE_MS);
+}
+
+// The runner has reached the lanes: whichever lane the player is
+// currently standing in decides the pick. Delegates the "what happens
+// next" bookkeeping entirely to WordRunLogic.advanceAfterWord(), then
+// acts on its outcome.
+function resolveWordRunWord() {
+  const wr = state.wordRun;
+  const picked = wr.lanes[wr.playerLane];
+  const correct = !!(picked && picked.correct);
+  const outcome = WordRunLogic.advanceAfterWord({ wordIndex: wr.wordIndex, round: wr.round, lives: wr.lives }, correct);
+  wr.lives = outcome.lives;
+  wr.status = 'resolved';
+  const targetWord = wr.roundWords[wr.wordIndex].word;
+  wr.feedback = correct
+    ? { kind: 'correct', text: `Nice! That was "${targetWord}".` }
+    : { kind: 'wrong', text: `Not quite — that was "${targetWord}".` };
+  render();
+
+  if (outcome.outcome === 'round-failed') {
+    wordRunPhaseTimer = setTimeout(loseWordRunRound, WORD_RUN_FEEDBACK_PAUSE_MS);
+    return;
+  }
+  wordRunPhaseTimer = setTimeout(() => {
+    if (outcome.outcome === 'next-word') {
+      maybeSpawnWordRunHazard(() => startWordRunWord(outcome.wordIndex));
+    } else if (outcome.outcome === 'round-complete') {
+      maybeSpawnWordRunHazard(() => startWordRunRound(outcome.round, false));
+    } else {
+      winWordRunLevel();
+    }
+  }, WORD_RUN_FEEDBACK_PAUSE_MS);
+}
+
+function buildWordRunObstacle(laneCount) {
+  const roll = Math.random();
+  const avoid = roll < 1 / 3 ? 'jump' : roll < 2 / 3 ? 'duck' : null;
+  return { kind: 'obstacle', lane: avoid ? null : Math.floor(Math.random() * laneCount), avoid };
+}
+
+// Between words, a coin or an obstacle sometimes appears in the stretch
+// the runner covers before the next word starts — never both, and often
+// neither (WORD_RUN_HAZARD_CHANCE). `next` is whatever should happen once
+// the hazard (or the empty stretch) has played out: starting the next
+// word, the next round, or nothing extra if a life was just lost to an
+// obstacle (see resolveWordRunHazard()'s return value).
+function maybeSpawnWordRunHazard(next) {
+  const wr = state.wordRun;
+  if (Math.random() >= WORD_RUN_HAZARD_CHANCE) {
+    next();
+    return;
+  }
+  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
+  wr.hazard = Math.random() < WORD_RUN_HAZARD_COIN_CHANCE
+    ? { kind: 'coin', lane: Math.floor(Math.random() * laneCount), avoid: null }
+    : buildWordRunObstacle(laneCount);
+  wr.feedback = null;
+  wr.status = 'hazard';
+  wr.phaseStartedAt = Date.now();
+  render();
+  wordRunPhaseTimer = setTimeout(() => {
+    const outOfLives = resolveWordRunHazard();
+    render();
+    if (outOfLives) {
+      wordRunPhaseTimer = setTimeout(loseWordRunRound, WORD_RUN_FEEDBACK_PAUSE_MS);
+    } else {
+      next();
+    }
+  }, WORD_RUN_HAZARD_MS);
+}
+
+// Resolves whatever hazard is currently pending against the player's lane
+// and jump/duck pose. A coin either gets collected (bonus point, no
+// penalty either way) or is simply missed; an obstacle costs a life the
+// same as a wrong word pick. Returns true only when an obstacle hit just
+// emptied the player's lives, so the caller ends the round instead of
+// continuing to the next word.
+function resolveWordRunHazard() {
+  const wr = state.wordRun;
+  const hazard = wr.hazard;
+  wr.hazard = null;
+  if (!hazard) return false;
+  const player = { lane: wr.playerLane, jumping: wr.jumping, ducking: wr.ducking };
+  if (hazard.kind === 'coin') {
+    if (WordRunLogic.isCoinCollected(hazard, player)) {
+      wr.coins += 1;
+      flashWordRunCoin();
+    }
+    return false;
+  }
+  if (WordRunLogic.isObstacleAvoided(hazard, player)) return false;
+  wr.lives -= 1;
+  wr.feedback = { kind: 'wrong', text: 'An obstacle got in the way — that cost a life!' };
+  return wr.lives <= 0;
+}
+
+// All 3 rounds (12 words) cleared. Awards the level's badge through the
+// same celebration-toast plumbing every other level-completion badge
+// uses, then — after a pause — either advances to the next level or, on
+// the final level, awards the master badge and sets state.wordRunFinale
+// to trigger the full-screen finale overlay. Mirrors winMemoryLevel()/
+// winRollReadLevel() function-for-function.
+function winWordRunLevel() {
+  const wr = state.wordRun;
+  wr.status = 'won';
+  const level = wr.level;
+  const isFinalLevel = level === WordRunLogic.LEVELS[WordRunLogic.LEVELS.length - 1].level;
+  const levelBadge = awardWordRunBadgeIfEligible(level);
+  if (levelBadge) {
+    clearTimeout(celebrationTimer);
+    state.celebration = levelBadge;
+    celebrationTimer = setTimeout(() => {
+      state.celebration = null;
+      render();
+    }, 2200);
+  }
+  render();
+  wordRunPhaseTimer = setTimeout(() => {
+    if (isFinalLevel) {
+      state.wordRunFinale = awardWordRunMasterBadgeIfEligible() || wordRunMasterBadge();
+      render();
+    } else {
+      startWordRunLevel(level + 1);
+    }
+  }, WORD_RUN_LEVEL_ADVANCE_PAUSE_MS);
+}
+
+// 0 lives before the round's 4 words were cleared — retry the exact same
+// round (same words, see startWordRunRound()'s keepWords) after a brief
+// "Game Over" pause. Mirrors loseMemoryLevel()/loseRollReadLevel().
+function loseWordRunRound() {
+  state.wordRun.status = 'lost';
+  render();
+  wordRunPhaseTimer = setTimeout(() => startWordRunRound(state.wordRun.round, true), WORD_RUN_ROUND_FAIL_PAUSE_MS);
+}
+
+// Absolute lane switching — a tap/click on a specific lane card jumps
+// straight to it. Does nothing while a lane pick isn't actually live (see
+// WORD_RUN_ACTIVE_STATUSES), same guard moveWordRunLane() below uses.
+function setWordRunLane(index) {
+  const wr = state.wordRun;
+  if (!state.wordRunStarted || WORD_RUN_ACTIVE_STATUSES.indexOf(wr.status) === -1) return;
+  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
+  const clamped = Math.max(0, Math.min(laneCount - 1, index));
+  if (clamped === wr.playerLane) return;
+  wr.playerLane = clamped;
+  render();
+}
+
+// Discrete relative lane switching for the keyboard/swipe controls (not a
+// held-continuous move like Catch the Sound's basket) — one keypress/
+// swipe moves exactly one lane.
+function moveWordRunLane(delta) {
+  setWordRunLane(state.wordRun.playerLane + delta);
+}
+
+function triggerWordRunJump() {
+  const wr = state.wordRun;
+  if (!state.wordRunStarted || WORD_RUN_ACTIVE_STATUSES.indexOf(wr.status) === -1) return;
+  clearTimeout(wordRunJumpTimer);
+  wr.jumping = true;
+  render();
+  wordRunJumpTimer = setTimeout(() => {
+    wr.jumping = false;
+    render();
+  }, WORD_RUN_JUMP_MS);
+}
+
+function triggerWordRunDuck() {
+  const wr = state.wordRun;
+  if (!state.wordRunStarted || WORD_RUN_ACTIVE_STATUSES.indexOf(wr.status) === -1) return;
+  clearTimeout(wordRunDuckTimer);
+  wr.ducking = true;
+  render();
+  wordRunDuckTimer = setTimeout(() => {
+    wr.ducking = false;
+    render();
+  }, WORD_RUN_DUCK_MS);
+}
+
+function flashWordRunCoin() {
+  clearTimeout(wordRunCoinFlashTimer);
+  state.wordRun.coinFlash = true;
+  wordRunCoinFlashTimer = setTimeout(() => {
+    state.wordRun.coinFlash = false;
+    render();
+  }, WORD_RUN_COIN_FLASH_MS);
+}
+
+// A negative animation-delay equal to how long the current phase
+// ('approaching' or 'hazard') has actually been running, so that a
+// lane-switch re-render mid-flight — which, like every render() in this
+// app, rebuilds the DOM node the CSS animation is running on — resumes
+// the "runner closing in" animation from the right point instead of
+// visibly snapping back to the start. See .word-run-lanes.is-approaching
+// / .word-run-hazard-track.is-approaching in phonics-styles.css.
+function wordRunPhaseAnimationStyle(durationMs) {
+  const elapsed = state.wordRun.phaseStartedAt ? Date.now() - state.wordRun.phaseStartedAt : 0;
+  return `animation-duration:${durationMs}ms;animation-delay:${-elapsed}ms;`;
+}
+
+let wordRunTouchStart = null;
+
+function handleWordRunTouchStart(event) {
+  const touch = event.touches[0];
+  if (!touch) return;
+  wordRunTouchStart = { x: touch.clientX, y: touch.clientY };
+}
+
+// Swipe left/right switches lanes; swipe up jumps; swipe down ducks —
+// whichever axis moved further past the threshold wins, so a mostly-
+// horizontal swipe never accidentally triggers a jump/duck and vice
+// versa.
+function handleWordRunTouchEnd(event) {
+  if (!wordRunTouchStart) return;
+  const touch = event.changedTouches[0];
+  const start = wordRunTouchStart;
+  wordRunTouchStart = null;
+  if (!touch) return;
+  const dx = touch.clientX - start.x;
+  const dy = touch.clientY - start.y;
+  const SWIPE_THRESHOLD_PX = 32;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_THRESHOLD_PX) return;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    moveWordRunLane(dx > 0 ? 1 : -1);
+  } else if (dy < 0) {
+    triggerWordRunJump();
+  } else {
+    triggerWordRunDuck();
+  }
+}
+
+// ---------- Start Game flow (shared by Catch the Sound, Memory Match,
+// Roll and Read, and Word Run) ----------
+// Each of the four game tabs gates its round/timer behind an explicit
 // "Start Game" click rather than auto-starting on mount: gameStartPromptTemplate()
 // is what each game's own template function renders in place of its
 // normal board/field while `state.<game>Started` is still false (see
-// catchStarted/memoryStarted/rollReadStarted's comments above), and each
-// game's own wire*Events() function wires that button's click to
-// beginGameCountdown(). The countdown itself — a brief "Ready… Set… Go!"
-// flourish — is the one piece actually shared across all three, since
-// it's identical regardless of which game it's gating; each game's own
-// start function (playCatchRound()/startMemoryLevel()/startRollReadLevel())
-// is untouched and only ever gets called once the countdown finishes, so
-// none of the three games' round/timer/badge/finale logic needed to
-// change at all.
+// catchStarted/memoryStarted/rollReadStarted/wordRunStarted's comments
+// above), and each game's own wire*Events() function wires that button's
+// click to beginGameCountdown(). The countdown itself — a brief
+// "Ready… Set… Go!" flourish — is the one piece actually shared across
+// all four, since it's identical regardless of which game it's gating;
+// each game's own start function (playCatchRound()/startMemoryLevel()/
+// startRollReadLevel()/startWordRunSession()) is untouched and only ever
+// gets called once the countdown finishes, so none of the four games'
+// round/timer/badge/finale logic needed to change at all.
 const START_COUNTDOWN_STEPS = ['ready', 'set', 'go'];
 let startCountdownTimer = null;
 
@@ -1955,6 +2403,7 @@ function beginGameCountdown(view) {
     if (view === 'game') state.catchStarted = true;
     else if (view === 'memory') state.memoryStarted = true;
     else if (view === 'rollread') state.rollReadStarted = true;
+    else if (view === 'wordrun') state.wordRunStarted = true;
     // render() re-runs every wire*Events(), whose own idle-mount check
     // (e.g. wireMemoryGameEvents()'s `if (state.memory.status === 'idle')
     // startMemoryLevel(...)`) is what actually kicks the round off now
@@ -2928,6 +3377,22 @@ const GAME_INSTRUCTIONS = {
       'اربح جولات كافية لاجتياز كل من المستويات الخمسة، وتحصل على وسام في كل مرة — أنهِ المستوى الخامس للحصول على وسام «بطل ارمِ واقرأ».',
     ],
   },
+  wordrun: {
+    en: () => [
+      'A word plays aloud, then a runner heads toward lane pictures — 2 on level 1, 3 on level 2 — only one of them matching the word.',
+      'Steer with the ← and → arrow keys (or swipe left/right on a phone) to move into the matching lane before the runner arrives, or just tap/click a lane directly.',
+      'Watch for coins and obstacles between words: grab a coin (steer into its lane) for a bonus point — missing one costs nothing. An obstacle costs a life just like a wrong picture, so dodge it by switching lanes, or jump (↑ or spacebar) / duck (↓) when one spans every lane.',
+      'A wrong pick costs 1 of 3 lives but still moves on to the next word — only running out of lives sends you back to the start of the current 4-word round.',
+      `Clear ${WordRunLogic.ROUNDS_PER_LEVEL} rounds (${WordRunLogic.ROUNDS_PER_LEVEL * WordRunLogic.WORDS_PER_ROUND} words) to finish level 1 and unlock level 2 — finish level 2 for the Word Run Champion badge.`,
+    ],
+    ar: () => [
+      'تُنطق كلمة، ثم يتجه العدّاء نحو صور في ممرات — ممرّان في المستوى الأول، وثلاثة في المستوى الثاني — واحدة منها فقط تطابق الكلمة.',
+      'وجّه العدّاء بمفتاحي الأسهم ← و → (أو اسحب يمينًا/يسارًا على الهاتف) للانتقال إلى الممر الصحيح قبل وصول العدّاء، أو اضغط على الممر مباشرة.',
+      'انتبه للعملات والعقبات بين الكلمات: اجمع عملة (بالانتقال إلى ممرها) لنقطة إضافية — تفويتها لا يكلفك شيئًا. أما العقبة فتكلفك حياة مثل الصورة الخاطئة تمامًا، فتجنبها بتغيير الممر، أو اقفز (↑ أو مفتاح المسافة) أو انحنِ (↓) عندما تمتد عبر كل الممرات.',
+      'الاختيار الخاطئ يكلفك حياة واحدة من ثلاث لكنه ينتقل للكلمة التالية رغم ذلك — نفاد الحيوات فقط يعيدك إلى بداية الجولة الحالية من 4 كلمات.',
+      `أكمل ${WordRunLogic.ROUNDS_PER_LEVEL} جولات (${WordRunLogic.ROUNDS_PER_LEVEL * WordRunLogic.WORDS_PER_ROUND} كلمة) لإنهاء المستوى الأول وفتح المستوى الثاني — أنهِ المستوى الثاني للحصول على وسام «بطل الجري بالكلمات».`,
+    ],
+  },
 };
 
 function instructionsTemplate() {
@@ -2954,7 +3419,7 @@ function instructionsTemplate() {
 }
 
 // The small "English / العربية" pill next to a game's instructions —
-// only rendered for the three game tabs (see render()'s instructions
+// only rendered for the four game tabs (see render()'s instructions
 // section), since every other view's instructions stay English-only.
 function instructionsLangToggleTemplate() {
   const isAr = state.instructionsLang === 'ar';
@@ -2962,6 +3427,228 @@ function instructionsLangToggleTemplate() {
     <button type="button" data-instructions-lang="en" class="${!isAr ? 'active' : ''}" aria-pressed="${!isAr}">English</button>
     <button type="button" data-instructions-lang="ar" class="${isAr ? 'active' : ''}" aria-pressed="${isAr}">العربية</button>
   </div>`;
+}
+
+// ---------- Word Run: view ----------
+// Status/HUD bar, the lane track (word-image lanes while a word is being
+// picked, or a coin/obstacle while a hazard is in play), the runner
+// sprite, and feedback — mirrors the shape of Catch the Sound's/Roll and
+// Read's own view sections above.
+function wordRunStatusTemplate() {
+  const wr = state.wordRun;
+  const label = wr.status === 'won' ? 'Level complete!' : wr.status === 'lost' ? 'Game over!' : `Level ${wr.level} of ${WordRunLogic.LEVELS.length}`;
+  return `<div class="word-run-status-group">
+    <span class="word-run-status-badge ${wr.status === 'won' ? 'is-won' : wr.status === 'lost' ? 'is-lost' : ''}">${icon('play')}${escapeHtml(label)}</span>
+    <span class="word-run-rounds">Round ${wr.round}/${WordRunLogic.ROUNDS_PER_LEVEL} · Word ${Math.min(wr.wordIndex + 1, WordRunLogic.WORDS_PER_ROUND)}/${WordRunLogic.WORDS_PER_ROUND}</span>
+  </div>`;
+}
+
+// Lives as hearts (WordRunLogic.STARTING_LIVES of them, emptying left to
+// right as they're lost) plus the running coin tally — `coinFlash` briefly
+// highlights the count right after a coin is collected (see
+// flashWordRunCoin()), the same "state-driven popup" trick
+// flashMemoryTimeBonus()/flashRollReadTimeBonus() use so the flash still
+// plays correctly even though render() rebuilds this element from
+// scratch.
+function wordRunHudTemplate() {
+  const wr = state.wordRun;
+  const hearts = Array.from({ length: WordRunLogic.STARTING_LIVES }, (_, i) =>
+    `<span class="word-run-heart ${i < wr.lives ? 'is-full' : 'is-empty'}">${icon('heart')}</span>`
+  ).join('');
+  return `<div class="word-run-hud">
+    <div class="word-run-lives" aria-label="${wr.lives} of ${WordRunLogic.STARTING_LIVES} lives left">${hearts}</div>
+    <div class="word-run-coins ${wr.coinFlash ? 'is-flash' : ''}" aria-label="${wr.coins} coins collected">${wordRunCoinSvg()}<span>${wr.coins}</span></div>
+  </div>`;
+}
+
+function wordRunCoinSvg() {
+  return `<svg viewBox="0 0 24 24" class="word-run-coin-svg" aria-hidden="true">
+    <circle class="wrc-face" cx="12" cy="12" r="10"/>
+    <circle class="wrc-ring" cx="12" cy="12" r="10" fill="none"/>
+    <text class="wrc-glyph" x="12" y="16.5" text-anchor="middle">¢</text>
+  </svg>`;
+}
+
+// A simple, friendly runner — decorative flavor only, same illustration
+// tier as catchBasketSvg()/dieFaceTemplate(). `.is-jumping`/`.is-ducking`
+// (driven straight off state.wordRun.jumping/ducking) do the actual pose
+// change via CSS transform, see .word-run-runner in phonics-styles.css.
+function wordRunRunnerSvg() {
+  return `<svg viewBox="0 0 60 74" class="word-run-runner-svg" aria-hidden="true">
+    <ellipse class="wr-shadow" cx="30" cy="68" rx="17" ry="4"/>
+    <circle class="wr-body" cx="30" cy="36" r="19"/>
+    <circle class="wr-face" cx="30" cy="32" r="12.5"/>
+    <circle class="wr-eye" cx="25" cy="30" r="2.3"/>
+    <circle class="wr-eye" cx="35" cy="30" r="2.3"/>
+    <path class="wr-smile" d="M24 36q6 6 12 0" fill="none"/>
+  </svg>`;
+}
+
+// One lane card. While a word is 'resolved', the truly correct lane gets
+// a check mark and — if the player picked a different one — that pick
+// gets an X, so a wrong guess is immediately clear about which lane
+// actually matched the word (full transparency, same spirit as Roll and
+// Read never hiding which tile was right).
+function wordRunLaneTemplate(lane, index) {
+  const wr = state.wordRun;
+  const isPlayerLane = wr.playerLane === index;
+  const showResult = wr.status === 'resolved';
+  return `<button type="button" class="word-run-lane ${isPlayerLane ? 'is-player-lane' : ''} ${showResult && lane.correct ? 'is-correct-lane' : ''} ${showResult && isPlayerLane && !lane.correct ? 'is-wrong-lane' : ''}" data-word-run-lane="${index}" aria-label="Lane ${index + 1}: ${escapeHtml(lane.item.word)}">
+    <img src="${lane.item.image}" alt="">
+    ${showResult && lane.correct ? `<span class="word-run-lane-mark is-correct">${icon('check')}</span>` : ''}
+    ${showResult && isPlayerLane && !lane.correct ? `<span class="word-run-lane-mark is-wrong">${icon('close')}</span>` : ''}
+  </button>`;
+}
+
+// The row of lane images, closing in on the runner over WORD_RUN_APPROACH_MS
+// while status is 'approaching' — see wordRunPhaseAnimationStyle() for how
+// it stays visually continuous across a lane-switch re-render mid-flight.
+// Outside 'approaching' (speaking/resolved) it just sits still, already at
+// rest, so the player has a moment to see the images before they start
+// closing in and a moment to see the result once they've arrived.
+function wordRunLaneTrackTemplate() {
+  const wr = state.wordRun;
+  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
+  const approaching = wr.status === 'approaching';
+  const style = `--word-run-lanes:${laneCount};${approaching ? wordRunPhaseAnimationStyle(WORD_RUN_APPROACH_MS) : ''}`;
+  return `<div class="word-run-lanes ${approaching ? 'is-approaching' : 'is-resting'}" style="${style}">
+    ${wr.lanes.map((lane, i) => wordRunLaneTemplate(lane, i)).join('')}
+  </div>`;
+}
+
+// The between-words hazard: a coin sits in one lane (collect it by being
+// in that lane when it arrives); an obstacle either sits in one lane
+// (dodge by being anywhere else) or spans every lane at ground or head
+// height (dodge by jumping/ducking instead, regardless of lane).
+function wordRunHazardTemplate() {
+  const wr = state.wordRun;
+  const hazard = wr.hazard;
+  if (!hazard) return '';
+  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
+  const style = `--word-run-lanes:${laneCount};${wordRunPhaseAnimationStyle(WORD_RUN_HAZARD_MS)}`;
+  if (hazard.avoid) {
+    return `<div class="word-run-hazard-track is-approaching is-full-width" style="${style}">
+      <div class="word-run-obstacle is-${hazard.avoid}" role="img" aria-label="${hazard.avoid === 'jump' ? 'Low obstacle ahead — jump!' : 'High obstacle ahead — duck!'}"></div>
+    </div>`;
+  }
+  const laneMarkup = Array.from({ length: laneCount }, (_, i) => {
+    if (i !== hazard.lane) return '<div class="word-run-hazard-lane"></div>';
+    const mark = hazard.kind === 'coin' ? wordRunCoinSvg() : '<div class="word-run-obstacle"></div>';
+    return `<div class="word-run-hazard-lane">${mark}</div>`;
+  }).join('');
+  return `<div class="word-run-hazard-track is-approaching" style="${style}">${laneMarkup}</div>`;
+}
+
+function wordRunFeedbackTemplate() {
+  const wr = state.wordRun;
+  if (wr.status === 'won') {
+    const isFinalLevel = wr.level === WordRunLogic.LEVELS[WordRunLogic.LEVELS.length - 1].level;
+    return `<p class="word-run-feedback is-correct" aria-live="polite">${isFinalLevel ? 'Every level complete!' : 'Great running! Next level starting…'}</p>`;
+  }
+  if (wr.status === 'lost') {
+    return `<p class="word-run-feedback is-incorrect" aria-live="polite">Out of lives — let's try that round again…</p>`;
+  }
+  if (wr.feedback) {
+    return `<p class="word-run-feedback is-${wr.feedback.kind}" aria-live="polite">${escapeHtml(wr.feedback.text)}</p>`;
+  }
+  const hint = wr.status === 'speaking' ? 'Listen for the word…'
+    : wr.status === 'approaching' ? 'Steer into the matching picture!'
+    : wr.status === 'hazard' ? 'Watch out ahead!'
+    : 'Get ready…';
+  return `<p class="word-run-feedback" aria-live="polite">${hint}</p>`;
+}
+
+function wordRunGameTemplate() {
+  if (state.startCountdown && state.startCountdown.view === 'wordrun') return gameStartCountdownTemplate();
+  if (!state.wordRunStarted) return gameStartPromptTemplate();
+  const wr = state.wordRun;
+  return `
+    <section class="word-run-game">
+      <div class="word-run-top">
+        ${wordRunStatusTemplate()}
+        ${wordRunHudTemplate()}
+      </div>
+      <div class="word-run-field" data-word-run-field>
+        <div class="word-run-track">
+          ${wr.status === 'hazard' ? wordRunHazardTemplate() : (wr.lanes.length ? wordRunLaneTrackTemplate() : '')}
+          <div class="word-run-runner ${wr.jumping ? 'is-jumping' : ''} ${wr.ducking ? 'is-ducking' : ''}">${wordRunRunnerSvg()}</div>
+        </div>
+      </div>
+      ${wordRunFeedbackTemplate()}
+    </section>`;
+}
+
+// The Word Run badges, shown alongside every sound group's badge row in
+// the shelf even though it isn't tied to a sound group/level — same
+// pattern as memoryBadgeShelfSectionTemplate()/rollReadBadgeShelfSectionTemplate().
+function wordRunBadgeShelfSectionTemplate() {
+  const levelBadges = WordRunLogic.LEVELS.map((entry) => wordRunBadgeForLevel(entry.level));
+  const master = wordRunMasterBadge();
+  return `<section class="badge-shelf-group">
+    <h3>Word Run</h3>
+    <div class="badge-shelf-grid">
+      ${[...levelBadges, master].map((badge) => {
+        const earned = !!state.badges[badge.id];
+        return `<div class="badge-shelf-item ${earned ? '' : 'is-locked'}">
+          ${badgeMedalTemplate(badge, { size: 'md', earned })}
+          <span class="badge-shelf-item-label">${escapeHtml(badge.label)}</span>
+          <span class="badge-shelf-item-affirmation">${earned ? escapeHtml(badge.affirmation) : 'Not yet earned'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+// The grand finale for finishing every level — mirrors memoryFinaleTemplate()/
+// rollReadFinaleTemplate() exactly (same full-screen overlay mechanism,
+// confetti/close-button/replay-levels shape), just relabeled for Word Run.
+function wordRunFinaleTemplate() {
+  if (!state.wordRunFinale) return '';
+  const badge = state.wordRunFinale;
+  const confetti = Array.from({ length: 28 }, (_, i) => `<span class="confetti-piece" style="--i:${i}"></span>`).join('');
+  return `<div class="word-run-finale-overlay" role="dialog" aria-label="All Word Run levels complete">
+    <div class="word-run-finale-confetti" aria-hidden="true">${confetti}</div>
+    <button class="word-run-finale-close" data-dismiss-word-run-finale aria-label="Close">${icon('close')}</button>
+    <div class="word-run-finale-panel">
+      ${celebrationAvatarTemplate('md')}
+      ${badgeMedalTemplate(badge, { size: 'xl' })}
+      <p class="word-run-finale-kicker">Champion!</p>
+      <h2>All ${WordRunLogic.LEVELS.length} levels complete!</h2>
+      <p>${escapeHtml(badge.affirmation)} You steered past every word and every obstacle — pick a level below to play again.</p>
+      <div class="word-run-replay-levels">
+        ${WordRunLogic.LEVELS.map((entry) => `<button type="button" data-word-run-finale-replay-level="${entry.level}">${icon('play')}Level ${entry.level}</button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function dismissWordRunFinale() {
+  state.wordRunFinale = null;
+  render();
+}
+
+// This view's own controls besides the shared lane/jump/duck keyboard and
+// swipe handling (wired globally, see the keydown listener and this
+// function's touch listeners below): the lane cards themselves, and
+// starting the level/session for as long as the view is mounted — status
+// is only ever 'idle' right after mount or a Reset, so this can't
+// double-fire on every render() while a round is already in progress.
+// Mirrors wireMemoryGameEvents()/wireRollReadTabEvents() exactly.
+function wireWordRunTabEvents() {
+  if (state.view !== 'wordrun') {
+    stopWordRunGame();
+    return;
+  }
+  const startButton = $('[data-start-game]');
+  if (startButton) startButton.onclick = () => beginGameCountdown('wordrun');
+  if (!state.wordRunStarted) return;
+  if (state.wordRun.status === 'idle') startWordRunSession();
+  document.querySelectorAll('[data-word-run-lane]').forEach((button) => button.onclick = () => setWordRunLane(Number(button.dataset.wordRunLane)));
+  const field = $('[data-word-run-field]');
+  if (field) {
+    field.addEventListener('touchstart', handleWordRunTouchStart, { passive: true });
+    field.addEventListener('touchend', handleWordRunTouchEnd, { passive: true });
+  }
 }
 
 // ---------- ADMIN MODE ----------
@@ -3158,11 +3845,27 @@ function wireAdminEvents() {
   }
 }
 
+// Word Run's lane-switch/jump/duck keys — unlike Catch the Sound's
+// ArrowLeft/ArrowRight above (a held-continuous move tracked via
+// catchKeys + an animation loop), these fire once per keydown: each of
+// moveWordRunLane()/triggerWordRunJump()/triggerWordRunDuck() already
+// no-ops outside an active word/hazard (see WORD_RUN_ACTIVE_STATUSES), so
+// there's no separate "is a round live" check needed here.
+const WORD_RUN_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '];
+
 document.addEventListener('keydown', (event) => {
   if (state.view === 'game' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
     event.preventDefault();
     if (event.key === 'ArrowLeft') catchKeys.left = true;
     else catchKeys.right = true;
+    return;
+  }
+  if (state.view === 'wordrun' && WORD_RUN_KEYS.indexOf(event.key) !== -1) {
+    event.preventDefault();
+    if (event.key === 'ArrowLeft') moveWordRunLane(-1);
+    else if (event.key === 'ArrowRight') moveWordRunLane(1);
+    else if (event.key === 'ArrowUp' || event.key === ' ') triggerWordRunJump();
+    else if (event.key === 'ArrowDown') triggerWordRunDuck();
     return;
   }
   if (state.adminAvailable && event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
@@ -3328,6 +4031,7 @@ function badgeShelfTemplate() {
       ${catchGameBadgeShelfSectionTemplate()}
       ${memoryBadgeShelfSectionTemplate()}
       ${rollReadBadgeShelfSectionTemplate()}
+      ${wordRunBadgeShelfSectionTemplate()}
     </div>
   </div>`;
 }
@@ -4424,6 +5128,7 @@ function render() {
         <button data-view="game" role="tab" aria-selected="${state.view === 'game'}" class="${state.view === 'game' ? 'active' : ''}">${icon('basket')}Catch the Sound</button>
         <button data-view="memory" role="tab" aria-selected="${state.view === 'memory'}" class="${state.view === 'memory' ? 'active' : ''}">${icon('cards')}Memory Match</button>
         <button data-view="rollread" role="tab" aria-selected="${state.view === 'rollread'}" class="${state.view === 'rollread' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
+        <button data-view="wordrun" role="tab" aria-selected="${state.view === 'wordrun'}" class="${state.view === 'wordrun' ? 'active' : ''}">${icon('bolt')}Word Run</button>
       </div>
       <div class="controls-bar">
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
@@ -4443,7 +5148,7 @@ function render() {
     </section>
     <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
       ${state.view === 'learn' ? sidebarTemplate() : ''}
-      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : practiceTemplate()}</div>
+      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : state.view === 'wordrun' ? wordRunGameTemplate() : practiceTemplate()}</div>
     </div>
     ${state.adminAvailable ? `<footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
@@ -4454,6 +5159,7 @@ function render() {
     ${groupCelebrationTemplate()}
     ${memoryFinaleTemplate()}
     ${rollReadFinaleTemplate()}
+    ${wordRunFinaleTemplate()}
     ${badgeShelfTemplate()}`;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
@@ -4461,6 +5167,7 @@ function render() {
     stopRollReadGame();
     stopCatchGame();
     stopMemoryGame();
+    stopWordRunGame();
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
     setState('view', button.dataset.view);
@@ -4474,6 +5181,7 @@ function render() {
     stopRollReadGame();
     stopCatchGame();
     stopMemoryGame();
+    stopWordRunGame();
     openProfilePicker();
   };
   $('[data-reset]').onclick = () => {
@@ -4491,6 +5199,10 @@ function render() {
     state.rollRead = { status: 'idle', level: 1, words: [], rows: 0, cols: 0, dieValue: null, targetWord: null, feedback: null, roundsWon: 0, roundsToWin: 0, secondsLeft: 0, timeBonusFlash: false };
     state.rollReadFinale = null;
     state.rollReadStarted = false;
+    stopWordRunGame();
+    state.wordRun = { status: 'idle', level: 1, round: 1, wordIndex: 0, roundWords: [], lanes: [], playerLane: 0, lives: 3, coins: 0, coinFlash: false, hazard: null, jumping: false, ducking: false, feedback: null, phaseStartedAt: 0 };
+    state.wordRunFinale = null;
+    state.wordRunStarted = false;
     stopStartCountdown();
     removeProgress('donePhonics');
     removeProgress('badgesPhonics');
@@ -4543,11 +5255,17 @@ function render() {
     state.rollReadFinale = null;
     startRollReadLevel(Number(el.dataset.rollReadFinaleReplayLevel));
   });
+  document.querySelectorAll('[data-dismiss-word-run-finale]').forEach((el) => el.onclick = () => dismissWordRunFinale());
+  document.querySelectorAll('[data-word-run-finale-replay-level]').forEach((el) => el.onclick = () => {
+    state.wordRunFinale = null;
+    startWordRunLevel(Number(el.dataset.wordRunFinaleReplayLevel));
+  });
   wireAdminEvents();
   wireReadingEvents();
   wireCatchGameEvents();
   wireMemoryGameEvents();
   wireRollReadTabEvents();
+  wireWordRunTabEvents();
 }
 
 render();

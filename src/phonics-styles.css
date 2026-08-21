@@ -182,7 +182,12 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .progress span { display: block; margin-top: 4px; font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.02em; }
 
 /* ---------- Toolbar / navigation ---------- */
-.toolbar { position: sticky; top: 0; z-index: 5; padding: 16px 0 8px; background: linear-gradient(var(--cream) 78%, transparent); }
+/* padding-right reserves room for the fixed .header-widgets corner
+   cluster (avatar + badge shelf toggle, top:16px;right:16px;z-index:15) —
+   without it, a wide enough tab row (7 tabs, including Word Run) can
+   extend far enough right to sit underneath those buttons once the
+   sticky toolbar pins to the top of the viewport on scroll. */
+.toolbar { position: sticky; top: 0; z-index: 5; padding: 16px 90px 8px 0; background: linear-gradient(var(--cream) 78%, transparent); }
 .tabs {
   display: flex;
   gap: 6px;
@@ -203,7 +208,11 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   border: 0;
   background: transparent;
   border-radius: var(--radius-pill);
-  padding: 11px 20px;
+  /* Trimmed a touch (from 20px) now that a 7th tab (Word Run) shares this
+     row — keeps every tab visible without the pill needing to scroll on
+     a typical desktop width, per .toolbar's padding-right reserving room
+     for the fixed .header-widgets corner cluster. */
+  padding: 11px 16px;
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 0.98rem;
@@ -1664,6 +1673,245 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   .memory-finale-panel { animation: none; }
 }
 
+/* ---------- Word Run ---------- */
+.word-run-game { display: flex; flex-direction: column; gap: 16px; }
+.word-run-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.word-run-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.word-run-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.word-run-status-badge .icon { width: 1.1em; height: 1.1em; }
+.word-run-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.word-run-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.word-run-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+
+.word-run-hud { display: flex; align-items: center; gap: 18px; }
+.word-run-lives { display: flex; gap: 4px; }
+.word-run-heart { display: inline-flex; width: 1.5rem; height: 1.5rem; color: var(--incorrect); }
+.word-run-heart .icon { width: 100%; height: 100%; }
+.word-run-heart.is-full .icon { fill: var(--incorrect); }
+.word-run-heart.is-empty { color: var(--primary-tint-200); opacity: 0.7; }
+.word-run-coins {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px 6px 8px;
+  font-family: var(--font-heading); font-weight: 800; font-size: 1.1rem;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+.word-run-coins.is-flash { transform: scale(1.14); }
+.word-run-coin-svg { width: 26px; height: 26px; flex: none; }
+.word-run-coin-svg .wrc-face { fill: #f0c14b; }
+.word-run-coin-svg .wrc-ring { stroke: #c9932a; stroke-width: 1.6; }
+.word-run-coin-svg .wrc-glyph { fill: #8a6114; font-size: 11px; font-weight: 800; font-family: var(--font-heading); }
+
+/* The field: the runner sits fixed near the bottom while lane images or
+   a hazard animate in from "far" (small, faded, near the top) to "near"
+   (full size, at the runner) — the animation-duration/-delay are set
+   inline per-render by wordRunPhaseAnimationStyle() so a lane-switch
+   re-render mid-flight resumes instead of restarting (see that
+   function's comment in phonics-app.js). */
+.word-run-field {
+  position: relative;
+  background: linear-gradient(180deg, var(--primary-tint-50) 0%, var(--primary-tint-100) 70%, var(--primary-tint-200) 100%);
+  border: 2px solid var(--primary-tint-200);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.word-run-track {
+  position: relative;
+  min-height: 320px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.word-run-lanes, .word-run-hazard-track {
+  display: grid;
+  grid-template-columns: repeat(var(--word-run-lanes, 2), 1fr);
+  gap: 14px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto 100px;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.word-run-hazard-track { min-height: 70px; }
+.word-run-hazard-track.is-full-width { max-width: 320px; grid-template-columns: 1fr; }
+.word-run-lanes.is-approaching, .word-run-hazard-track.is-approaching {
+  animation-name: word-run-approach;
+}
+.word-run-lanes.is-resting { transform: translateY(-6%) scale(0.82); opacity: 0.85; }
+@keyframes word-run-approach {
+  from { transform: translateY(-8%) scale(0.62); opacity: 0.55; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.word-run-lane {
+  position: relative;
+  aspect-ratio: 1;
+  border: 3px solid var(--primary-tint-200);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.word-run-lane img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.word-run-lane.is-player-lane { border-color: var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.word-run-lane.is-correct-lane { border-color: var(--success); }
+.word-run-lane.is-wrong-lane { border-color: var(--incorrect); }
+.word-run-lane-mark {
+  position: absolute; top: 6px; right: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  color: #fff;
+}
+.word-run-lane-mark.is-correct { background: var(--success); }
+.word-run-lane-mark.is-wrong { background: var(--incorrect); }
+.word-run-lane-mark .icon { width: 1.1em; height: 1.1em; }
+
+.word-run-hazard-lane { display: flex; align-items: center; justify-content: center; }
+.word-run-obstacle {
+  width: 68%; height: 68%;
+  border-radius: var(--radius-sm);
+  background: var(--illus-sand-dark);
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.15);
+}
+.word-run-obstacle.is-jump { width: 100%; height: 34px; margin-top: auto; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.word-run-obstacle.is-duck {
+  width: 100%; height: 34px; margin-bottom: auto;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: var(--incorrect-soft);
+  box-shadow: inset 0 0 0 3px var(--incorrect);
+}
+
+/* The runner: fixed near the base of the track, squashing down for a
+   duck and hopping up for a jump — purely decorative flavor, same tier
+   as catchBasketSvg()/dieFaceTemplate(). */
+.word-run-runner { position: relative; z-index: 2; width: 84px; transition: transform 0.15s ease; }
+.word-run-runner.is-jumping { transform: translateY(-34px); }
+.word-run-runner.is-ducking { transform: scaleY(0.7) translateY(6px); transform-origin: bottom; }
+.word-run-runner-svg { width: 100%; height: auto; display: block; }
+.word-run-runner-svg .wr-shadow { fill: rgba(6, 62, 143, 0.14); }
+.word-run-runner-svg .wr-body { fill: var(--primary); }
+.word-run-runner-svg .wr-face { fill: var(--illus-sand); }
+.word-run-runner-svg .wr-eye { fill: var(--ink); }
+.word-run-runner-svg .wr-smile { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+
+.word-run-feedback { margin: 0; text-align: center; font-weight: 700; color: var(--ink-soft); min-height: 1.4em; }
+.word-run-feedback.is-correct { color: var(--success-dark); }
+.word-run-feedback.is-wrong, .word-run-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+/* ---------- Word Run: finale overlay ----------
+   Same mechanism/proportions as .memory-finale-overlay — see its comment
+   above for why (bigger confetti, XL medal, springier scale-in than a
+   single-level badge toast or sound-group completion screen). */
+.word-run-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.word-run-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.word-run-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.word-run-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.word-run-finale-close .icon { width: 1.1em; height: 1.1em; }
+.word-run-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: word-run-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.word-run-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.word-run-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.word-run-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes word-run-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.word-run-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.word-run-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.word-run-replay-levels button:hover { background: var(--primary-dark); }
+.word-run-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+.contrast .word-run-status-badge { background: #fff; color: #000; }
+.contrast .word-run-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .word-run-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .word-run-rounds { color: #ccc; }
+.contrast .word-run-coins { background: #000; border-color: #fff; color: #fff; }
+.contrast .word-run-field { background: #000; border-color: #fff; }
+.contrast .word-run-lane { background: #111; border-color: #444; }
+.contrast .word-run-lane.is-player-lane { border-color: #fff; }
+.contrast .word-run-lane.is-correct-lane { border-color: #0f0; }
+.contrast .word-run-lane.is-wrong-lane { border-color: #ff5252; }
+.contrast .word-run-feedback { color: #ccc; }
+.contrast .word-run-feedback.is-correct { color: #7cffb2; }
+.contrast .word-run-feedback.is-wrong, .contrast .word-run-feedback.is-incorrect { color: #ffd27f; }
+.contrast .word-run-replay-levels button { background: #fff; color: #000; }
+.contrast .word-run-replay-levels button:hover { background: #ccc; }
+.contrast .word-run-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-run-finale-kicker { color: #ffd27f; }
+.contrast .word-run-finale-panel h2 { color: #fff; }
+.contrast .word-run-finale-panel p { color: #ccc; }
+.contrast .word-run-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+@media (max-width: 700px) {
+  .word-run-runner { width: 64px; }
+  .word-run-track { min-height: 260px; }
+  .word-run-lanes, .word-run-hazard-track { margin-bottom: 76px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-run-lanes.is-approaching, .word-run-hazard-track.is-approaching { animation: none; }
+  .word-run-runner { transition: none; }
+  .word-run-coins { transition: none; }
+  .word-run-finale-panel { animation: none; }
+}
+
 /* ---------- Rules ---------- */
 .rules { display: grid; gap: 18px; }
 .rules > h2 { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); color: var(--ink); position: relative; padding-bottom: 10px; }
@@ -2018,7 +2266,10 @@ body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--d
 @media (max-width: 700px) {
   main { padding: 16px 14px 48px; }
   .hero { padding: 26px 22px; box-shadow: var(--shadow-md); }
-  .toolbar { position: static; }
+  /* Not sticky here, so it can never pin under the fixed .header-widgets
+     corner cluster the way it can at desktop widths — no need to reserve
+     padding-right for it. */
+  .toolbar { position: static; padding-right: 0; }
   .tabs { width: 100%; flex-wrap: wrap; justify-content: center; border-radius: var(--radius-md); }
   .tabs button { flex: 1 1 auto; justify-content: center; }
   .controls-bar { width: 100%; }
