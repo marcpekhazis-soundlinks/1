@@ -242,11 +242,15 @@ const WORDS = [
   // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
   // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
   // flags it too.
-  // say: 'gradjooayt' — confirmed correct by ear (real browser voice, via
-  // a side-by-side audition page comparing the bare word against several
-  // respellings) after two earlier attempts (no override, then
-  // 'graduayt') both turned out wrong on the actual voice being tested.
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], say: 'gradjooayt', sentence: "She will graduate from high school this year." },
+  // lang: 'en-GB' + say: 'gradjuate' — confirmed correct by ear (real
+  // browser voice, via a side-by-side audition page) only on a UK English
+  // voice; three earlier attempts (no override, 'graduayt', 'gradjooayt')
+  // were each confirmed wrong on the American voice this app normally
+  // requests. `lang` is a per-word override of the 'en-US' every other
+  // word requests (see speak()'s callers) — everything else in the app
+  // still teaches American pronunciation; this one word just didn't land
+  // correctly on any American voice tested.
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], lang: 'en-GB', say: 'gradjuate', sentence: "She will graduate from high school this year." },
   // say: 'inishiate' — bare "initiate" mispronounces the "ti"; the
   // respelling forces the correct /ʃ/ ("sh") sound. Confirmed by ear via
   // the same audition page as "graduate" above.
@@ -1444,9 +1448,9 @@ function playReadingSentence(item) {
   if (!spokenWords.length) return;
 
   const utterance = new SpeechSynthesisUtterance(spokenText);
-  utterance.lang = 'en-US';
+  utterance.lang = item.lang || 'en-US';
   utterance.rate = readingPlaybackRate();
-  const voice = pickVoice('en-US', { preferLocal: true });
+  const voice = pickVoice(item.lang || 'en-US', { preferLocal: true });
   if (voice) utterance.voice = voice;
   // Left in place intentionally (not just a debugging aid removed after
   // this fix) so the actual rate reaching the TTS engine can always be
@@ -1779,7 +1783,7 @@ function beginRollReadListening() {
   rr.targetWord = target.word;
   rr.status = 'listening';
   render();
-  speak(target.say || target.word, 'en-US');
+  speak(target.say || target.word, target.lang || 'en-US');
 }
 
 // Briefly shows a "+10s" flash next to the big timer on a correct guess
@@ -2193,7 +2197,7 @@ function startWordInvadersWord(index) {
   wi.status = 'playing';
   wi.currentWord = wi.roundWords[index];
   render();
-  speak(wi.currentWord.say || wi.currentWord.word);
+  speak(wi.currentWord.say || wi.currentWord.word, wi.currentWord.lang || 'en-US');
   wordInvadersPhaseTimer = setTimeout(spawnWordInvadersWave, WORD_INVADERS_SPEAK_PAUSE_MS);
 }
 
@@ -3044,8 +3048,8 @@ function wordCardTemplate(item) {
         <p class="hint">${escapeHtml(item.hint)}</p>
       </div>
       <div class="actions">
-        <button data-say="${escapeHtml(item.say || item.word)}" data-lang="en-US">${icon('speaker')}English</button>
-        <button data-say="${escapeHtml(item.say || item.word)}. ${escapeHtml(item.hint)}" data-lang="en-US">${icon('chat')}Sentence cue</button>
+        <button data-say="${escapeHtml(item.say || item.word)}" data-lang="${item.lang || 'en-US'}">${icon('speaker')}English</button>
+        <button data-say="${escapeHtml(item.say || item.word)}. ${escapeHtml(item.hint)}" data-lang="${item.lang || 'en-US'}">${icon('chat')}Sentence cue</button>
         <button data-toggle="${item.word}" class="${done ? 'is-done' : ''}">${icon('check')}${done ? 'Known' : 'I know it'}</button>
       </div>
     </article>`;
@@ -3827,7 +3831,7 @@ function wireWordInvadersTabEvents() {
   if (repeatButton) {
     repeatButton.onclick = () => {
       const word = state.wordInvaders.currentWord;
-      if (word) speak(word.say || word.word);
+      if (word) speak(word.say || word.word, word.lang || 'en-US');
     };
   }
   const field = $('[data-word-invaders-field]');
@@ -4331,7 +4335,7 @@ function wireRollReadTabEvents() {
   if (repeatButton) {
     repeatButton.onclick = () => {
       const target = state.rollRead.words.find((item) => item.word === state.rollRead.targetWord);
-      if (target) speak(target.say || target.word, 'en-US');
+      if (target) speak(target.say || target.word, target.lang || 'en-US');
     };
   }
 }
@@ -4706,7 +4710,7 @@ function playCatchRound() {
   state.game.feedback = null;
   state.game.basketPct = catchBasketCenterPct();
   render();
-  speak(state.game.round.target.say || state.game.round.target.word, 'en-US');
+  speak(state.game.round.target.say || state.game.round.target.word, state.game.round.target.lang || 'en-US');
   requestAnimationFrame(() => requestAnimationFrame(startCatchFall));
 }
 
@@ -4744,7 +4748,7 @@ function wireCatchGameEvents() {
   if (repeatButton) {
     repeatButton.onclick = () => {
       const target = state.game.round && state.game.round.target;
-      if (target) speak(target.say || target.word, 'en-US');
+      if (target) speak(target.say || target.word, target.lang || 'en-US');
     };
   }
   const musicButton = $('[data-catch-music-toggle]');
