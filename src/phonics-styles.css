@@ -1673,152 +1673,193 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   .memory-finale-panel { animation: none; }
 }
 
-/* ---------- Word Run ---------- */
-.word-run-game { display: flex; flex-direction: column; gap: 16px; }
-.word-run-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+/* ---------- Word Invaders ---------- */
+.word-invaders-game { display: flex; flex-direction: column; gap: 16px; }
+.word-invaders-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
-.word-run-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.word-run-status-badge {
+.word-invaders-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.word-invaders-status-badge {
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--primary-tint-100); color: var(--primary-dark);
   font-weight: 800; font-size: 0.92rem;
   padding: 8px 14px; border-radius: var(--radius-pill);
 }
-.word-run-status-badge .icon { width: 1.1em; height: 1.1em; }
-.word-run-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
-.word-run-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
-.word-run-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+.word-invaders-status-badge .icon { width: 1.1em; height: 1.1em; }
+.word-invaders-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.word-invaders-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.word-invaders-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
 
-.word-run-hud { display: flex; align-items: center; gap: 18px; }
-.word-run-lives { display: flex; gap: 4px; }
-.word-run-heart { display: inline-flex; width: 1.5rem; height: 1.5rem; color: var(--incorrect); }
-.word-run-heart .icon { width: 100%; height: 100%; }
-.word-run-heart.is-full .icon { fill: var(--incorrect); }
-.word-run-heart.is-empty { color: var(--primary-tint-200); opacity: 0.7; }
-.word-run-coins {
+.word-invaders-hud { display: flex; align-items: center; gap: 18px; }
+.word-invaders-lives { display: flex; gap: 4px; }
+.word-invaders-heart { display: inline-flex; width: 1.5rem; height: 1.5rem; color: var(--incorrect); }
+.word-invaders-heart .icon { width: 100%; height: 100%; }
+.word-invaders-heart.is-full .icon { fill: var(--incorrect); }
+.word-invaders-heart.is-empty { color: var(--primary-tint-200); opacity: 0.7; }
+.word-invaders-score {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--surface);
   border: 2px solid var(--primary-tint-300);
   border-radius: var(--radius-pill);
-  padding: 6px 14px 6px 8px;
+  padding: 6px 14px;
   font-family: var(--font-heading); font-weight: 800; font-size: 1.1rem;
   color: var(--ink);
   box-shadow: var(--shadow-sm);
   transition: transform 0.15s ease;
 }
-.word-run-coins.is-flash { transform: scale(1.14); }
-.word-run-coin-svg { width: 26px; height: 26px; flex: none; }
-.word-run-coin-svg .wrc-face { fill: #f0c14b; }
-.word-run-coin-svg .wrc-ring { stroke: #c9932a; stroke-width: 1.6; }
-.word-run-coin-svg .wrc-glyph { fill: #8a6114; font-size: 11px; font-weight: 800; font-family: var(--font-heading); }
+.word-invaders-score .icon { width: 1.2em; height: 1.2em; color: var(--warning); }
+.word-invaders-score.is-flash { transform: scale(1.14); }
 
-/* The field: the runner sits fixed near the bottom while lane images or
-   a hazard animate in from "far" (small, faded, near the top) to "near"
-   (full size, at the runner) — the animation-duration/-delay are set
-   inline per-render by wordRunPhaseAnimationStyle() so a lane-switch
-   re-render mid-flight resumes instead of restarting (see that
-   function's comment in phonics-app.js). */
-.word-run-field {
+/* The field is a deliberately narrow, portrait "arcade screen" — not
+   stretched to the column's full width — matching the visual mockup
+   shared and confirmed before this was built. Everything falling inside
+   it (word-cards, coins, obstacles, bullets) is injected directly by
+   phonics-app.js's spawnWordInvadersWave()/addWordInvadersItem(), not
+   rendered here — see that section's opening comment for why. */
+.word-invaders-field {
   position: relative;
-  background: linear-gradient(180deg, var(--primary-tint-50) 0%, var(--primary-tint-100) 70%, var(--primary-tint-200) 100%);
-  border: 2px solid var(--primary-tint-200);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-  overflow: hidden;
-  touch-action: pan-y;
-}
-.word-run-track {
-  position: relative;
-  min-height: 320px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-.word-run-lanes, .word-run-hazard-track {
-  display: grid;
-  grid-template-columns: repeat(var(--word-run-lanes, 2), 1fr);
-  gap: 14px;
   width: 100%;
-  max-width: 560px;
-  margin: 0 auto 100px;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
-}
-.word-run-hazard-track { min-height: 70px; }
-.word-run-hazard-track.is-full-width { max-width: 320px; grid-template-columns: 1fr; }
-.word-run-lanes.is-approaching, .word-run-hazard-track.is-approaching {
-  animation-name: word-run-approach;
-}
-.word-run-lanes.is-resting { transform: translateY(-6%) scale(0.82); opacity: 0.85; }
-@keyframes word-run-approach {
-  from { transform: translateY(-8%) scale(0.62); opacity: 0.55; }
-  to   { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-.word-run-lane {
-  position: relative;
-  aspect-ratio: 1;
-  border: 3px solid var(--primary-tint-200);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  padding: 0;
+  max-width: 480px;
+  height: 600px;
+  margin: 0 auto;
+  background: radial-gradient(120% 70% at 50% 0%, #2a3a72 0%, #182352 46%, #0c1436 100%);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  touch-action: none;
+  cursor: grab;
 }
-.word-run-lane img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.word-run-lane.is-player-lane { border-color: var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-md); }
-.word-run-lane.is-correct-lane { border-color: var(--success); }
-.word-run-lane.is-wrong-lane { border-color: var(--incorrect); }
-.word-run-lane-mark {
-  position: absolute; top: 6px; right: 6px;
+.word-invaders-field:active { cursor: grabbing; }
+
+.word-invaders-prompt {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 28px);
+  background: rgba(10, 16, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-pill);
+  padding: 6px 10px 6px 12px;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: #dbe4ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.word-invaders-ear { display: inline-flex; width: 1.1em; height: 1.1em; flex: none; }
+.word-invaders-ear .icon { width: 100%; height: 100%; }
+.word-invaders-repeat {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  color: #fff;
+  flex: none; width: 26px; height: 26px;
+  border: none; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #eef3ff;
+  cursor: pointer;
 }
-.word-run-lane-mark.is-correct { background: var(--success); }
-.word-run-lane-mark.is-wrong { background: var(--incorrect); }
-.word-run-lane-mark .icon { width: 1.1em; height: 1.1em; }
+.word-invaders-repeat .icon { width: 1em; height: 1em; }
 
-.word-run-hazard-lane { display: flex; align-items: center; justify-content: center; }
-.word-run-obstacle {
-  width: 68%; height: 68%;
+/* Every falling item (word-card, coin, obstacle) shares this box:
+   absolute, centered on its own `left`, fixed size for its whole descent
+   — phonics-app.js only ever animates `top`, never scale, which is the
+   entire point (the word has to be legible on frame one, not just once
+   it's close). */
+.word-invaders-item {
+  position: absolute;
+  transform: translateX(-50%);
+  aspect-ratio: 1 / 0.92;
+  will-change: top;
+}
+.word-invaders-item-word {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
   border-radius: var(--radius-sm);
-  background: var(--illus-sand-dark);
-  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 10px rgba(4, 10, 30, 0.28);
+  overflow: hidden;
+  padding: 8px 6px 6px;
 }
-.word-run-obstacle.is-jump { width: 100%; height: 34px; margin-top: auto; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-.word-run-obstacle.is-duck {
-  width: 100%; height: 34px; margin-bottom: auto;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  background: var(--incorrect-soft);
-  box-shadow: inset 0 0 0 3px var(--incorrect);
+.word-invaders-item-word img { width: 62%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); }
+.word-invaders-item-label { font-family: var(--font-heading); font-weight: 700; font-size: 0.86rem; color: var(--ink); }
+.word-invaders-item-coin, .word-invaders-item-obstacle { display: flex; align-items: center; justify-content: center; }
+.word-invaders-coin-svg { width: 82%; height: 82%; }
+.word-invaders-coin-svg .wic-face { fill: #f0c14b; }
+.word-invaders-coin-svg .wic-ring { stroke: #c9932a; stroke-width: 1.6; }
+.word-invaders-coin-svg .wic-glyph { fill: #8a6114; font-size: 11px; font-weight: 800; font-family: var(--font-heading); }
+.word-invaders-meteor-svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 6px rgba(4, 10, 30, 0.35)); }
+.word-invaders-meteor-svg .wim-body { fill: #8a7d74; }
+.word-invaders-meteor-svg .wim-shine { fill: #a89a8d; opacity: 0.7; }
+.word-invaders-meteor-svg .wim-crater { fill: #5f564f; }
+
+/* A shot card gets a brief pop (correct) or shake (wrong/missed) before
+   phonics-app.js removes it — reuses the same keyframes Catch the
+   Sound's falling chips use (.catch-word.is-correct/.is-wrong), since
+   both share the identical translateX(-50%)-centered absolute box. */
+.word-invaders-item.is-hit-correct { animation: catch-word-pop 340ms ease forwards; }
+.word-invaders-item.is-hit-wrong { animation: catch-word-shake 340ms ease forwards; }
+.word-invaders-item.is-hit { animation: word-invaders-bonus-pop 340ms ease forwards; }
+@keyframes word-invaders-bonus-pop {
+  0% { transform: translateX(-50%) scale(1); opacity: 1; }
+  40% { transform: translateX(-50%) scale(1.3); opacity: 1; }
+  100% { transform: translateX(-50%) scale(0.6); opacity: 0; }
 }
 
-/* The runner: fixed near the base of the track, squashing down for a
-   duck and hopping up for a jump — purely decorative flavor, same tier
-   as catchBasketSvg()/dieFaceTemplate(). */
-.word-run-runner { position: relative; z-index: 2; width: 84px; transition: transform 0.15s ease; }
-.word-run-runner.is-jumping { transform: translateY(-34px); }
-.word-run-runner.is-ducking { transform: scaleY(0.7) translateY(6px); transform-origin: bottom; }
-.word-run-runner-svg { width: 100%; height: auto; display: block; }
-.word-run-runner-svg .wr-shadow { fill: rgba(6, 62, 143, 0.14); }
-.word-run-runner-svg .wr-body { fill: var(--primary); }
-.word-run-runner-svg .wr-face { fill: var(--illus-sand); }
-.word-run-runner-svg .wr-eye { fill: var(--ink); }
-.word-run-runner-svg .wr-smile { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.word-invaders-bullet {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 6px; height: 16px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fff, var(--primary-tint-200));
+  box-shadow: 0 0 8px 2px rgba(120, 170, 255, 0.8);
+}
 
-.word-run-feedback { margin: 0; text-align: center; font-weight: 700; color: var(--ink-soft); min-height: 1.4em; }
-.word-run-feedback.is-correct { color: var(--success-dark); }
-.word-run-feedback.is-wrong, .word-run-feedback.is-incorrect { color: var(--incorrect-dark); }
+.word-invaders-ship {
+  position: absolute;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: 15%;
+  aspect-ratio: 0.8;
+  z-index: 4;
+}
+.word-invaders-ship-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.word-invaders-ship-svg .wis-flame { fill: #ffb14a; transform-origin: 50% 0%; animation: word-invaders-flicker 0.22s ease-in-out infinite alternate; }
+.word-invaders-ship-svg .wis-flame-inner { fill: #fff2c4; transform-origin: 50% 0%; animation: word-invaders-flicker 0.22s ease-in-out infinite alternate; }
+.word-invaders-ship-svg .wis-hull { fill: var(--illus-sand); }
+.word-invaders-ship-svg .wis-hull-shade { fill: var(--primary-tint-200); }
+.word-invaders-ship-svg .wis-fin { fill: var(--primary); }
+.word-invaders-ship-svg .wis-window-ring { fill: var(--primary); }
+.word-invaders-ship-svg .wis-window { fill: var(--primary-tint-50); }
+@keyframes word-invaders-flicker {
+  from { transform: scaleY(0.75) scaleX(0.9); }
+  to { transform: scaleY(1.15) scaleX(1.05); }
+}
 
-/* ---------- Word Run: finale overlay ----------
+.word-invaders-fire-btn {
+  position: absolute;
+  right: 14px; bottom: 14px;
+  z-index: 5;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px;
+  border: none; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a6a, var(--incorrect) 78%);
+  box-shadow: 0 6px 16px rgba(225, 75, 58, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.word-invaders-fire-btn:active { transform: scale(0.92); }
+.word-invaders-fire-btn .icon { width: 1.5em; height: 1.5em; }
+
+.word-invaders-feedback { margin: 0; text-align: center; font-weight: 700; color: var(--ink-soft); min-height: 1.4em; }
+.word-invaders-feedback.is-correct { color: var(--success-dark); }
+.word-invaders-feedback.is-wrong, .word-invaders-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+/* ---------- Word Invaders: finale overlay ----------
    Same mechanism/proportions as .memory-finale-overlay — see its comment
    above for why (bigger confetti, XL medal, springier scale-in than a
    single-level badge toast or sound-group completion screen). */
-.word-run-finale-overlay {
+.word-invaders-finale-overlay {
   position: fixed; inset: 0;
   z-index: 35;
   display: grid; place-items: center;
@@ -1826,8 +1867,8 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
   overflow: hidden;
 }
-.word-run-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.word-run-finale-close {
+.word-invaders-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.word-invaders-finale-close {
   position: absolute; top: 22px; right: 22px;
   z-index: 2;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1838,9 +1879,9 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   color: #fff;
   cursor: pointer;
 }
-.word-run-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
-.word-run-finale-close .icon { width: 1.1em; height: 1.1em; }
-.word-run-finale-panel {
+.word-invaders-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.word-invaders-finale-close .icon { width: 1.1em; height: 1.1em; }
+.word-invaders-finale-panel {
   position: relative;
   z-index: 1;
   width: min(480px, 100%);
@@ -1852,64 +1893,62 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
-  animation: word-run-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+  animation: word-invaders-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
 }
-.word-run-finale-kicker {
+.word-invaders-finale-kicker {
   margin: 4px 0 0;
   font-family: var(--font-heading); font-weight: 800;
   font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--warning-dark);
 }
-.word-run-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
-.word-run-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
-@keyframes word-run-finale-in {
+.word-invaders-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.word-invaders-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes word-invaders-finale-in {
   0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
   60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
-.word-run-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
-.word-run-replay-levels button {
+.word-invaders-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.word-invaders-replay-levels button {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--primary); color: #fff;
   border: none; border-radius: var(--radius-pill);
   padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
   cursor: pointer;
 }
-.word-run-replay-levels button:hover { background: var(--primary-dark); }
-.word-run-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+.word-invaders-replay-levels button:hover { background: var(--primary-dark); }
+.word-invaders-replay-levels button .icon { width: 1.05em; height: 1.05em; }
 
-.contrast .word-run-status-badge { background: #fff; color: #000; }
-.contrast .word-run-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
-.contrast .word-run-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
-.contrast .word-run-rounds { color: #ccc; }
-.contrast .word-run-coins { background: #000; border-color: #fff; color: #fff; }
-.contrast .word-run-field { background: #000; border-color: #fff; }
-.contrast .word-run-lane { background: #111; border-color: #444; }
-.contrast .word-run-lane.is-player-lane { border-color: #fff; }
-.contrast .word-run-lane.is-correct-lane { border-color: #0f0; }
-.contrast .word-run-lane.is-wrong-lane { border-color: #ff5252; }
-.contrast .word-run-feedback { color: #ccc; }
-.contrast .word-run-feedback.is-correct { color: #7cffb2; }
-.contrast .word-run-feedback.is-wrong, .contrast .word-run-feedback.is-incorrect { color: #ffd27f; }
-.contrast .word-run-replay-levels button { background: #fff; color: #000; }
-.contrast .word-run-replay-levels button:hover { background: #ccc; }
-.contrast .word-run-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
-.contrast .word-run-finale-kicker { color: #ffd27f; }
-.contrast .word-run-finale-panel h2 { color: #fff; }
-.contrast .word-run-finale-panel p { color: #ccc; }
-.contrast .word-run-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+/* The field is a deliberately single, fixed visual world (a night sky,
+   like a lit-up handheld screen) — it does not follow high-contrast mode,
+   the same way an embedded game or video keeps its own palette. Only the
+   surrounding HUD/feedback text (which does need to stay readable in
+   high-contrast) gets overrides here. */
+.contrast .word-invaders-status-badge { background: #fff; color: #000; }
+.contrast .word-invaders-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .word-invaders-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .word-invaders-rounds { color: #ccc; }
+.contrast .word-invaders-score { background: #000; border-color: #fff; color: #fff; }
+.contrast .word-invaders-score .icon { color: #ffd27f; }
+.contrast .word-invaders-feedback { color: #ccc; }
+.contrast .word-invaders-feedback.is-correct { color: #7cffb2; }
+.contrast .word-invaders-feedback.is-wrong, .contrast .word-invaders-feedback.is-incorrect { color: #ffd27f; }
+.contrast .word-invaders-replay-levels button { background: #fff; color: #000; }
+.contrast .word-invaders-replay-levels button:hover { background: #ccc; }
+.contrast .word-invaders-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-invaders-finale-kicker { color: #ffd27f; }
+.contrast .word-invaders-finale-panel h2 { color: #fff; }
+.contrast .word-invaders-finale-panel p { color: #ccc; }
+.contrast .word-invaders-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
 
 @media (max-width: 700px) {
-  .word-run-runner { width: 64px; }
-  .word-run-track { min-height: 260px; }
-  .word-run-lanes, .word-run-hazard-track { margin-bottom: 76px; }
+  .word-invaders-field { height: 68vh; max-height: 560px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .word-run-lanes.is-approaching, .word-run-hazard-track.is-approaching { animation: none; }
-  .word-run-runner { transition: none; }
-  .word-run-coins { transition: none; }
-  .word-run-finale-panel { animation: none; }
+  .word-invaders-ship-svg .wis-flame, .word-invaders-ship-svg .wis-flame-inner { animation: none; }
+  .word-invaders-score { transition: none; }
+  .word-invaders-finale-panel { animation: none; }
 }
 
 /* ---------- Rules ---------- */

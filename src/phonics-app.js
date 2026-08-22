@@ -889,6 +889,7 @@ function selectProfile(id) {
   stopCatchGame();
   stopMemoryGame();
   stopRollReadGame();
+  stopWordInvadersGame();
   stopStartCountdown();
   render();
 }
@@ -1062,45 +1063,41 @@ let state = {
   // beating level 5, cleared by dismissRollReadFinale(). See
   // rollReadFinaleTemplate() — same mechanism as state.memoryFinale.
   rollReadFinale: null,
-  // Word Run: a two-level lane runner, own tab, structured like the other
+  // Word Invaders: a two-level shooter, own tab, structured like the other
   // three games (own transient round state here, its own Start Game gate,
-  // badges through the shared badge system). `status` steps through
-  // 'speaking' (the word plays) -> 'approaching' (lane images close in,
-  // steerable) -> 'resolved' (brief right/wrong pause) -> 'hazard' (an
-  // optional coin/obstacle between words, also steerable) -> back to
-  // 'speaking' for the next word, or 'won'/'lost' at a round/level
-  // boundary. See the "Word Run" section below for the full state
-  // machine (startWordRunWord()/resolveWordRunWord()/
-  // maybeSpawnWordRunHazard()). `roundWords` is fixed for the whole round
-  // (even across a round-failed retry — see loseWordRunRound()); `lanes`
-  // is rebuilt fresh for whichever word is current. `phaseStartedAt` is a
-  // wall-clock timestamp the lane-track/hazard templates use to compute a
-  // negative `animation-delay`, so a lane-switch re-render mid-approach
-  // resumes the CSS animation from the right point instead of restarting
-  // it (see wordRunPhaseAnimationStyle()). `coins` is a session-only bonus
-  // tally (not persisted — only level-completion badges are, through the
-  // usual state.badges/writeProgress() path).
-  wordRunStarted: false,
-  wordRun: {
+  // badges through the shared badge system). `status` is 'idle' (not
+  // started yet), 'playing' (a word's cards are falling and shootable),
+  // 'resolved' (brief right/wrong pause between words), 'won' (this
+  // level's rounds are all cleared), or 'lost' (0 lives, briefly shown
+  // before retrying). See the "Word Invaders" section below for the full
+  // state machine (startWordInvadersWord()/resolveWordInvadersWord()).
+  // `roundWords` is fixed for the whole round (even across a round-failed
+  // retry — see loseWordInvadersRound()); `currentWord` is whichever of
+  // those the wave in flight is for. `shipPct` is the ship's left-edge
+  // position as a % of the field's width, kept here (like Catch's
+  // basketPct) so it survives the render() at the start of every word.
+  // `score` and `scoreFlash` (a brief highlight right after a hit, the
+  // same "state-driven popup" trick flashMemoryTimeBonus() uses) are
+  // session-only, like the old Word Run's coin tally — only
+  // level-completion badges persist, through the usual
+  // state.badges/writeProgress() path.
+  wordInvadersStarted: false,
+  wordInvaders: {
     status: 'idle',
     level: 1,
     round: 1,
     wordIndex: 0,
     roundWords: [],
-    lanes: [],
-    playerLane: 0,
+    currentWord: null,
     lives: 3,
-    coins: 0,
-    coinFlash: false,
-    hazard: null,
-    jumping: false,
-    ducking: false,
+    score: 0,
+    scoreFlash: false,
+    shipPct: 50,
     feedback: null,
-    phaseStartedAt: 0,
   },
-  // The full-screen "finished every level" celebration for Word Run —
-  // same mechanism as state.memoryFinale/state.rollReadFinale.
-  wordRunFinale: null,
+  // The full-screen "finished every level" celebration for Word
+  // Invaders — same mechanism as state.memoryFinale/state.rollReadFinale.
+  wordInvadersFinale: null,
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file. `adminAvailable` gates
@@ -1946,290 +1943,531 @@ function dismissGroupCelebration() {
   render();
 }
 
-// ---------- Word Run ----------
-// A lane-runner tab: a word plays aloud, 2 (level 1) or 3 (level 2) lane
-// images approach, and the player steers into the one matching the word.
-// The round/level bookkeeping (how a right/wrong pick affects lives and
-// when a round/level is won or failed) is pure logic lifted out into
-// word-run-logic.js — WordRunLogic.advanceAfterWord() — specifically so
-// it's unit-testable without a browser; everything here is the DOM/timer/
-// audio glue around that.
+// ---------- Word Invaders ----------
+// A shooter tab: a word plays aloud, then 2 (level 1) or 3 (level 2)
+// word-cards descend from the top at a constant, fully-readable size, one
+// matching the spoken word. The player steers a ship along the bottom and
+// shoots the matching card before it reaches the ship. The round/level
+// bookkeeping (how a hit/miss affects lives and when a round/level is won
+// or failed) is pure logic lifted out into word-invaders-logic.js —
+// WordInvadersLogic.advanceAfterWord() — specifically so it's
+// unit-testable without a browser; everything here is the DOM/timer/audio
+// glue around that, plus the actual falling/shooting mechanics.
 //
-// A round is WordRunLogic.WORDS_PER_ROUND (4) words; clearing
-// WordRunLogic.ROUNDS_PER_LEVEL (3) rounds without running out of lives
-// completes the level. A wrong pick costs a life but still advances to
-// the next word — only hitting 0 lives sends the player back to the
-// start of the CURRENT round (same 4 words, freshly redrawn lane
-// distractors — see loseWordRunRound()). Level 2 only ever becomes
-// reachable by clearing level 1 (see startWordRunLevel()'s
-// WordRunLogic.isLevelUnlocked() guard) — the same "first is always open,
-// each next needs the one before it" shape as the Learn tab's
+// Unlike every other game tab, the falling cards and the ship/bullets
+// don't go through state+render() while they're moving — the same
+// "moves/reads the DOM directly... rebuilding the whole app's innerHTML
+// would visibly stutter" reasoning Catch the Sound's basket/falling words
+// already use (see startCatchLoop()'s comment). Concretely: render() only
+// ever runs at a *word boundary* (a fresh word starting, or one just
+// resolved) to update the HUD/status text; every card's actual fall is a
+// CSS `top` transition set directly on its element (mirroring
+// startCatchFall()), and the ship/bullets/collisions are driven by a
+// small requestAnimationFrame loop reading and writing the DOM directly
+// (mirroring startCatchLoop()/checkCatchCollisions()). render() only ever
+// runs at a word-boundary moment, when nothing is still mid-flight.
+//
+// A round is WordInvadersLogic.WORDS_PER_ROUND (4) words; clearing
+// WordInvadersLogic.ROUNDS_PER_LEVEL (3) rounds without running out of
+// lives completes the level. A wrong or missed pick costs a life but
+// still advances to the next word — only hitting 0 lives sends the
+// player back to the start of the CURRENT round (same 4 words, freshly
+// redrawn distractors — see loseWordInvadersRound()). Level 2 only ever
+// becomes reachable by clearing level 1 (see startWordInvadersLevel()'s
+// WordInvadersLogic.isLevelUnlocked() guard) — the same "first is always
+// open, each next needs the one before it" shape as the Learn tab's
 // isLevelUnlocked(), just with no lock-icon list UI since (like Memory
-// Match/Roll and Read) this game is played level-by-level in sequence,
-// not picked from a list.
-const WORD_RUN_SPEAK_PAUSE_MS = 700;
-const WORD_RUN_APPROACH_MS = 2600;
-const WORD_RUN_FEEDBACK_PAUSE_MS = 1100;
-const WORD_RUN_HAZARD_MS = 1600;
-const WORD_RUN_HAZARD_CHANCE = 0.6;
-const WORD_RUN_HAZARD_COIN_CHANCE = 0.65;
-const WORD_RUN_JUMP_MS = 550;
-const WORD_RUN_DUCK_MS = 550;
-const WORD_RUN_COIN_FLASH_MS = 700;
-const WORD_RUN_ROUND_FAIL_PAUSE_MS = 2200;
-const WORD_RUN_LEVEL_ADVANCE_PAUSE_MS = 2400;
+// Match/Roll and Read/the old Word Run) this game is played
+// level-by-level in sequence, not picked from a list.
+const WORD_INVADERS_SPEAK_PAUSE_MS = 1000; // word plays, *then* cards start appearing
+const WORD_INVADERS_FEEDBACK_PAUSE_MS = 1100;
+const WORD_INVADERS_ROUND_FAIL_PAUSE_MS = 2200;
+const WORD_INVADERS_LEVEL_ADVANCE_PAUSE_MS = 2400;
+const WORD_INVADERS_FIRE_COOLDOWN_MS = 260;
+const WORD_INVADERS_BULLET_MS = 300;
+const WORD_INVADERS_SHIP_SPEED_PCT_PER_SEC = 80;
+const WORD_INVADERS_SHIP_MIN_PCT = 8;
+const WORD_INVADERS_SHIP_MAX_PCT = 92;
+const WORD_INVADERS_SPAWN_TOP_PCT = -16; // just above the visible field
+const WORD_INVADERS_TARGET_TOP_PCT = 78; // the ship's row
 
-// The statuses during which the player can steer — lane-switch/jump/duck
-// do nothing outside these (e.g. during the brief 'resolved'/'won'/'lost'
-// pauses, or before Start Game), same "controls only live while something
-// is actually happening" rule Catch the Sound's basket follows implicitly
-// by only reacting to catchKeys while a round is active.
-const WORD_RUN_ACTIVE_STATUSES = ['speaking', 'approaching', 'hazard'];
+// Coin/obstacle width (percent of field) and the real visible margin kept
+// between any two items' edges — see WordInvadersLogic.computeMinGapPercent()
+// / pickClearX(), used by spawnWordInvadersWave() below to guarantee a
+// coin/obstacle never lands in the same column as a word-card.
+const WORD_INVADERS_EXTRA_WIDTH_PCT = 13;
+const WORD_INVADERS_CLEARANCE_MARGIN_PCT = 2;
+
+// The rendering knobs that vary by level — fall speed, how far apart
+// successive cards in a wave start falling, how wide a card is (level 2's
+// third simultaneous card needs a bit more breathing room than level 1's
+// two get), where each of a level's cards sits (as % of field width), and
+// how often a bonus coin/obstacle shows up. `cards` (how many
+// simultaneous word-cards) itself comes from WordInvadersLogic.LEVELS —
+// not duplicated here — so the two files can never drift out of sync on
+// that number.
+const WORD_INVADERS_LEVEL_VISUALS = {
+  1: { duration: 7200, stagger: 950, cardWidth: 27, cardX: [25, 75], coinChance: 0.25, obstacleChance: 0.10 },
+  2: { duration: 5200, stagger: 700, cardWidth: 20, cardX: [10, 50, 90], coinChance: 0.3, obstacleChance: 0.18 },
+};
+
+function wordInvadersLevelVisuals(level) {
+  return WORD_INVADERS_LEVEL_VISUALS[level] || WORD_INVADERS_LEVEL_VISUALS[1];
+}
 
 // Every non-archived word with a real photo, across every sound group —
-// unlike Memory Match's memoryWordPool() (long-a only), Word Run draws
-// from the whole active WORDS list, per spec.
-function wordRunWordPool() {
-  return WordRunLogic.filterImageWords(WORDS.filter((word) => !word.archived));
+// unlike Memory Match's memoryWordPool() (long-a only), Word Invaders
+// draws from the whole active WORDS list, per spec (same pool the old
+// Word Run used).
+function wordInvadersWordPool() {
+  return WordInvadersLogic.filterImageWords(WORDS.filter((word) => !word.archived));
 }
 
-// One badge per level (word-run::1, word-run::2), plus a master badge for
-// finishing both — same id/storage convention as Memory Match's
-// memoryBadgeId()/memoryBadgeForLevel()/memoryMasterBadge().
-const WORD_RUN_BADGE_PREFIX = 'word-run';
-const WORD_RUN_MASTER_BADGE_ID = `${WORD_RUN_BADGE_PREFIX}::master`;
+// One badge per level (word-invaders::1, word-invaders::2), plus a master
+// badge for finishing both — same id/storage convention as Memory Match's
+// memoryBadgeId()/memoryBadgeForLevel()/memoryMasterBadge() and the old
+// Word Run's badges.
+const WORD_INVADERS_BADGE_PREFIX = 'word-invaders';
+const WORD_INVADERS_MASTER_BADGE_ID = `${WORD_INVADERS_BADGE_PREFIX}::master`;
 
-function wordRunBadgeId(level) {
-  return `${WORD_RUN_BADGE_PREFIX}::${level}`;
+function wordInvadersBadgeId(level) {
+  return `${WORD_INVADERS_BADGE_PREFIX}::${level}`;
 }
 
-function wordRunBadgeForLevel(level) {
-  const colors = badgeColor(level, WordRunLogic.LEVELS.length);
+function wordInvadersBadgeForLevel(level) {
+  const colors = badgeColor(level, WordInvadersLogic.LEVELS.length);
   return {
-    id: wordRunBadgeId(level),
-    label: `Word Run ${level}`,
+    id: wordInvadersBadgeId(level),
+    label: `Word Invaders ${level}`,
     affirmation: badgeAffirmation(level),
     color: colors.base,
     colorLight: colors.light,
   };
 }
 
-// Same warm gold as Memory Match/Roll and Read's master badges, for the
-// same reason — a visually distinct "finished everything" tier.
-function wordRunMasterBadge() {
+// Same warm gold as Memory Match/Roll and Read/Word Run's master badges,
+// for the same reason — a visually distinct "finished everything" tier.
+function wordInvadersMasterBadge() {
   return {
-    id: WORD_RUN_MASTER_BADGE_ID,
-    label: 'Word Run Champion',
-    affirmation: 'You outran every level!',
+    id: WORD_INVADERS_MASTER_BADGE_ID,
+    label: 'Word Invaders Champion',
+    affirmation: 'You cleared every level!',
     color: 'hsl(42 88% 48%)',
     colorLight: 'hsl(42 88% 88%)',
   };
 }
 
-function awardWordRunBadgeIfEligible(level) {
-  const id = wordRunBadgeId(level);
+function awardWordInvadersBadgeIfEligible(level) {
+  const id = wordInvadersBadgeId(level);
   if (state.badges[id]) return null;
   state.badges[id] = { earnedAt: Date.now() };
   writeProgress('badgesPhonics', JSON.stringify(state.badges));
-  return wordRunBadgeForLevel(level);
+  return wordInvadersBadgeForLevel(level);
 }
 
-function awardWordRunMasterBadgeIfEligible() {
-  if (state.badges[WORD_RUN_MASTER_BADGE_ID]) return null;
-  state.badges[WORD_RUN_MASTER_BADGE_ID] = { earnedAt: Date.now() };
+function awardWordInvadersMasterBadgeIfEligible() {
+  if (state.badges[WORD_INVADERS_MASTER_BADGE_ID]) return null;
+  state.badges[WORD_INVADERS_MASTER_BADGE_ID] = { earnedAt: Date.now() };
   writeProgress('badgesPhonics', JSON.stringify(state.badges));
-  return wordRunMasterBadge();
+  return wordInvadersMasterBadge();
 }
 
-// One phase timer drives the whole speak -> approach -> resolve -> pause
-// -> (hazard ->) next-word sequence — only one phase is ever "in flight"
-// at a time, so a single module-scoped handle (mirroring
-// memoryAdvanceTimer/rollReadAdvanceTimer) is enough. Jump/duck poses and
-// the coin-collected flash are independent of that sequence (they can
-// happen mid-approach), so they get their own timers.
-let wordRunPhaseTimer = null;
-let wordRunJumpTimer = null;
-let wordRunDuckTimer = null;
-let wordRunCoinFlashTimer = null;
+// ---- Module-scoped, non-persisted game state ----
+// One phase timer drives the whole speak -> wave -> resolve -> pause ->
+// next-word sequence — only one phase is ever "in flight" at a time, so a
+// single handle (mirroring memoryAdvanceTimer/rollReadAdvanceTimer) is
+// enough. `wordInvadersWaveTimers` are the *staggered* per-card/coin/
+// obstacle spawn timeouts for the current wave specifically — a separate
+// list because several can be pending at once, and every one of them
+// needs to be cancellable the instant the wave resolves (see
+// clearWordInvadersWaveTimers()'s comment below for why that matters).
+// `wordInvadersItems`/`wordInvadersBullets` are the live (DOM node +
+// metadata) falling cards/coins/obstacles and in-flight shots; `loopHandle`
+// is the requestAnimationFrame handle for the ship/bullet/collision loop,
+// running for as long as this tab is mounted and the game started —
+// same lifecycle as Catch the Sound's catchLoopHandle.
+let wordInvadersPhaseTimer = null;
+let wordInvadersWaveTimers = [];
+let wordInvadersItems = [];
+let wordInvadersBullets = [];
+let wordInvadersLoopHandle = null;
+let wordInvadersNextId = 1;
+let wordInvadersFireCooldownAt = 0;
+let wordInvadersDragging = false;
+const wordInvadersKeys = { left: false, right: false };
 
-function stopWordRunGame() {
-  clearTimeout(wordRunPhaseTimer);
-  wordRunPhaseTimer = null;
-  clearTimeout(wordRunJumpTimer);
-  clearTimeout(wordRunDuckTimer);
-  clearTimeout(wordRunCoinFlashTimer);
+// Cancels every pending staggered spawn for the *current* wave. Critical
+// to call the instant a word resolves (see resolveWordInvadersWord()) —
+// not just when the *next* wave starts — because a word can resolve (a
+// quick correct shot) before its own later-staggered card has even
+// spawned yet; left alone, that pending spawn would still fire afterward
+// and orphan a card from the finished wave into whatever column the next
+// wave reuses. Found by testing the visual mockup before this was built:
+// without this, two waves' cards could land in the same column at once.
+function clearWordInvadersWaveTimers() {
+  wordInvadersWaveTimers.forEach((id) => clearTimeout(id));
+  wordInvadersWaveTimers = [];
+}
+
+function removeWordInvadersItemEl(item) {
+  if (item.el && item.el.parentNode) item.el.parentNode.removeChild(item.el);
+}
+
+function clearWordInvadersItems() {
+  wordInvadersItems.forEach(removeWordInvadersItemEl);
+  wordInvadersItems = [];
+}
+
+function clearWordInvadersBullets() {
+  wordInvadersBullets.forEach(removeWordInvadersItemEl);
+  wordInvadersBullets = [];
+}
+
+function stopWordInvadersGame() {
+  clearTimeout(wordInvadersPhaseTimer);
+  wordInvadersPhaseTimer = null;
+  clearWordInvadersWaveTimers();
+  if (wordInvadersLoopHandle) {
+    cancelAnimationFrame(wordInvadersLoopHandle);
+    wordInvadersLoopHandle = null;
+  }
+  wordInvadersKeys.left = false;
+  wordInvadersKeys.right = false;
+  wordInvadersDragging = false;
+  clearWordInvadersItems();
+  clearWordInvadersBullets();
   stopStartCountdown();
 }
 
 // True session start — called once Start Game's countdown finishes (see
-// wireWordRunTabEvents()). Resets the session-only coin tally, then
+// wireWordInvadersTabEvents()). Resets the session-only score, then
 // begins level 1.
-function startWordRunSession() {
-  state.wordRun.coins = 0;
-  startWordRunLevel(1);
+function startWordInvadersSession() {
+  state.wordInvaders.score = 0;
+  startWordInvadersLevel(1);
 }
 
 // Starts (or re-enters, e.g. a finale replay button) one level at round 1
-// with fresh lives and a fresh word draw. Never touches coins — those are
-// a running session total, not scoped to any one level. Guards against
+// with fresh lives and a fresh word draw. Never touches score — that's a
+// running session total, not scoped to any one level. Guards against
 // landing on a level that isn't actually unlocked yet (e.g. a stray call)
 // by falling back to level 1, the same defensive spirit as
 // isLevelUnlocked() being checked before acting on a sidebar level click.
-function startWordRunLevel(level) {
-  if (!WordRunLogic.isLevelUnlocked(level, (lvl) => !!state.badges[wordRunBadgeId(lvl)])) level = 1;
-  stopWordRunGame();
-  state.wordRun.level = level;
-  state.wordRunFinale = null;
-  startWordRunRound(1, false);
+function startWordInvadersLevel(level) {
+  if (!WordInvadersLogic.isLevelUnlocked(level, (lvl) => !!state.badges[wordInvadersBadgeId(lvl)])) level = 1;
+  stopWordInvadersGame();
+  state.wordInvaders.level = level;
+  state.wordInvadersFinale = null;
+  startWordInvadersRound(1, false);
 }
 
 // Starts round `round`. Draws a fresh 4-word set unless `keepWords` is
-// true — the round-failed retry path (see loseWordRunRound()), which
-// reuses the exact same 4 words but still gets entirely fresh lane
-// distractors per word, since startWordRunWord() rebuilds lanes from
-// scratch every time regardless.
-function startWordRunRound(round, keepWords) {
-  const wr = state.wordRun;
-  wr.round = round;
-  wr.lives = WordRunLogic.STARTING_LIVES;
+// true — the round-failed retry path (see loseWordInvadersRound()), which
+// reuses the exact same 4 words but still gets an entirely fresh
+// distractor draw per word, since startWordInvadersWord() rebuilds the
+// wave from scratch every time regardless.
+function startWordInvadersRound(round, keepWords) {
+  const wi = state.wordInvaders;
+  wi.round = round;
+  wi.lives = WordInvadersLogic.STARTING_LIVES;
   if (!keepWords) {
-    wr.roundWords = WordRunLogic.pickRandom(wordRunWordPool(), WordRunLogic.WORDS_PER_ROUND);
+    wi.roundWords = WordInvadersLogic.pickRandom(wordInvadersWordPool(), WordInvadersLogic.WORDS_PER_ROUND);
   }
-  startWordRunWord(0);
+  startWordInvadersWord(0);
 }
 
-// Speaks the word for `index`, builds its lane options, and — after a
-// short pause so the word has room to be heard before anything starts
-// moving — flips to 'approaching' and arms the timer that resolves the
-// pick once the runner "reaches" the lanes.
-function startWordRunWord(index) {
-  clearTimeout(wordRunPhaseTimer);
-  const wr = state.wordRun;
-  wr.wordIndex = index;
-  wr.feedback = null;
-  wr.hazard = null;
-  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
-  const correctItem = wr.roundWords[index];
-  const distractorPool = wordRunWordPool().filter((word) => word.word !== correctItem.word);
-  wr.lanes = WordRunLogic.buildLaneOptions(correctItem, distractorPool, laneCount);
-  wr.playerLane = Math.floor(laneCount / 2);
-  wr.status = 'speaking';
+// Speaks the word for `index`, renders the (still-empty) field, and —
+// after a pause so the word has room to be heard before anything starts
+// falling — spawns its wave of cards.
+function startWordInvadersWord(index) {
+  clearTimeout(wordInvadersPhaseTimer);
+  clearWordInvadersWaveTimers();
+  clearWordInvadersItems();
+  clearWordInvadersBullets();
+  const wi = state.wordInvaders;
+  wi.wordIndex = index;
+  wi.feedback = null;
+  wi.status = 'playing';
+  wi.currentWord = wi.roundWords[index];
   render();
-  speak(correctItem.word);
-  wordRunPhaseTimer = setTimeout(() => {
-    wr.status = 'approaching';
-    wr.phaseStartedAt = Date.now();
-    render();
-    wordRunPhaseTimer = setTimeout(resolveWordRunWord, WORD_RUN_APPROACH_MS);
-  }, WORD_RUN_SPEAK_PAUSE_MS);
+  speak(wi.currentWord.say || wi.currentWord.word);
+  wordInvadersPhaseTimer = setTimeout(spawnWordInvadersWave, WORD_INVADERS_SPEAK_PAUSE_MS);
 }
 
-// The runner has reached the lanes: whichever lane the player is
-// currently standing in decides the pick. Delegates the "what happens
-// next" bookkeeping entirely to WordRunLogic.advanceAfterWord(), then
-// acts on its outcome.
-function resolveWordRunWord() {
-  const wr = state.wordRun;
-  const picked = wr.lanes[wr.playerLane];
-  const correct = !!(picked && picked.correct);
-  const outcome = WordRunLogic.advanceAfterWord({ wordIndex: wr.wordIndex, round: wr.round, lives: wr.lives }, correct);
-  wr.lives = outcome.lives;
-  wr.status = 'resolved';
-  const targetWord = wr.roundWords[wr.wordIndex].word;
-  wr.feedback = correct
+// Builds and spawns the current word's wave: WordInvadersLogic.buildWave()
+// picks the distractors and shuffles the correct card into a random slot;
+// each entry is then handed a staggered spawn delay (the first two cards
+// land together, any further one trickles in — see the level visuals'
+// `stagger`) and a fixed x column from the level's `cardX` slots. A coin
+// and/or obstacle may also spawn, each placed via
+// WordInvadersLogic.pickClearX() so it can never share a column with a
+// word-card (or the other one) — see that function's own comment for why
+// that's a spatial guarantee, not a timing one.
+function spawnWordInvadersWave() {
+  const wi = state.wordInvaders;
+  const cfg = WordInvadersLogic.levelConfig(wi.level);
+  const visuals = wordInvadersLevelVisuals(wi.level);
+  const correctItem = wi.currentWord;
+  const distractorPool = wordInvadersWordPool().filter((word) => word.word !== correctItem.word);
+  const wave = WordInvadersLogic.buildWave(correctItem, distractorPool, cfg.cards, Math.random);
+
+  wave.forEach((card, i) => {
+    const x = visuals.cardX[i];
+    const delay = visuals.stagger * Math.max(0, i - 1);
+    const id = setTimeout(() => {
+      addWordInvadersItem('word', x, visuals.cardWidth, visuals.duration, { word: card.item.word, image: card.item.image, correct: card.correct });
+    }, delay);
+    wordInvadersWaveTimers.push(id);
+  });
+
+  const wordMinGap = WordInvadersLogic.computeMinGapPercent(visuals.cardWidth, WORD_INVADERS_EXTRA_WIDTH_PCT, WORD_INVADERS_CLEARANCE_MARGIN_PCT);
+  const occupiedX = visuals.cardX.slice();
+  if (Math.random() < visuals.coinChance) {
+    const coinX = WordInvadersLogic.pickClearX(occupiedX, wordMinGap);
+    if (coinX != null) {
+      occupiedX.push(coinX);
+      const id = setTimeout(() => addWordInvadersItem('coin', coinX, WORD_INVADERS_EXTRA_WIDTH_PCT, visuals.duration, {}), visuals.stagger * 0.6);
+      wordInvadersWaveTimers.push(id);
+    }
+  }
+  if (Math.random() < visuals.obstacleChance) {
+    const obstacleX = WordInvadersLogic.pickClearX(occupiedX, wordMinGap);
+    if (obstacleX != null) {
+      const id = setTimeout(() => addWordInvadersItem('obstacle', obstacleX, WORD_INVADERS_EXTRA_WIDTH_PCT, visuals.duration * 0.9, {}), visuals.stagger * 1.4);
+      wordInvadersWaveTimers.push(id);
+    }
+  }
+}
+
+// Creates one falling item (word-card, coin, or obstacle), appends it
+// directly to the live field — *not* through render(), see this section's
+// opening comment — and kicks off its CSS-transition fall exactly the way
+// startCatchFall() does: paint it at rest at its spawn position first (two
+// nested requestAnimationFrame calls force that paint before the
+// transition is assigned), then assign the transition and its target
+// `top`, so the very first frame never skips straight to the end
+// position. `transitionend` resolves it as "reached the ship unshot" —
+// only meaningful for the correct word-card; a distractor, a coin, or an
+// obstacle landing uninterrupted is simply removed, no penalty, matching
+// Catch the Sound's decoy-landing rule.
+function addWordInvadersItem(kind, xPercent, widthPercent, durationMs, extra) {
+  const el = document.createElement('div');
+  el.className = `word-invaders-item word-invaders-item-${kind}`;
+  el.style.left = `${xPercent}%`;
+  el.style.top = `${WORD_INVADERS_SPAWN_TOP_PCT}%`;
+  el.style.width = `${widthPercent}%`;
+  if (kind === 'word') {
+    el.innerHTML = `<img src="${extra.image}" alt=""><span class="word-invaders-item-label">${escapeHtml(extra.word)}</span>`;
+  } else if (kind === 'coin') {
+    el.innerHTML = wordInvadersCoinSvg();
+  } else {
+    el.innerHTML = wordInvadersMeteorSvg();
+  }
+  const field = $('[data-word-invaders-field]');
+  if (!field) return;
+  field.appendChild(el);
+  const item = { id: wordInvadersNextId++, kind, word: extra.word, correct: extra.correct, el, resolved: false };
+  wordInvadersItems.push(item);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (item.resolved) return;
+    el.style.transition = `top ${durationMs}ms linear`;
+    el.style.top = `${WORD_INVADERS_TARGET_TOP_PCT}%`;
+    el.addEventListener('transitionend', () => {
+      if (item.resolved) return;
+      if (kind === 'word' && item.correct) {
+        // The correct card reached the ship unshot — same visual
+        // treatment as a wrong shot (a brief shake) so a miss always
+        // reads the same way regardless of how it happened.
+        resolveWordInvadersItem(item, 'is-hit-wrong');
+        resolveWordInvadersWord(false);
+      } else {
+        resolveWordInvadersItem(item);
+      }
+    }, { once: true });
+  }));
+}
+
+// Removes one item without affecting round/level state — a distractor
+// card, coin, or obstacle simply leaving play. With `animateClass`, the
+// element gets a brief pop/shake first (added by checkWordInvadersCollisions()
+// or the miss handler above) and is removed once that plays out rather
+// than vanishing instantly, so a shot always gets visible feedback;
+// without it (used for a wave's *other* items once the word is decided —
+// see resolveWordInvadersWord()) it's just gone, no animation needed.
+function resolveWordInvadersItem(item, animateClass) {
+  if (item.resolved) return;
+  item.resolved = true;
+  wordInvadersItems = wordInvadersItems.filter((entry) => entry !== item);
+  if (animateClass) {
+    item.el.classList.add(animateClass);
+    setTimeout(() => removeWordInvadersItemEl(item), 340);
+  } else {
+    removeWordInvadersItemEl(item);
+  }
+}
+
+// Synthesized laser "pew" via Web Audio — no audio file, same approach as
+// speak() reaching for a built-in browser API rather than an asset.
+// AudioContext needs a user gesture to start, which firing always is (a
+// click, tap, or spacebar press), so it's safe to create/resume here.
+let wordInvadersAudioCtx = null;
+function getWordInvadersAudioCtx() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!wordInvadersAudioCtx) wordInvadersAudioCtx = new AudioCtx();
+  if (wordInvadersAudioCtx.state === 'suspended') wordInvadersAudioCtx.resume();
+  return wordInvadersAudioCtx;
+}
+
+function playWordInvadersLaserSound() {
+  const ctx = getWordInvadersAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'sine'; // sine, not square/saw — a softer edge for young ears
+  osc.frequency.setValueAtTime(880, now);
+  osc.frequency.exponentialRampToValueAtTime(220, now + 0.14);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(2200, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.1, now + 0.012); // fast attack
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16); // quick decay, kept quiet — this repeats every shot
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.18);
+}
+
+// Fires one bullet from the ship's current position — rate-limited so
+// holding/mashing the fire control can't spam the field. Like the falling
+// items, the bullet's actual travel is a CSS `top` transition, not a
+// JS-computed position; checkWordInvadersCollisions() reads its live
+// interpolated position every frame via getBoundingClientRect(), the same
+// technique checkCatchCollisions() uses against the falling word chips.
+function fireWordInvadersBullet() {
+  if (state.wordInvaders.status !== 'playing') return;
+  const now = performance.now();
+  if (now - wordInvadersFireCooldownAt < WORD_INVADERS_FIRE_COOLDOWN_MS) return;
+  wordInvadersFireCooldownAt = now;
+  playWordInvadersLaserSound();
+  const field = $('[data-word-invaders-field]');
+  if (!field) return;
+  const el = document.createElement('div');
+  el.className = 'word-invaders-bullet';
+  el.style.left = `${state.wordInvaders.shipPct}%`;
+  el.style.top = `${WORD_INVADERS_TARGET_TOP_PCT}%`;
+  field.appendChild(el);
+  const bullet = { id: wordInvadersNextId++, el, resolved: false };
+  wordInvadersBullets.push(bullet);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (bullet.resolved) return;
+    el.style.transition = `top ${WORD_INVADERS_BULLET_MS}ms linear`;
+    el.style.top = '-4%';
+    el.addEventListener('transitionend', () => resolveWordInvadersBullet(bullet), { once: true });
+  }));
+}
+
+function resolveWordInvadersBullet(bullet) {
+  if (bullet.resolved) return;
+  bullet.resolved = true;
+  removeWordInvadersItemEl(bullet);
+  wordInvadersBullets = wordInvadersBullets.filter((entry) => entry !== bullet);
+}
+
+// Every live bullet against every live item, by their actual on-screen
+// boxes — correct for items whose position is a live CSS transition, not
+// just a static one, since getBoundingClientRect() always reflects the
+// browser's current interpolated value. A word hit resolves the whole
+// word (see resolveWordInvadersWord()); a coin/obstacle hit only resolves
+// itself — WordInvadersLogic.resolveHit() is the single source of truth
+// for what each kind is worth.
+function checkWordInvadersCollisions() {
+  if (!wordInvadersBullets.length || !wordInvadersItems.length) return;
+  wordInvadersBullets.forEach((bullet) => {
+    if (bullet.resolved) return;
+    const bulletRect = bullet.el.getBoundingClientRect();
+    for (const item of wordInvadersItems) {
+      if (item.resolved) continue;
+      const itemRect = item.el.getBoundingClientRect();
+      const overlaps = bulletRect.left < itemRect.right && itemRect.left < bulletRect.right
+        && bulletRect.top < itemRect.bottom && itemRect.top < bulletRect.bottom;
+      if (!overlaps) continue;
+      resolveWordInvadersBullet(bullet);
+      const outcome = WordInvadersLogic.resolveHit(item.kind, item.correct);
+      if (outcome.scoreDelta) {
+        state.wordInvaders.score += outcome.scoreDelta;
+        flashWordInvadersScore();
+      }
+      if (item.kind === 'word') {
+        resolveWordInvadersItem(item, item.correct ? 'is-hit-correct' : 'is-hit-wrong');
+        resolveWordInvadersWord(item.correct);
+      } else {
+        resolveWordInvadersItem(item, 'is-hit');
+      }
+      break;
+    }
+  });
+}
+
+// A word's wave is decided — by a shot (correct or wrong) or by the
+// correct card reaching the ship unshot. The item that actually triggered
+// this (if any) has already been handed its own brief pop/shake and a
+// deferred removal by the caller (see resolveWordInvadersItem()'s
+// `animateClass` — it's no longer in wordInvadersItems by the time this
+// runs); everything else still falling from this wave — other cards, a
+// coin, an obstacle — is cleared immediately, since per-word bonus items
+// don't carry over into the next word (simplest given render() rebuilds
+// the field at every word boundary anyway). Cancels the wave's own
+// pending staggered spawns too, then delegates the round/level
+// bookkeeping entirely to WordInvadersLogic.advanceAfterWord() and acts
+// on its outcome — the same shape as the old Word Run's
+// resolveWordRunWord().
+function resolveWordInvadersWord(correct) {
+  const wi = state.wordInvaders;
+  clearTimeout(wordInvadersPhaseTimer);
+  clearWordInvadersWaveTimers();
+  wordInvadersItems.slice().forEach((entry) => resolveWordInvadersItem(entry));
+  clearWordInvadersBullets();
+
+  const outcome = WordInvadersLogic.advanceAfterWord({ wordIndex: wi.wordIndex, round: wi.round, lives: wi.lives }, correct);
+  wi.lives = outcome.lives;
+  wi.status = 'resolved';
+  const targetWord = wi.currentWord.word;
+  wi.feedback = correct
     ? { kind: 'correct', text: `Nice! That was "${targetWord}".` }
     : { kind: 'wrong', text: `Not quite — that was "${targetWord}".` };
   render();
 
   if (outcome.outcome === 'round-failed') {
-    wordRunPhaseTimer = setTimeout(loseWordRunRound, WORD_RUN_FEEDBACK_PAUSE_MS);
+    wordInvadersPhaseTimer = setTimeout(loseWordInvadersRound, WORD_INVADERS_FEEDBACK_PAUSE_MS);
     return;
   }
-  wordRunPhaseTimer = setTimeout(() => {
+  wordInvadersPhaseTimer = setTimeout(() => {
     if (outcome.outcome === 'next-word') {
-      maybeSpawnWordRunHazard(() => startWordRunWord(outcome.wordIndex));
+      startWordInvadersWord(outcome.wordIndex);
     } else if (outcome.outcome === 'round-complete') {
-      maybeSpawnWordRunHazard(() => startWordRunRound(outcome.round, false));
+      startWordInvadersRound(outcome.round, false);
     } else {
-      winWordRunLevel();
+      winWordInvadersLevel();
     }
-  }, WORD_RUN_FEEDBACK_PAUSE_MS);
-}
-
-function buildWordRunObstacle(laneCount) {
-  const roll = Math.random();
-  const avoid = roll < 1 / 3 ? 'jump' : roll < 2 / 3 ? 'duck' : null;
-  return { kind: 'obstacle', lane: avoid ? null : Math.floor(Math.random() * laneCount), avoid };
-}
-
-// Between words, a coin or an obstacle sometimes appears in the stretch
-// the runner covers before the next word starts — never both, and often
-// neither (WORD_RUN_HAZARD_CHANCE). `next` is whatever should happen once
-// the hazard (or the empty stretch) has played out: starting the next
-// word, the next round, or nothing extra if a life was just lost to an
-// obstacle (see resolveWordRunHazard()'s return value).
-function maybeSpawnWordRunHazard(next) {
-  const wr = state.wordRun;
-  if (Math.random() >= WORD_RUN_HAZARD_CHANCE) {
-    next();
-    return;
-  }
-  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
-  wr.hazard = Math.random() < WORD_RUN_HAZARD_COIN_CHANCE
-    ? { kind: 'coin', lane: Math.floor(Math.random() * laneCount), avoid: null }
-    : buildWordRunObstacle(laneCount);
-  wr.feedback = null;
-  wr.status = 'hazard';
-  wr.phaseStartedAt = Date.now();
-  render();
-  wordRunPhaseTimer = setTimeout(() => {
-    const outOfLives = resolveWordRunHazard();
-    render();
-    if (outOfLives) {
-      wordRunPhaseTimer = setTimeout(loseWordRunRound, WORD_RUN_FEEDBACK_PAUSE_MS);
-    } else {
-      next();
-    }
-  }, WORD_RUN_HAZARD_MS);
-}
-
-// Resolves whatever hazard is currently pending against the player's lane
-// and jump/duck pose. A coin either gets collected (bonus point, no
-// penalty either way) or is simply missed; an obstacle costs a life the
-// same as a wrong word pick. Returns true only when an obstacle hit just
-// emptied the player's lives, so the caller ends the round instead of
-// continuing to the next word.
-function resolveWordRunHazard() {
-  const wr = state.wordRun;
-  const hazard = wr.hazard;
-  wr.hazard = null;
-  if (!hazard) return false;
-  const player = { lane: wr.playerLane, jumping: wr.jumping, ducking: wr.ducking };
-  if (hazard.kind === 'coin') {
-    if (WordRunLogic.isCoinCollected(hazard, player)) {
-      wr.coins += 1;
-      flashWordRunCoin();
-    }
-    return false;
-  }
-  if (WordRunLogic.isObstacleAvoided(hazard, player)) return false;
-  wr.lives -= 1;
-  wr.feedback = { kind: 'wrong', text: 'An obstacle got in the way — that cost a life!' };
-  return wr.lives <= 0;
+  }, WORD_INVADERS_FEEDBACK_PAUSE_MS);
 }
 
 // All 3 rounds (12 words) cleared. Awards the level's badge through the
 // same celebration-toast plumbing every other level-completion badge
 // uses, then — after a pause — either advances to the next level or, on
-// the final level, awards the master badge and sets state.wordRunFinale
+// the final level, awards the master badge and sets state.wordInvadersFinale
 // to trigger the full-screen finale overlay. Mirrors winMemoryLevel()/
-// winRollReadLevel() function-for-function.
-function winWordRunLevel() {
-  const wr = state.wordRun;
-  wr.status = 'won';
-  const level = wr.level;
-  const isFinalLevel = level === WordRunLogic.LEVELS[WordRunLogic.LEVELS.length - 1].level;
-  const levelBadge = awardWordRunBadgeIfEligible(level);
+// winRollReadLevel()/the old winWordRunLevel() function-for-function.
+function winWordInvadersLevel() {
+  const wi = state.wordInvaders;
+  wi.status = 'won';
+  const level = wi.level;
+  const isFinalLevel = level === WordInvadersLogic.LEVELS[WordInvadersLogic.LEVELS.length - 1].level;
+  const levelBadge = awardWordInvadersBadgeIfEligible(level);
   if (levelBadge) {
     clearTimeout(celebrationTimer);
     state.celebration = levelBadge;
@@ -2239,134 +2477,107 @@ function winWordRunLevel() {
     }, 2200);
   }
   render();
-  wordRunPhaseTimer = setTimeout(() => {
+  wordInvadersPhaseTimer = setTimeout(() => {
     if (isFinalLevel) {
-      state.wordRunFinale = awardWordRunMasterBadgeIfEligible() || wordRunMasterBadge();
+      state.wordInvadersFinale = awardWordInvadersMasterBadgeIfEligible() || wordInvadersMasterBadge();
       render();
     } else {
-      startWordRunLevel(level + 1);
+      startWordInvadersLevel(level + 1);
     }
-  }, WORD_RUN_LEVEL_ADVANCE_PAUSE_MS);
+  }, WORD_INVADERS_LEVEL_ADVANCE_PAUSE_MS);
 }
 
 // 0 lives before the round's 4 words were cleared — retry the exact same
-// round (same words, see startWordRunRound()'s keepWords) after a brief
-// "Game Over" pause. Mirrors loseMemoryLevel()/loseRollReadLevel().
-function loseWordRunRound() {
-  state.wordRun.status = 'lost';
+// round (same words, see startWordInvadersRound()'s keepWords) after a
+// brief "Game Over" pause. Mirrors loseMemoryLevel()/loseRollReadLevel()/
+// the old loseWordRunRound().
+function loseWordInvadersRound() {
+  state.wordInvaders.status = 'lost';
   render();
-  wordRunPhaseTimer = setTimeout(() => startWordRunRound(state.wordRun.round, true), WORD_RUN_ROUND_FAIL_PAUSE_MS);
+  wordInvadersPhaseTimer = setTimeout(() => startWordInvadersRound(state.wordInvaders.round, true), WORD_INVADERS_ROUND_FAIL_PAUSE_MS);
 }
 
-// Absolute lane switching — a tap/click on a specific lane card jumps
-// straight to it. Does nothing while a lane pick isn't actually live (see
-// WORD_RUN_ACTIVE_STATUSES), same guard moveWordRunLane() below uses.
-function setWordRunLane(index) {
-  const wr = state.wordRun;
-  if (!state.wordRunStarted || WORD_RUN_ACTIVE_STATUSES.indexOf(wr.status) === -1) return;
-  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
-  const clamped = Math.max(0, Math.min(laneCount - 1, index));
-  if (clamped === wr.playerLane) return;
-  wr.playerLane = clamped;
-  render();
+let wordInvadersScoreFlashTimer = null;
+function flashWordInvadersScore() {
+  clearTimeout(wordInvadersScoreFlashTimer);
+  state.wordInvaders.scoreFlash = true;
+  const scoreEl = $('[data-word-invaders-score]');
+  if (scoreEl) scoreEl.classList.add('is-flash');
+  wordInvadersScoreFlashTimer = setTimeout(() => {
+    state.wordInvaders.scoreFlash = false;
+    if (scoreEl) scoreEl.classList.remove('is-flash');
+  }, 260);
 }
 
-// Discrete relative lane switching for the keyboard/swipe controls (not a
-// held-continuous move like Catch the Sound's basket) — one keypress/
-// swipe moves exactly one lane.
-function moveWordRunLane(delta) {
-  setWordRunLane(state.wordRun.playerLane + delta);
+// ---- Ship: continuous movement, independent of render() ----
+// Reads the DOM fresh every call rather than caching the element, since a
+// render() at a word boundary replaces the node entirely — same defensive
+// pattern stepCatchBasket() uses for the basket.
+function stepWordInvadersShip(dt) {
+  const ship = $('[data-word-invaders-ship]');
+  if (!ship) return;
+  let pct = state.wordInvaders.shipPct;
+  const delta = WORD_INVADERS_SHIP_SPEED_PCT_PER_SEC * dt;
+  if (wordInvadersKeys.left) pct -= delta;
+  if (wordInvadersKeys.right) pct += delta;
+  pct = Math.max(WORD_INVADERS_SHIP_MIN_PCT, Math.min(WORD_INVADERS_SHIP_MAX_PCT, pct));
+  state.wordInvaders.shipPct = pct;
+  ship.style.left = `${pct}%`;
 }
 
-function triggerWordRunJump() {
-  const wr = state.wordRun;
-  if (!state.wordRunStarted || WORD_RUN_ACTIVE_STATUSES.indexOf(wr.status) === -1) return;
-  clearTimeout(wordRunJumpTimer);
-  wr.jumping = true;
-  render();
-  wordRunJumpTimer = setTimeout(() => {
-    wr.jumping = false;
-    render();
-  }, WORD_RUN_JUMP_MS);
+function startWordInvadersLoop() {
+  if (wordInvadersLoopHandle) return;
+  let last = performance.now();
+  const tick = (now) => {
+    const dt = (now - last) / 1000;
+    last = now;
+    stepWordInvadersShip(dt);
+    checkWordInvadersCollisions();
+    wordInvadersLoopHandle = requestAnimationFrame(tick);
+  };
+  wordInvadersLoopHandle = requestAnimationFrame(tick);
 }
 
-function triggerWordRunDuck() {
-  const wr = state.wordRun;
-  if (!state.wordRunStarted || WORD_RUN_ACTIVE_STATUSES.indexOf(wr.status) === -1) return;
-  clearTimeout(wordRunDuckTimer);
-  wr.ducking = true;
-  render();
-  wordRunDuckTimer = setTimeout(() => {
-    wr.ducking = false;
-    render();
-  }, WORD_RUN_DUCK_MS);
+// Drag-to-steer: the whole field is a drag surface (not just tap-left/
+// tap-right), matching the visual mockup shared and confirmed before this
+// was built. Writes straight to the DOM/state, same reasoning as
+// stepWordInvadersShip() — no need to wait for the next animation frame
+// for a drag to feel responsive. The move/up listeners live on `window`
+// (registered once, see below) rather than the field itself, so a drag
+// that slides off the field edge doesn't get stuck "still dragging."
+function stepWordInvadersShipToPointer(clientX) {
+  const field = $('[data-word-invaders-field]');
+  if (!field) return;
+  const rect = field.getBoundingClientRect();
+  const pct = Math.max(WORD_INVADERS_SHIP_MIN_PCT, Math.min(WORD_INVADERS_SHIP_MAX_PCT, ((clientX - rect.left) / rect.width) * 100));
+  state.wordInvaders.shipPct = pct;
+  const ship = $('[data-word-invaders-ship]');
+  if (ship) ship.style.left = `${pct}%`;
 }
 
-function flashWordRunCoin() {
-  clearTimeout(wordRunCoinFlashTimer);
-  state.wordRun.coinFlash = true;
-  wordRunCoinFlashTimer = setTimeout(() => {
-    state.wordRun.coinFlash = false;
-    render();
-  }, WORD_RUN_COIN_FLASH_MS);
+function handleWordInvadersPointerDown(event) {
+  if (event.target.closest('[data-word-invaders-fire], [data-word-invaders-repeat]')) return;
+  wordInvadersDragging = true;
+  stepWordInvadersShipToPointer(event.clientX);
 }
-
-// A negative animation-delay equal to how long the current phase
-// ('approaching' or 'hazard') has actually been running, so that a
-// lane-switch re-render mid-flight — which, like every render() in this
-// app, rebuilds the DOM node the CSS animation is running on — resumes
-// the "runner closing in" animation from the right point instead of
-// visibly snapping back to the start. See .word-run-lanes.is-approaching
-// / .word-run-hazard-track.is-approaching in phonics-styles.css.
-function wordRunPhaseAnimationStyle(durationMs) {
-  const elapsed = state.wordRun.phaseStartedAt ? Date.now() - state.wordRun.phaseStartedAt : 0;
-  return `animation-duration:${durationMs}ms;animation-delay:${-elapsed}ms;`;
-}
-
-let wordRunTouchStart = null;
-
-function handleWordRunTouchStart(event) {
-  const touch = event.touches[0];
-  if (!touch) return;
-  wordRunTouchStart = { x: touch.clientX, y: touch.clientY };
-}
-
-// Swipe left/right switches lanes; swipe up jumps; swipe down ducks —
-// whichever axis moved further past the threshold wins, so a mostly-
-// horizontal swipe never accidentally triggers a jump/duck and vice
-// versa.
-function handleWordRunTouchEnd(event) {
-  if (!wordRunTouchStart) return;
-  const touch = event.changedTouches[0];
-  const start = wordRunTouchStart;
-  wordRunTouchStart = null;
-  if (!touch) return;
-  const dx = touch.clientX - start.x;
-  const dy = touch.clientY - start.y;
-  const SWIPE_THRESHOLD_PX = 32;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_THRESHOLD_PX) return;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    moveWordRunLane(dx > 0 ? 1 : -1);
-  } else if (dy < 0) {
-    triggerWordRunJump();
-  } else {
-    triggerWordRunDuck();
-  }
-}
+window.addEventListener('pointermove', (event) => {
+  if (wordInvadersDragging) stepWordInvadersShipToPointer(event.clientX);
+});
+window.addEventListener('pointerup', () => { wordInvadersDragging = false; });
 
 // ---------- Start Game flow (shared by Catch the Sound, Memory Match,
-// Roll and Read, and Word Run) ----------
+// Roll and Read, and Word Invaders) ----------
 // Each of the four game tabs gates its round/timer behind an explicit
 // "Start Game" click rather than auto-starting on mount: gameStartPromptTemplate()
 // is what each game's own template function renders in place of its
 // normal board/field while `state.<game>Started` is still false (see
-// catchStarted/memoryStarted/rollReadStarted/wordRunStarted's comments
-// above), and each game's own wire*Events() function wires that button's
-// click to beginGameCountdown(). The countdown itself — a brief
+// catchStarted/memoryStarted/rollReadStarted/wordInvadersStarted's
+// comments above), and each game's own wire*Events() function wires that
+// button's click to beginGameCountdown(). The countdown itself — a brief
 // "Ready… Set… Go!" flourish — is the one piece actually shared across
 // all four, since it's identical regardless of which game it's gating;
 // each game's own start function (playCatchRound()/startMemoryLevel()/
-// startRollReadLevel()/startWordRunSession()) is untouched and only ever
+// startRollReadLevel()/startWordInvadersSession()) is untouched and only ever
 // gets called once the countdown finishes, so none of the four games'
 // round/timer/badge/finale logic needed to change at all.
 const START_COUNTDOWN_STEPS = ['ready', 'set', 'go'];
@@ -2403,7 +2614,7 @@ function beginGameCountdown(view) {
     if (view === 'game') state.catchStarted = true;
     else if (view === 'memory') state.memoryStarted = true;
     else if (view === 'rollread') state.rollReadStarted = true;
-    else if (view === 'wordrun') state.wordRunStarted = true;
+    else if (view === 'wordinvaders') state.wordInvadersStarted = true;
     // render() re-runs every wire*Events(), whose own idle-mount check
     // (e.g. wireMemoryGameEvents()'s `if (state.memory.status === 'idle')
     // startMemoryLevel(...)`) is what actually kicks the round off now
@@ -3377,20 +3588,20 @@ const GAME_INSTRUCTIONS = {
       'اربح جولات كافية لاجتياز كل من المستويات الخمسة، وتحصل على وسام في كل مرة — أنهِ المستوى الخامس للحصول على وسام «بطل ارمِ واقرأ».',
     ],
   },
-  wordrun: {
+  wordinvaders: {
     en: () => [
-      'A word plays aloud, then a runner heads toward lane pictures — 2 on level 1, 3 on level 2 — only one of them matching the word.',
-      'Steer with the ← and → arrow keys (or swipe left/right on a phone) to move into the matching lane before the runner arrives, or just tap/click a lane directly.',
-      'Watch for coins and obstacles between words: grab a coin (steer into its lane) for a bonus point — missing one costs nothing. An obstacle costs a life just like a wrong picture, so dodge it by switching lanes, or jump (↑ or spacebar) / duck (↓) when one spans every lane.',
-      'A wrong pick costs 1 of 3 lives but still moves on to the next word — only running out of lives sends you back to the start of the current 4-word round.',
-      `Clear ${WordRunLogic.ROUNDS_PER_LEVEL} rounds (${WordRunLogic.ROUNDS_PER_LEVEL * WordRunLogic.WORDS_PER_ROUND} words) to finish level 1 and unlock level 2 — finish level 2 for the Word Run Champion badge.`,
+      'A word plays aloud, then word-cards drop from the top — 2 on level 1, 3 on level 2 — only one of them matching the word.',
+      'Steer your ship with the ← and → arrow keys (or drag anywhere in the sky on a phone) and shoot with the spacebar or the 🔥 button before the matching card reaches you.',
+      'Shooting the right card scores points and moves on to the next word; shooting a wrong one, or letting the right one reach your ship, costs 1 of 3 lives but still moves on.',
+      'Watch for coins and meteors drifting down between cards: shoot a coin for a bonus point — missing it costs nothing. Shooting a meteor (or letting your own shot hit one) just wastes that shot, no other penalty.',
+      `Clear ${WordInvadersLogic.ROUNDS_PER_LEVEL} rounds (${WordInvadersLogic.ROUNDS_PER_LEVEL * WordInvadersLogic.WORDS_PER_ROUND} words) to finish level 1 and unlock level 2 — finish level 2 for the Word Invaders Champion badge.`,
     ],
     ar: () => [
-      'تُنطق كلمة، ثم يتجه العدّاء نحو صور في ممرات — ممرّان في المستوى الأول، وثلاثة في المستوى الثاني — واحدة منها فقط تطابق الكلمة.',
-      'وجّه العدّاء بمفتاحي الأسهم ← و → (أو اسحب يمينًا/يسارًا على الهاتف) للانتقال إلى الممر الصحيح قبل وصول العدّاء، أو اضغط على الممر مباشرة.',
-      'انتبه للعملات والعقبات بين الكلمات: اجمع عملة (بالانتقال إلى ممرها) لنقطة إضافية — تفويتها لا يكلفك شيئًا. أما العقبة فتكلفك حياة مثل الصورة الخاطئة تمامًا، فتجنبها بتغيير الممر، أو اقفز (↑ أو مفتاح المسافة) أو انحنِ (↓) عندما تمتد عبر كل الممرات.',
-      'الاختيار الخاطئ يكلفك حياة واحدة من ثلاث لكنه ينتقل للكلمة التالية رغم ذلك — نفاد الحيوات فقط يعيدك إلى بداية الجولة الحالية من 4 كلمات.',
-      `أكمل ${WordRunLogic.ROUNDS_PER_LEVEL} جولات (${WordRunLogic.ROUNDS_PER_LEVEL * WordRunLogic.WORDS_PER_ROUND} كلمة) لإنهاء المستوى الأول وفتح المستوى الثاني — أنهِ المستوى الثاني للحصول على وسام «بطل الجري بالكلمات».`,
+      'تُنطق كلمة، ثم تسقط بطاقات الكلمات من الأعلى — بطاقتان في المستوى الأول، وثلاث في المستوى الثاني — واحدة منها فقط تطابق الكلمة.',
+      'وجّه سفينتك بمفتاحي الأسهم ← و → (أو اسحب في أي مكان من السماء على الهاتف) وأطلق النار بمفتاح المسافة أو زر 🔥 قبل أن تصل البطاقة المطابقة إليك.',
+      'إصابة البطاقة الصحيحة تمنحك نقاطًا وتنتقل إلى الكلمة التالية؛ أما إصابة بطاقة خاطئة، أو وصول البطاقة الصحيحة دون إصابتها، فتكلفك حياة واحدة من ثلاث لكنها تنتقل للكلمة التالية أيضًا.',
+      'انتبه للعملات والنيازك المنحدرة بين البطاقات: أصب عملة لنقطة إضافية — تفويتها لا يكلفك شيئًا. أما إصابة نيزك (أو ارتطام رصاصتك به) فتهدر تلك الطلقة فقط، دون أي عقوبة أخرى.',
+      `أكمل ${WordInvadersLogic.ROUNDS_PER_LEVEL} جولات (${WordInvadersLogic.ROUNDS_PER_LEVEL * WordInvadersLogic.WORDS_PER_ROUND} كلمة) لإنهاء المستوى الأول وفتح المستوى الثاني — أنهِ المستوى الثاني للحصول على وسام «بطل غزاة الكلمات».`,
     ],
   },
 };
@@ -3429,163 +3640,125 @@ function instructionsLangToggleTemplate() {
   </div>`;
 }
 
-// ---------- Word Run: view ----------
-// Status/HUD bar, the lane track (word-image lanes while a word is being
-// picked, or a coin/obstacle while a hazard is in play), the runner
-// sprite, and feedback — mirrors the shape of Catch the Sound's/Roll and
-// Read's own view sections above.
-function wordRunStatusTemplate() {
-  const wr = state.wordRun;
-  const label = wr.status === 'won' ? 'Level complete!' : wr.status === 'lost' ? 'Game over!' : `Level ${wr.level} of ${WordRunLogic.LEVELS.length}`;
-  return `<div class="word-run-status-group">
-    <span class="word-run-status-badge ${wr.status === 'won' ? 'is-won' : wr.status === 'lost' ? 'is-lost' : ''}">${icon('play')}${escapeHtml(label)}</span>
-    <span class="word-run-rounds">Round ${wr.round}/${WordRunLogic.ROUNDS_PER_LEVEL} · Word ${Math.min(wr.wordIndex + 1, WordRunLogic.WORDS_PER_ROUND)}/${WordRunLogic.WORDS_PER_ROUND}</span>
+// ---------- Word Invaders: view ----------
+// Status/HUD bar, the field (ship + fire button + a live "listen" prompt —
+// the falling cards themselves are injected directly by
+// spawnWordInvadersWave()/addWordInvadersItem(), not rendered here, see
+// this game's opening comment above), and feedback — mirrors the shape of
+// Catch the Sound's/Roll and Read's own view sections above.
+function wordInvadersStatusTemplate() {
+  const wi = state.wordInvaders;
+  const label = wi.status === 'won' ? 'Level complete!' : wi.status === 'lost' ? 'Game over!' : `Level ${wi.level} of ${WordInvadersLogic.LEVELS.length}`;
+  return `<div class="word-invaders-status-group">
+    <span class="word-invaders-status-badge ${wi.status === 'won' ? 'is-won' : wi.status === 'lost' ? 'is-lost' : ''}">${icon('play')}${escapeHtml(label)}</span>
+    <span class="word-invaders-rounds">Round ${wi.round}/${WordInvadersLogic.ROUNDS_PER_LEVEL} · Word ${Math.min(wi.wordIndex + 1, WordInvadersLogic.WORDS_PER_ROUND)}/${WordInvadersLogic.WORDS_PER_ROUND}</span>
   </div>`;
 }
 
-// Lives as hearts (WordRunLogic.STARTING_LIVES of them, emptying left to
-// right as they're lost) plus the running coin tally — `coinFlash` briefly
-// highlights the count right after a coin is collected (see
-// flashWordRunCoin()), the same "state-driven popup" trick
-// flashMemoryTimeBonus()/flashRollReadTimeBonus() use so the flash still
-// plays correctly even though render() rebuilds this element from
-// scratch.
-function wordRunHudTemplate() {
-  const wr = state.wordRun;
-  const hearts = Array.from({ length: WordRunLogic.STARTING_LIVES }, (_, i) =>
-    `<span class="word-run-heart ${i < wr.lives ? 'is-full' : 'is-empty'}">${icon('heart')}</span>`
+// Lives as hearts (WordInvadersLogic.STARTING_LIVES of them, emptying
+// left to right as they're lost) plus the running score — `scoreFlash`
+// briefly highlights it right after a hit (see flashWordInvadersScore()),
+// the same "state-driven popup" trick flashMemoryTimeBonus() uses so the
+// flash still plays correctly even though render() rebuilds this element
+// from scratch at the next word boundary.
+function wordInvadersHudTemplate() {
+  const wi = state.wordInvaders;
+  const hearts = Array.from({ length: WordInvadersLogic.STARTING_LIVES }, (_, i) =>
+    `<span class="word-invaders-heart ${i < wi.lives ? 'is-full' : 'is-empty'}">${icon('heart')}</span>`
   ).join('');
-  return `<div class="word-run-hud">
-    <div class="word-run-lives" aria-label="${wr.lives} of ${WordRunLogic.STARTING_LIVES} lives left">${hearts}</div>
-    <div class="word-run-coins ${wr.coinFlash ? 'is-flash' : ''}" aria-label="${wr.coins} coins collected">${wordRunCoinSvg()}<span>${wr.coins}</span></div>
+  return `<div class="word-invaders-hud">
+    <div class="word-invaders-lives" aria-label="${wi.lives} of ${WordInvadersLogic.STARTING_LIVES} lives left">${hearts}</div>
+    <div class="word-invaders-score ${wi.scoreFlash ? 'is-flash' : ''}" data-word-invaders-score aria-label="${wi.score} points">${icon('bolt')}<span>${wi.score}</span></div>
   </div>`;
 }
 
-function wordRunCoinSvg() {
-  return `<svg viewBox="0 0 24 24" class="word-run-coin-svg" aria-hidden="true">
-    <circle class="wrc-face" cx="12" cy="12" r="10"/>
-    <circle class="wrc-ring" cx="12" cy="12" r="10" fill="none"/>
-    <text class="wrc-glyph" x="12" y="16.5" text-anchor="middle">¢</text>
+// Same coin motif as the rest of the app's illustration set (a plain
+// circle+ring+¢ glyph) — the old Word Run used this exact svg, kept
+// identical here for visual consistency across the two games' bonus coins.
+function wordInvadersCoinSvg() {
+  return `<svg viewBox="0 0 24 24" class="word-invaders-coin-svg" aria-hidden="true">
+    <circle class="wic-face" cx="12" cy="12" r="10"/>
+    <circle class="wic-ring" cx="12" cy="12" r="10" fill="none"/>
+    <text class="wic-glyph" x="12" y="16.5" text-anchor="middle">¢</text>
   </svg>`;
 }
 
-// A simple, friendly runner — decorative flavor only, same illustration
-// tier as catchBasketSvg()/dieFaceTemplate(). `.is-jumping`/`.is-ducking`
-// (driven straight off state.wordRun.jumping/ducking) do the actual pose
-// change via CSS transform, see .word-run-runner in phonics-styles.css.
-function wordRunRunnerSvg() {
-  return `<svg viewBox="0 0 60 74" class="word-run-runner-svg" aria-hidden="true">
-    <ellipse class="wr-shadow" cx="30" cy="68" rx="17" ry="4"/>
-    <circle class="wr-body" cx="30" cy="36" r="19"/>
-    <circle class="wr-face" cx="30" cy="32" r="12.5"/>
-    <circle class="wr-eye" cx="25" cy="30" r="2.3"/>
-    <circle class="wr-eye" cx="35" cy="30" r="2.3"/>
-    <path class="wr-smile" d="M24 36q6 6 12 0" fill="none"/>
+// A rounded, irregular rock silhouette (not a square block) so an
+// obstacle reads as "meteor to dodge," not "wall to shoot" — ported
+// directly from the visual mockup shared and confirmed before this was
+// built.
+function wordInvadersMeteorSvg() {
+  return `<svg viewBox="0 0 100 100" class="word-invaders-meteor-svg" aria-hidden="true">
+    <path class="wim-body" d="M44 6 C58 2 74 8 84 20 C94 32 96 48 90 60 C86 70 78 76 70 84 C60 94 46 96 34 90 C22 84 12 74 8 60 C4 46 8 30 18 20 C26 12 34 10 44 6 Z"/>
+    <path class="wim-shine" d="M28 14 C38 8 50 8 58 12 C48 17 36 24 28 34 C21 26 22 19 28 14 Z"/>
+    <ellipse class="wim-crater" cx="36" cy="36" rx="8" ry="6"/>
+    <ellipse class="wim-crater" cx="64" cy="50" rx="6" ry="5"/>
+    <ellipse class="wim-crater" cx="42" cy="70" rx="5" ry="4"/>
   </svg>`;
 }
 
-// One lane card. While a word is 'resolved', the truly correct lane gets
-// a check mark and — if the player picked a different one — that pick
-// gets an X, so a wrong guess is immediately clear about which lane
-// actually matched the word (full transparency, same spirit as Roll and
-// Read never hiding which tile was right).
-function wordRunLaneTemplate(lane, index) {
-  const wr = state.wordRun;
-  const isPlayerLane = wr.playerLane === index;
-  const showResult = wr.status === 'resolved';
-  return `<button type="button" class="word-run-lane ${isPlayerLane ? 'is-player-lane' : ''} ${showResult && lane.correct ? 'is-correct-lane' : ''} ${showResult && isPlayerLane && !lane.correct ? 'is-wrong-lane' : ''}" data-word-run-lane="${index}" aria-label="Lane ${index + 1}: ${escapeHtml(lane.item.word)}">
-    <img src="${lane.item.image}" alt="">
-    ${showResult && lane.correct ? `<span class="word-run-lane-mark is-correct">${icon('check')}</span>` : ''}
-    ${showResult && isPlayerLane && !lane.correct ? `<span class="word-run-lane-mark is-wrong">${icon('close')}</span>` : ''}
-  </button>`;
+// A simple rocket ship, decorative flavor only, same illustration tier as
+// catchBasketSvg()/dieFaceTemplate() — drawn with the app's own color
+// tokens (not fixed hex) so it stays legible in high-contrast mode.
+function wordInvadersShipSvg() {
+  return `<svg viewBox="0 0 100 120" class="word-invaders-ship-svg" aria-hidden="true">
+    <ellipse class="wis-flame" cx="50" cy="106" rx="12" ry="16"/>
+    <ellipse class="wis-flame-inner" cx="50" cy="104" rx="6" ry="9"/>
+    <path class="wis-hull" d="M50 6 C72 30 78 62 70 96 L30 96 C22 62 28 30 50 6 Z"/>
+    <path class="wis-hull-shade" d="M50 6 C72 30 78 62 70 96 L58 96 C64 62 60 30 50 6 Z"/>
+    <path class="wis-fin" d="M20 70 L30 96 L34 96 L28 66 Z"/>
+    <path class="wis-fin" d="M80 70 L70 96 L66 96 L72 66 Z"/>
+    <circle class="wis-window-ring" cx="50" cy="46" r="14"/>
+    <circle class="wis-window" cx="50" cy="46" r="9"/>
+  </svg>`;
 }
 
-// The row of lane images, closing in on the runner over WORD_RUN_APPROACH_MS
-// while status is 'approaching' — see wordRunPhaseAnimationStyle() for how
-// it stays visually continuous across a lane-switch re-render mid-flight.
-// Outside 'approaching' (speaking/resolved) it just sits still, already at
-// rest, so the player has a moment to see the images before they start
-// closing in and a moment to see the result once they've arrived.
-function wordRunLaneTrackTemplate() {
-  const wr = state.wordRun;
-  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
-  const approaching = wr.status === 'approaching';
-  const style = `--word-run-lanes:${laneCount};${approaching ? wordRunPhaseAnimationStyle(WORD_RUN_APPROACH_MS) : ''}`;
-  return `<div class="word-run-lanes ${approaching ? 'is-approaching' : 'is-resting'}" style="${style}">
-    ${wr.lanes.map((lane, i) => wordRunLaneTemplate(lane, i)).join('')}
-  </div>`;
+function wordInvadersFeedbackTemplate() {
+  const wi = state.wordInvaders;
+  if (wi.status === 'won') {
+    const isFinalLevel = wi.level === WordInvadersLogic.LEVELS[WordInvadersLogic.LEVELS.length - 1].level;
+    return `<p class="word-invaders-feedback is-correct" aria-live="polite">${isFinalLevel ? 'Every level complete!' : 'Great shooting! Next level starting…'}</p>`;
+  }
+  if (wi.status === 'lost') {
+    return `<p class="word-invaders-feedback is-incorrect" aria-live="polite">Out of lives — let's try that round again…</p>`;
+  }
+  if (wi.feedback) {
+    return `<p class="word-invaders-feedback is-${wi.feedback.kind}" aria-live="polite">${escapeHtml(wi.feedback.text)}</p>`;
+  }
+  return `<p class="word-invaders-feedback" aria-live="polite">Listen, then shoot the matching card…</p>`;
 }
 
-// The between-words hazard: a coin sits in one lane (collect it by being
-// in that lane when it arrives); an obstacle either sits in one lane
-// (dodge by being anywhere else) or spans every lane at ground or head
-// height (dodge by jumping/ducking instead, regardless of lane).
-function wordRunHazardTemplate() {
-  const wr = state.wordRun;
-  const hazard = wr.hazard;
-  if (!hazard) return '';
-  const laneCount = WordRunLogic.levelConfig(wr.level).lanes;
-  const style = `--word-run-lanes:${laneCount};${wordRunPhaseAnimationStyle(WORD_RUN_HAZARD_MS)}`;
-  if (hazard.avoid) {
-    return `<div class="word-run-hazard-track is-approaching is-full-width" style="${style}">
-      <div class="word-run-obstacle is-${hazard.avoid}" role="img" aria-label="${hazard.avoid === 'jump' ? 'Low obstacle ahead — jump!' : 'High obstacle ahead — duck!'}"></div>
-    </div>`;
-  }
-  const laneMarkup = Array.from({ length: laneCount }, (_, i) => {
-    if (i !== hazard.lane) return '<div class="word-run-hazard-lane"></div>';
-    const mark = hazard.kind === 'coin' ? wordRunCoinSvg() : '<div class="word-run-obstacle"></div>';
-    return `<div class="word-run-hazard-lane">${mark}</div>`;
-  }).join('');
-  return `<div class="word-run-hazard-track is-approaching" style="${style}">${laneMarkup}</div>`;
-}
-
-function wordRunFeedbackTemplate() {
-  const wr = state.wordRun;
-  if (wr.status === 'won') {
-    const isFinalLevel = wr.level === WordRunLogic.LEVELS[WordRunLogic.LEVELS.length - 1].level;
-    return `<p class="word-run-feedback is-correct" aria-live="polite">${isFinalLevel ? 'Every level complete!' : 'Great running! Next level starting…'}</p>`;
-  }
-  if (wr.status === 'lost') {
-    return `<p class="word-run-feedback is-incorrect" aria-live="polite">Out of lives — let's try that round again…</p>`;
-  }
-  if (wr.feedback) {
-    return `<p class="word-run-feedback is-${wr.feedback.kind}" aria-live="polite">${escapeHtml(wr.feedback.text)}</p>`;
-  }
-  const hint = wr.status === 'speaking' ? 'Listen for the word…'
-    : wr.status === 'approaching' ? 'Steer into the matching picture!'
-    : wr.status === 'hazard' ? 'Watch out ahead!'
-    : 'Get ready…';
-  return `<p class="word-run-feedback" aria-live="polite">${hint}</p>`;
-}
-
-function wordRunGameTemplate() {
-  if (state.startCountdown && state.startCountdown.view === 'wordrun') return gameStartCountdownTemplate();
-  if (!state.wordRunStarted) return gameStartPromptTemplate();
-  const wr = state.wordRun;
+function wordInvadersGameTemplate() {
+  if (state.startCountdown && state.startCountdown.view === 'wordinvaders') return gameStartCountdownTemplate();
+  if (!state.wordInvadersStarted) return gameStartPromptTemplate();
+  const wi = state.wordInvaders;
   return `
-    <section class="word-run-game">
-      <div class="word-run-top">
-        ${wordRunStatusTemplate()}
-        ${wordRunHudTemplate()}
+    <section class="word-invaders-game">
+      <div class="word-invaders-top">
+        ${wordInvadersStatusTemplate()}
+        ${wordInvadersHudTemplate()}
       </div>
-      <div class="word-run-field" data-word-run-field>
-        <div class="word-run-track">
-          ${wr.status === 'hazard' ? wordRunHazardTemplate() : (wr.lanes.length ? wordRunLaneTrackTemplate() : '')}
-          <div class="word-run-runner ${wr.jumping ? 'is-jumping' : ''} ${wr.ducking ? 'is-ducking' : ''}">${wordRunRunnerSvg()}</div>
+      <div class="word-invaders-field" data-word-invaders-field>
+        <div class="word-invaders-prompt">
+          <span class="word-invaders-ear">${icon('speaker')}</span>
+          <span>Listen, then shoot the matching card</span>
+          <button type="button" class="word-invaders-repeat" data-word-invaders-repeat aria-label="Repeat the word">${icon('retry')}</button>
         </div>
+        <div class="word-invaders-ship" data-word-invaders-ship style="left:${wi.shipPct}%">${wordInvadersShipSvg()}</div>
+        <button type="button" class="word-invaders-fire-btn" data-word-invaders-fire aria-label="Fire">${icon('bolt')}</button>
       </div>
-      ${wordRunFeedbackTemplate()}
+      ${wordInvadersFeedbackTemplate()}
     </section>`;
 }
 
-// The Word Run badges, shown alongside every sound group's badge row in
-// the shelf even though it isn't tied to a sound group/level — same
+// The Word Invaders badges, shown alongside every sound group's badge row
+// in the shelf even though it isn't tied to a sound group/level — same
 // pattern as memoryBadgeShelfSectionTemplate()/rollReadBadgeShelfSectionTemplate().
-function wordRunBadgeShelfSectionTemplate() {
-  const levelBadges = WordRunLogic.LEVELS.map((entry) => wordRunBadgeForLevel(entry.level));
-  const master = wordRunMasterBadge();
+function wordInvadersBadgeShelfSectionTemplate() {
+  const levelBadges = WordInvadersLogic.LEVELS.map((entry) => wordInvadersBadgeForLevel(entry.level));
+  const master = wordInvadersMasterBadge();
   return `<section class="badge-shelf-group">
-    <h3>Word Run</h3>
+    <h3>Word Invaders</h3>
     <div class="badge-shelf-grid">
       ${[...levelBadges, master].map((badge) => {
         const earned = !!state.badges[badge.id];
@@ -3601,54 +3774,61 @@ function wordRunBadgeShelfSectionTemplate() {
 
 // The grand finale for finishing every level — mirrors memoryFinaleTemplate()/
 // rollReadFinaleTemplate() exactly (same full-screen overlay mechanism,
-// confetti/close-button/replay-levels shape), just relabeled for Word Run.
-function wordRunFinaleTemplate() {
-  if (!state.wordRunFinale) return '';
-  const badge = state.wordRunFinale;
+// confetti/close-button/replay-levels shape), just relabeled for Word
+// Invaders.
+function wordInvadersFinaleTemplate() {
+  if (!state.wordInvadersFinale) return '';
+  const badge = state.wordInvadersFinale;
   const confetti = Array.from({ length: 28 }, (_, i) => `<span class="confetti-piece" style="--i:${i}"></span>`).join('');
-  return `<div class="word-run-finale-overlay" role="dialog" aria-label="All Word Run levels complete">
-    <div class="word-run-finale-confetti" aria-hidden="true">${confetti}</div>
-    <button class="word-run-finale-close" data-dismiss-word-run-finale aria-label="Close">${icon('close')}</button>
-    <div class="word-run-finale-panel">
+  return `<div class="word-invaders-finale-overlay" role="dialog" aria-label="All Word Invaders levels complete">
+    <div class="word-invaders-finale-confetti" aria-hidden="true">${confetti}</div>
+    <button class="word-invaders-finale-close" data-dismiss-word-invaders-finale aria-label="Close">${icon('close')}</button>
+    <div class="word-invaders-finale-panel">
       ${celebrationAvatarTemplate('md')}
       ${badgeMedalTemplate(badge, { size: 'xl' })}
-      <p class="word-run-finale-kicker">Champion!</p>
-      <h2>All ${WordRunLogic.LEVELS.length} levels complete!</h2>
-      <p>${escapeHtml(badge.affirmation)} You steered past every word and every obstacle — pick a level below to play again.</p>
-      <div class="word-run-replay-levels">
-        ${WordRunLogic.LEVELS.map((entry) => `<button type="button" data-word-run-finale-replay-level="${entry.level}">${icon('play')}Level ${entry.level}</button>`).join('')}
+      <p class="word-invaders-finale-kicker">Champion!</p>
+      <h2>All ${WordInvadersLogic.LEVELS.length} levels complete!</h2>
+      <p>${escapeHtml(badge.affirmation)} You shot down every word and dodged every meteor — pick a level below to play again.</p>
+      <div class="word-invaders-replay-levels">
+        ${WordInvadersLogic.LEVELS.map((entry) => `<button type="button" data-word-invaders-finale-replay-level="${entry.level}">${icon('play')}Level ${entry.level}</button>`).join('')}
       </div>
     </div>
   </div>`;
 }
 
-function dismissWordRunFinale() {
-  state.wordRunFinale = null;
+function dismissWordInvadersFinale() {
+  state.wordInvadersFinale = null;
   render();
 }
 
-// This view's own controls besides the shared lane/jump/duck keyboard and
-// swipe handling (wired globally, see the keydown listener and this
-// function's touch listeners below): the lane cards themselves, and
-// starting the level/session for as long as the view is mounted — status
-// is only ever 'idle' right after mount or a Reset, so this can't
-// double-fire on every render() while a round is already in progress.
-// Mirrors wireMemoryGameEvents()/wireRollReadTabEvents() exactly.
-function wireWordRunTabEvents() {
-  if (state.view !== 'wordrun') {
-    stopWordRunGame();
+// This view's own controls besides the shared arrow-key/spacebar handling
+// (wired globally, see the keydown listener below): the fire/repeat
+// buttons, drag-to-steer on the field, and starting the loop/session for
+// as long as the view is mounted — status is only ever 'idle' right after
+// mount or a Reset, so this can't double-fire on every render() while a
+// round is already in progress. Mirrors wireCatchGameEvents()/
+// wireMemoryGameEvents() exactly.
+function wireWordInvadersTabEvents() {
+  if (state.view !== 'wordinvaders') {
+    stopWordInvadersGame();
     return;
   }
   const startButton = $('[data-start-game]');
-  if (startButton) startButton.onclick = () => beginGameCountdown('wordrun');
-  if (!state.wordRunStarted) return;
-  if (state.wordRun.status === 'idle') startWordRunSession();
-  document.querySelectorAll('[data-word-run-lane]').forEach((button) => button.onclick = () => setWordRunLane(Number(button.dataset.wordRunLane)));
-  const field = $('[data-word-run-field]');
-  if (field) {
-    field.addEventListener('touchstart', handleWordRunTouchStart, { passive: true });
-    field.addEventListener('touchend', handleWordRunTouchEnd, { passive: true });
+  if (startButton) startButton.onclick = () => beginGameCountdown('wordinvaders');
+  if (!state.wordInvadersStarted) return;
+  startWordInvadersLoop();
+  if (state.wordInvaders.status === 'idle') startWordInvadersSession();
+  const fireButton = $('[data-word-invaders-fire]');
+  if (fireButton) fireButton.onclick = () => fireWordInvadersBullet();
+  const repeatButton = $('[data-word-invaders-repeat]');
+  if (repeatButton) {
+    repeatButton.onclick = () => {
+      const word = state.wordInvaders.currentWord;
+      if (word) speak(word.say || word.word);
+    };
   }
+  const field = $('[data-word-invaders-field]');
+  if (field) field.addEventListener('pointerdown', handleWordInvadersPointerDown);
 }
 
 // ---------- ADMIN MODE ----------
@@ -3845,14 +4025,12 @@ function wireAdminEvents() {
   }
 }
 
-// Word Run's lane-switch/jump/duck keys — unlike Catch the Sound's
-// ArrowLeft/ArrowRight above (a held-continuous move tracked via
-// catchKeys + an animation loop), these fire once per keydown: each of
-// moveWordRunLane()/triggerWordRunJump()/triggerWordRunDuck() already
-// no-ops outside an active word/hazard (see WORD_RUN_ACTIVE_STATUSES), so
-// there's no separate "is a round live" check needed here.
-const WORD_RUN_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '];
-
+// Word Invaders' steer/fire keys — ArrowLeft/ArrowRight are a
+// held-continuous move (tracked via wordInvadersKeys + the same
+// animation-loop pattern as Catch the Sound's catchKeys), so they set a
+// flag here and let stepWordInvadersShip() do the actual moving each
+// frame; spacebar fires once per press (`!event.repeat` so holding it
+// down doesn't spam shots past fireWordInvadersBullet()'s own cooldown).
 document.addEventListener('keydown', (event) => {
   if (state.view === 'game' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
     event.preventDefault();
@@ -3860,12 +4038,11 @@ document.addEventListener('keydown', (event) => {
     else catchKeys.right = true;
     return;
   }
-  if (state.view === 'wordrun' && WORD_RUN_KEYS.indexOf(event.key) !== -1) {
+  if (state.view === 'wordinvaders' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === ' ')) {
     event.preventDefault();
-    if (event.key === 'ArrowLeft') moveWordRunLane(-1);
-    else if (event.key === 'ArrowRight') moveWordRunLane(1);
-    else if (event.key === 'ArrowUp' || event.key === ' ') triggerWordRunJump();
-    else if (event.key === 'ArrowDown') triggerWordRunDuck();
+    if (event.key === 'ArrowLeft') wordInvadersKeys.left = true;
+    else if (event.key === 'ArrowRight') wordInvadersKeys.right = true;
+    else if (!event.repeat) fireWordInvadersBullet();
     return;
   }
   if (state.adminAvailable && event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
@@ -3888,8 +4065,8 @@ document.addEventListener('keydown', (event) => {
   }
 });
 document.addEventListener('keyup', (event) => {
-  if (event.key === 'ArrowLeft') catchKeys.left = false;
-  else if (event.key === 'ArrowRight') catchKeys.right = false;
+  if (event.key === 'ArrowLeft') { catchKeys.left = false; wordInvadersKeys.left = false; }
+  else if (event.key === 'ArrowRight') { catchKeys.right = false; wordInvadersKeys.right = false; }
 });
 
 // Keeps state.soundGroup/state.level pointing at something real and, for
@@ -4031,7 +4208,7 @@ function badgeShelfTemplate() {
       ${catchGameBadgeShelfSectionTemplate()}
       ${memoryBadgeShelfSectionTemplate()}
       ${rollReadBadgeShelfSectionTemplate()}
-      ${wordRunBadgeShelfSectionTemplate()}
+      ${wordInvadersBadgeShelfSectionTemplate()}
     </div>
   </div>`;
 }
@@ -5128,7 +5305,7 @@ function render() {
         <button data-view="game" role="tab" aria-selected="${state.view === 'game'}" class="${state.view === 'game' ? 'active' : ''}">${icon('basket')}Catch the Sound</button>
         <button data-view="memory" role="tab" aria-selected="${state.view === 'memory'}" class="${state.view === 'memory' ? 'active' : ''}">${icon('cards')}Memory Match</button>
         <button data-view="rollread" role="tab" aria-selected="${state.view === 'rollread'}" class="${state.view === 'rollread' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
-        <button data-view="wordrun" role="tab" aria-selected="${state.view === 'wordrun'}" class="${state.view === 'wordrun' ? 'active' : ''}">${icon('bolt')}Word Run</button>
+        <button data-view="wordinvaders" role="tab" aria-selected="${state.view === 'wordinvaders'}" class="${state.view === 'wordinvaders' ? 'active' : ''}">${icon('bolt')}Word Invaders</button>
       </div>
       <div class="controls-bar">
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
@@ -5148,7 +5325,7 @@ function render() {
     </section>
     <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
       ${state.view === 'learn' ? sidebarTemplate() : ''}
-      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : state.view === 'wordrun' ? wordRunGameTemplate() : practiceTemplate()}</div>
+      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : state.view === 'wordinvaders' ? wordInvadersGameTemplate() : practiceTemplate()}</div>
     </div>
     ${state.adminAvailable ? `<footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
@@ -5159,7 +5336,7 @@ function render() {
     ${groupCelebrationTemplate()}
     ${memoryFinaleTemplate()}
     ${rollReadFinaleTemplate()}
-    ${wordRunFinaleTemplate()}
+    ${wordInvadersFinaleTemplate()}
     ${badgeShelfTemplate()}`;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
@@ -5167,7 +5344,7 @@ function render() {
     stopRollReadGame();
     stopCatchGame();
     stopMemoryGame();
-    stopWordRunGame();
+    stopWordInvadersGame();
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
     setState('view', button.dataset.view);
@@ -5181,7 +5358,7 @@ function render() {
     stopRollReadGame();
     stopCatchGame();
     stopMemoryGame();
-    stopWordRunGame();
+    stopWordInvadersGame();
     openProfilePicker();
   };
   $('[data-reset]').onclick = () => {
@@ -5199,10 +5376,10 @@ function render() {
     state.rollRead = { status: 'idle', level: 1, words: [], rows: 0, cols: 0, dieValue: null, targetWord: null, feedback: null, roundsWon: 0, roundsToWin: 0, secondsLeft: 0, timeBonusFlash: false };
     state.rollReadFinale = null;
     state.rollReadStarted = false;
-    stopWordRunGame();
-    state.wordRun = { status: 'idle', level: 1, round: 1, wordIndex: 0, roundWords: [], lanes: [], playerLane: 0, lives: 3, coins: 0, coinFlash: false, hazard: null, jumping: false, ducking: false, feedback: null, phaseStartedAt: 0 };
-    state.wordRunFinale = null;
-    state.wordRunStarted = false;
+    stopWordInvadersGame();
+    state.wordInvaders = { status: 'idle', level: 1, round: 1, wordIndex: 0, roundWords: [], currentWord: null, lives: 3, score: 0, scoreFlash: false, shipPct: 50, feedback: null };
+    state.wordInvadersFinale = null;
+    state.wordInvadersStarted = false;
     stopStartCountdown();
     removeProgress('donePhonics');
     removeProgress('badgesPhonics');
@@ -5255,17 +5432,17 @@ function render() {
     state.rollReadFinale = null;
     startRollReadLevel(Number(el.dataset.rollReadFinaleReplayLevel));
   });
-  document.querySelectorAll('[data-dismiss-word-run-finale]').forEach((el) => el.onclick = () => dismissWordRunFinale());
-  document.querySelectorAll('[data-word-run-finale-replay-level]').forEach((el) => el.onclick = () => {
-    state.wordRunFinale = null;
-    startWordRunLevel(Number(el.dataset.wordRunFinaleReplayLevel));
+  document.querySelectorAll('[data-dismiss-word-invaders-finale]').forEach((el) => el.onclick = () => dismissWordInvadersFinale());
+  document.querySelectorAll('[data-word-invaders-finale-replay-level]').forEach((el) => el.onclick = () => {
+    state.wordInvadersFinale = null;
+    startWordInvadersLevel(Number(el.dataset.wordInvadersFinaleReplayLevel));
   });
   wireAdminEvents();
   wireReadingEvents();
   wireCatchGameEvents();
   wireMemoryGameEvents();
   wireRollReadTabEvents();
-  wireWordRunTabEvents();
+  wireWordInvadersTabEvents();
 }
 
 render();
