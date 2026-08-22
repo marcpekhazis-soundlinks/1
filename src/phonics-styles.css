@@ -2038,6 +2038,253 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   .word-invaders-finale-panel { animation: none; }
 }
 
+/* ---------- Word Search ----------
+   A split-screen Fun Zone game (see wordSearchGameTemplate() in JS): a
+   letter grid on the left, a bank of numbered audio tiles on the right —
+   never showing a tile's own spelling, so listening is the only way to
+   know a word (see .word-search-tile). Status/rounds bar and countdown
+   timer up top mirror .roll-read-status-badge/.roll-read-timer-display
+   exactly; the finale overlay below mirrors .roll-read-finale-overlay
+   just as closely. */
+.word-search-game { display: flex; flex-direction: column; gap: 16px; }
+.word-search-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.word-search-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.word-search-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.word-search-status-badge .icon { width: 1.1em; height: 1.1em; }
+.word-search-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.word-search-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.word-search-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+
+/* Mirrors .roll-read-timer-display exactly, minus the "+time" bonus
+   popup — finding a word here doesn't add time, since difficulty already
+   scales with level (see WordSearchLogic.LEVELS). */
+.word-search-timer-display {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 8px 22px 8px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.word-search-timer-icon { display: inline-flex; align-self: center; width: 1.6rem; height: 1.6rem; color: var(--warning); }
+.word-search-timer-icon .icon { width: 100%; height: 100%; }
+.word-search-timer-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 2.4rem; line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.word-search-timer-unit { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.word-search-timer-display.is-urgent { border-color: var(--incorrect); animation: word-search-timer-pulse 0.6s ease infinite; }
+.word-search-timer-display.is-urgent .word-search-timer-value { color: var(--incorrect-dark); }
+.word-search-timer-display.is-urgent .word-search-timer-icon { color: var(--incorrect); }
+@keyframes word-search-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* The split screen itself: grid on the left, word bank on the right —
+   the exact ratio and breakpoint confirmed in the mockup shared before
+   this was built. */
+.word-search-board { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.8fr); gap: 22px; align-items: start; }
+.word-search-grid-panel {
+  background: var(--surface-alt);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+.word-search-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--word-search-size, 6), 1fr);
+  gap: 4px;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1;
+}
+.word-search-cell {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-100);
+  border-radius: 8px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(0.8rem, 2.2vw, 1.1rem);
+  color: var(--ink);
+  cursor: default;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+/* Every cell is `disabled` in the template until a word-bank tile is
+   active (see wordSearchGridTemplate()) — no target word means a click
+   here can't mean anything yet. */
+.word-search-cell:not(:disabled) { cursor: pointer; }
+.word-search-cell:not(:disabled):hover { border-color: var(--primary-tint-300); transform: scale(1.04); }
+.word-search-cell.is-selecting { background: var(--primary-tint-100); border-color: var(--primary); color: var(--primary-dark); }
+.word-search-cell.is-found { background: var(--success-soft); border-color: var(--success); color: var(--success-dark); }
+.word-search-cell.is-wrong { background: var(--incorrect-soft); border-color: var(--incorrect); color: var(--incorrect-dark); animation: word-search-shake 0.32s ease; }
+@keyframes word-search-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.word-search-bank { display: flex; flex-direction: column; gap: 10px; }
+.word-search-bank-hint { margin: 0; font-size: 0.82rem; color: var(--ink-soft); }
+/* A tile never renders its own word's spelling (see wordSearchBankTemplate())
+   — a number plus the speaker icon is its only visible identity, so the
+   word itself is only ever conveyed by ear. */
+.word-search-tile {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.98rem;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.word-search-tile:hover { transform: translateY(-1px); border-color: var(--primary-tint-300); }
+.word-search-tile .icon { color: var(--primary); margin: 0; }
+.word-search-tile.is-active { border-color: var(--primary); background: var(--primary-tint-50); box-shadow: 0 0 0 3px var(--primary-tint-100); }
+.word-search-tile.is-found { background: var(--success); border-color: var(--success); color: #fff; cursor: default; }
+.word-search-tile.is-found .icon { color: #fff; }
+.word-search-tile.is-wrong { background: var(--incorrect); border-color: var(--incorrect); color: #fff; animation: word-search-tile-shake 0.32s ease; }
+.word-search-tile.is-wrong .icon { color: #fff; }
+@keyframes word-search-tile-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.word-search-tile-progress { margin-left: auto; font-size: 0.78rem; opacity: 0.85; font-variant-numeric: tabular-nums; }
+
+.word-search-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
+.word-search-feedback.is-correct { color: var(--success-dark); }
+.word-search-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+.word-search-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.word-search-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.word-search-replay-levels button:hover { background: var(--primary-dark); }
+.word-search-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+/* ---------- Word Search: finale overlay ----------
+   The "finished every level" moment — the exact same mechanism
+   .roll-read-finale-overlay/.word-invaders-finale-overlay use (full-
+   screen fixed overlay, confetti burst, XL medal, springy scale-in),
+   just relabeled for this game. */
+.word-search-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.word-search-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.word-search-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.word-search-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.word-search-finale-close .icon { width: 1.1em; height: 1.1em; }
+.word-search-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: word-search-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.word-search-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.word-search-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.word-search-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes word-search-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.contrast .word-search-status-badge { background: #fff; color: #000; }
+.contrast .word-search-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .word-search-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .word-search-rounds { color: #ccc; }
+.contrast .word-search-timer-display { background: #000; border-color: #fff; }
+.contrast .word-search-timer-value { color: #fff; }
+.contrast .word-search-timer-unit { color: #ccc; }
+.contrast .word-search-timer-icon { color: #fff; }
+.contrast .word-search-timer-display.is-urgent { border-color: #ff5252; }
+.contrast .word-search-timer-display.is-urgent .word-search-timer-value { color: #ff8a80; }
+.contrast .word-search-timer-display.is-urgent .word-search-timer-icon { color: #ff5252; }
+.contrast .word-search-grid-panel { background: #000; }
+.contrast .word-search-cell { background: #000; color: #fff; border: 2px solid #fff; }
+.contrast .word-search-cell:not(:disabled):hover { border-color: #ff5252; }
+.contrast .word-search-cell.is-selecting { background: #002a5c; border-color: #7cb3ff; color: #7cb3ff; }
+.contrast .word-search-cell.is-found { background: #001a12; border-color: #0f0; color: #7cffb2; }
+.contrast .word-search-cell.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
+.contrast .word-search-tile { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-search-tile .icon { color: #fff; }
+.contrast .word-search-tile.is-active { background: #002a5c; border-color: #7cb3ff; box-shadow: none; }
+.contrast .word-search-tile.is-found { background: #001a12; border-color: #0f0; color: #7cffb2; }
+.contrast .word-search-tile.is-found .icon { color: #7cffb2; }
+.contrast .word-search-tile.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
+.contrast .word-search-tile.is-wrong .icon { color: #ff8a80; }
+.contrast .word-search-bank-hint { color: #ccc; }
+.contrast .word-search-feedback { color: #ccc; }
+.contrast .word-search-feedback.is-correct { color: #7cffb2; }
+.contrast .word-search-feedback.is-incorrect { color: #ffd27f; }
+.contrast .word-search-replay-levels button { background: #fff; color: #000; }
+.contrast .word-search-replay-levels button:hover { background: #ccc; }
+.contrast .word-search-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-search-finale-kicker { color: #ffd27f; }
+.contrast .word-search-finale-panel h2 { color: #fff; }
+.contrast .word-search-finale-panel p { color: #ccc; }
+.contrast .word-search-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+@media (max-width: 780px) {
+  .word-search-board { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .word-search-grid { gap: 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-search-cell, .word-search-tile { transition: none; }
+  .word-search-cell.is-wrong, .word-search-tile.is-wrong { animation: none; }
+  .word-search-timer-display.is-urgent { animation: none; }
+  .word-search-finale-panel { animation: none; }
+}
+
 /* ---------- Rules ---------- */
 .rules { display: grid; gap: 18px; }
 .rules > h2 { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); color: var(--ink); position: relative; padding-bottom: 10px; }
