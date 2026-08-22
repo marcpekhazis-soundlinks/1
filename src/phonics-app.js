@@ -157,7 +157,10 @@ const WORDS = [
   { word: 'blame', arabic: 'يَلُومُ', hint: 'to say someone caused something bad', visual: 'blame', level: 1, image: 'src/assets/images/Long A/108-blame.png', sentence: "Don't blame me for the mistake." },
   { word: 'brace', arabic: 'دِعَامَةٌ', hint: 'a support that holds something steady', visual: 'brace', level: 1, image: 'src/assets/images/Long A/109-brace.png', sentence: "The metal brace held the shelf in place." },
   { word: 'brave', arabic: 'شُجَاعٌ', hint: 'not afraid; willing to face danger', visual: 'brave', level: 1, image: 'src/assets/images/Long A/110-brave.png', sentence: "The firefighter was very brave during the rescue." },
-  { word: 'chase', arabic: 'يُطَارِدُ', hint: 'to run after someone to catch them', visual: 'chase', level: 1, image: 'src/assets/images/Long A/111-chase.png', sentence: "The dog loves to chase the ball." },
+  // rule: 'voiceless-ch' — demo tag for the new rule-pattern underline;
+  // ties this word's "ch" to the Rules tab's "Voiceless consonant
+  // digraphs" entry. See highlightWord()/wordRuleIndices() above.
+  { word: 'chase', arabic: 'يُطَارِدُ', hint: 'to run after someone to catch them', visual: 'chase', level: 1, image: 'src/assets/images/Long A/111-chase.png', rule: 'voiceless-ch', sentence: "The dog loves to chase the ball." },
   { word: 'crane', arabic: 'رَافِعَةٌ / طَائِرُ مَالِكِ الْحَزِينِ', hint: 'a tall machine for lifting heavy things', visual: 'crane', level: 1, image: 'src/assets/images/Long A/112-crane.png', sentence: "A tall crane lifted the steel beams." },
   { word: 'flame', arabic: 'لَهَبٌ', hint: 'the bright, hot part of a fire', visual: 'flame', level: 1, image: 'src/assets/images/Long A/113-flame.png', sentence: "The candle's flame flickered in the breeze." },
   { word: 'flare', arabic: 'وَهَجٌ / شُعْلَةٌ مُضِيئَةٌ', hint: 'a sudden bright burst of light', visual: 'flare', level: 1, archived: true, sentence: "A bright flare lit up the night sky." },
@@ -176,7 +179,9 @@ const WORDS = [
   { word: "plane", arabic: "طَائِرَةٌ / مُسْتَوٍ", hint: "a flying machine, or a flat surface", visual: "plane", level: 1, image: 'src/assets/images/Long A/123-plane.png', svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"210\" rx=\"70\" ry=\"8\"/><path class=\"i-water\" d=\"M150 60l10 60 70 35v12l-70-20v40l20 15v10l-30-8-30 8v-10l20-15v-40l-70 20v-12l70-35z\"/><path class=\"i-line\" d=\"M150 60l10 60 70 35v12l-70-20v40l20 15v10l-30-8-30 8v-10l20-15v-40l-70 20v-12l70-35z\" fill=\"none\"/>", sentence: "We traveled by plane for our trip." },
   { word: 'plate', arabic: 'طَبَقٌ', hint: 'a flat dish you eat food from', visual: 'plate', level: 1, image: 'src/assets/images/Long A/124-plate.png', sentence: "He set a clean plate on the table." },
   { word: 'scare', arabic: 'يُخِيفُ', hint: 'to make someone feel afraid', visual: 'scare', level: 1, archived: true, sentence: "The loud thunder gave the puppy a scare." },
-  { word: 'shade', arabic: 'ظِلٌّ', hint: 'a shadowed area sheltered from light', visual: 'shade', level: 1, image: 'src/assets/images/Long A/126-shade.png', sentence: "We sat in the shade of the big tree." },
+  // rule: 'voiceless-sh' — demo tag; ties this word's "sh" to the Rules
+  // tab's "Voiceless consonant digraphs" entry.
+  { word: 'shade', arabic: 'ظِلٌّ', hint: 'a shadowed area sheltered from light', visual: 'shade', level: 1, image: 'src/assets/images/Long A/126-shade.png', rule: 'voiceless-sh', sentence: "We sat in the shade of the big tree." },
   { word: 'shame', arabic: 'خَجَلٌ / عَارٌ', hint: 'a bad feeling from doing something wrong', visual: 'shame', level: 1, image: 'src/assets/images/Long A/127-shame.png', sentence: "It's a shame we missed the movie." },
   { word: 'skate', arabic: 'يَتَزَلَّجُ', hint: 'to glide smoothly on skates or a board', visual: 'skate', level: 1, image: 'src/assets/images/Long A/128-skate.png', sentence: "She learned to skate at the ice rink." },
   { word: 'slate', arabic: 'لَوْحٌ إِرْدْوَازِيٌّ', hint: 'a flat, gray rock used for roofs or writing boards', visual: 'slate', level: 1, image: 'src/assets/images/Long A/129-slate.png', sentence: "The roof is covered with gray slate." },
@@ -258,7 +263,7 @@ const WORDS = [
   // were each confirmed wrong; this one keeps "inishee" merged as one
   // chunk but hyphenates before a literal "ate" (not "eight") — confirmed
   // correct by ear via the same audition page as "graduate".
-  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', say: 'inishee-ate', sentence: "The teacher will initiate the new project today." },
+  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', say: 'inishee-ate', rule: 'suffix-ti-vowel', sentence: "The teacher will initiate the new project today." },
   // Arabic hint corrected to the verb sense used here ("moderate a
   // debate"), not the adjective sense ("in the middle").
   // say: 'moderayt' — TTS defaults the isolated word to the adjective's
@@ -321,10 +326,49 @@ const RULES = [
   { title: 'Soft C Rule', rows: [['ce, ci, cy', '/s/', 'like س in Arabic', 'cent']], note: 'C is soft before e, i, y: cent, city, cycle.' },
   { title: 'Hard G Rule', rows: [['ga, go, gu', '/ɡ/', 'voiced g as in go → ج', 'go']], note: 'Use the back of the tongue and turn the voice on.' },
   { title: 'Soft G Rule', rows: [['ge, gi, gy', '/dʒ/', 'like دج in many Arabic dialects', 'gem']], note: 'Soft g often sounds like the first sound in judge.' },
-  { title: 'Common suffix endings', rows: [['-tion, -tian', '/ʃən/', 'shun: action, musician → شَنْ', 'action'], ['-tious, -cious', '/ʃəs/', 'shus: delicious → شَسُ', 'delicious'], ['-tial, -cial', '/ʃəl/', 'shul: special → شَلْ', 'special'], ['-sion after vowel', '/ʒən/', 'zhun: vision → جَنْ', 'vision'], ['-sion after consonant', '/ʃən/', 'shun: tension', 'tension'], ['-able, -ible', '/əbəl/', 'uh-bul → أَبِلْ / إِبِلْ', 'capable'], ['-ance, -ence', '/əns/', 'uhns → أَنْسْ / إِنْسْ', 'distance'], ['-ment', '/mənt/', 'muhnt → مِنْث', 'movement'], ['-ness', '/nəs/', 'nuhs → نِسْ', 'kindness'], ['-ity', '/ɪti/', 'ih-tee → إِتِي', 'city'], ['-ly', '/li/', 'lee → لِي', 'quickly'], ['-ward', '/wərd/', 'werd → وَرْدْ', 'forward'], ['-wise', '/waɪz/', 'wize → وَايْزْ', 'otherwise']], note: 'Suffixes can change slightly by accent and stress; teach the main classroom pronunciation first.' },
+  { title: 'Common suffix endings', rows: [['-tion, -tian', '/ʃən/', 'shun: action, musician → شَنْ', 'action'], ['ti + vowel', '/ʃ/', 'sh: initiate, patient → ش', 'patient'],['-tious, -cious', '/ʃəs/', 'shus: delicious → شَسُ', 'delicious'], ['-tial, -cial', '/ʃəl/', 'shul: special → شَلْ', 'special'], ['-sion after vowel', '/ʒən/', 'zhun: vision → جَنْ', 'vision'], ['-sion after consonant', '/ʃən/', 'shun: tension', 'tension'], ['-able, -ible', '/əbəl/', 'uh-bul → أَبِلْ / إِبِلْ', 'capable'], ['-ance, -ence', '/əns/', 'uhns → أَنْسْ / إِنْسْ', 'distance'], ['-ment', '/mənt/', 'muhnt → مِنْث', 'movement'], ['-ness', '/nəs/', 'nuhs → نِسْ', 'kindness'], ['-ity', '/ɪti/', 'ih-tee → إِتِي', 'city'], ['-ly', '/li/', 'lee → لِي', 'quickly'], ['-ward', '/wərd/', 'werd → وَرْدْ', 'forward'], ['-wise', '/waɪz/', 'wize → وَايْزْ', 'otherwise']], note: 'Suffixes can change slightly by accent and stress; teach the main classroom pronunciation first. "ti + vowel" is the same /ʃ/ sound as -tion/-tian, just not confined to a word-final suffix.' },
   { title: 'Voiceless consonant digraphs', rows: [['ch', '/tʃ/', 'voiceless affricate: chin → تش', 'chin'], ['sh', '/ʃ/', 'voiceless fricative: ship → ش', 'ship'], ['th', '/θ/', 'voiceless dental fricative: thin → ث', 'thin'], ['ph', '/f/', 'voiceless fricative: phone → ف', 'phone'], ['wh', '/w/ or /ʍ/', 'usually /w/ in modern English: whale → و', 'whale']], note: 'Voiceless means the throat does not vibrate. Have students touch the throat to check.' },
   { title: 'Voiced consonant digraphs', rows: [['th', '/ð/', 'voiced dental fricative: this → ذ', 'this'], ['ng', '/ŋ/', 'voiced nasal: sing → نغ', 'sing'], ['gh', 'often silent; sometimes /f/ or /ɡ/', 'night = silent, laugh = /f/ → ف, ghost = /ɡ/ → ج', 'ghost']], note: 'Voiced means the throat vibrates. Arabic has ذ, but English /ð/ places the tongue lightly between the teeth.' },
 ];
+
+// Maps a short, stable rule id to the regex that finds the exact
+// substring within a word demonstrating it — kept as its own small table
+// (rather than parsed live from a RULES row's "-tion, -tian"-style
+// display text) so a word's literal spelling doesn't have to match that
+// display text verbatim. A WORDS entry opts in with `rule: '<id>'`;
+// wordRuleIndices() below turns that into character positions the same
+// way `longAIndices` does for the vowel-team highlight, and
+// highlightWord() renders both together. Comment on each entry names
+// which RULES title/row it corresponds to, for a human cross-reference —
+// nothing here reads RULES itself, so the two never need to change in
+// lockstep.
+const RULE_PATTERNS = {
+  'hard-c': /c(?=[aou])/i, // Hard C Rule
+  'soft-c': /c(?=[eiy])/i, // Soft C Rule
+  'hard-g': /g(?=[aou])/i, // Hard G Rule
+  'soft-g': /g(?=[eiy])/i, // Soft G Rule
+  'voiceless-ch': /ch/i, // Voiceless consonant digraphs — ch
+  'voiceless-sh': /sh/i, // Voiceless consonant digraphs — sh
+  'voiceless-th': /th/i, // Voiceless consonant digraphs — th
+  'voiceless-ph': /ph/i, // Voiceless consonant digraphs — ph
+  'voiceless-wh': /wh/i, // Voiceless consonant digraphs — wh
+  'voiced-th': /th/i, // Voiced consonant digraphs — th
+  'voiced-ng': /ng/i, // Voiced consonant digraphs — ng
+  'voiced-gh': /gh/i, // Voiced consonant digraphs — gh
+  'suffix-ti-vowel': /ti[aeiou]/i, // Common suffix endings — ti + vowel
+};
+
+// The character-index run (start..start+length-1) that RULE_PATTERNS[
+// item.rule] matches within item.word, in the same shape highlightIndices()
+// returns — empty when the word has no `rule` tag or the pattern simply
+// doesn't occur (both treated as "nothing to underline", never an error).
+function wordRuleIndices(item) {
+  const regex = item.rule && RULE_PATTERNS[item.rule];
+  if (!regex) return [];
+  const match = regex.exec(item.word);
+  if (!match) return [];
+  return Array.from({ length: match[0].length }, (_, i) => match.index + i);
+}
 
 // ---------- Sound groups (vowel-team tabs) ----------
 // The curriculum manuscript has one chapter per written spelling of a
@@ -431,9 +475,19 @@ function highlightIndices(word, override) {
   return [...indices].sort((a, b) => a - b);
 }
 
+// Renders the vowel-team highlight (pink background+color) and the
+// rule-pattern underline (amber text-decoration) together, character by
+// character. The two are visually independent styles — one recolors a
+// letter, the other underlines it — so a letter needing both just gets
+// both classes on the same span; there's no precedence to pick between
+// them and no case where one has to win.
 function highlightWord(item) {
-  const targets = new Set(highlightIndices(item.word, item.longAIndices));
-  return [...item.word].map((char, i) => (targets.has(i) ? `<span class="vowel">${escapeHtml(char)}</span>` : escapeHtml(char))).join('');
+  const vowelTargets = new Set(highlightIndices(item.word, item.longAIndices));
+  const ruleTargets = new Set(wordRuleIndices(item));
+  return [...item.word].map((char, i) => {
+    const classes = [vowelTargets.has(i) ? 'vowel' : '', ruleTargets.has(i) ? 'rule-pattern' : ''].filter(Boolean).join(' ');
+    return classes ? `<span class="${classes}">${escapeHtml(char)}</span>` : escapeHtml(char);
+  }).join('');
 }
 
 // Pacing levels are derived from word length, not the raw word.level field
