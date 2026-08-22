@@ -955,6 +955,7 @@ function selectProfile(id) {
   stopMemoryGame();
   stopRollReadGame();
   stopWordInvadersGame();
+  stopWordSearchGame();
   stopStartCountdown();
   render();
 }
@@ -1166,6 +1167,37 @@ let state = {
   // The full-screen "finished every level" celebration for Word
   // Invaders — same mechanism as state.memoryFinale/state.rollReadFinale.
   wordInvadersFinale: null,
+  // Word Search: a split-screen grid (left) + numbered audio word-bank
+  // (right). `words` is this round's word-bank entries, index-aligned
+  // with the tiles; `puzzle` is WordSearchLogic.buildPuzzle()'s output
+  // ({cells, placements}); `found` maps an UPPER-CASE word to true once
+  // its grid path has been correctly traced; `activeIndex` is which
+  // tile's audio was last played (-1 if none), and `selection` is the
+  // in-progress ordered list of {row,col} clicks toward it —
+  // onWordSearchCellClick() checks it against `puzzle.placements` once
+  // it's exactly as long as the active word. `wrongFlash` is the tile
+  // index currently showing a red "try again" flash (-1 otherwise), the
+  // same disposable-state-driven-flash trick flashRollReadTimeBonus()
+  // uses instead of a directly-inserted DOM node. See the "Word Search"
+  // section below for the full state machine.
+  wordSearchStarted: false,
+  wordSearch: {
+    status: 'idle',
+    level: 1,
+    words: [],
+    puzzle: null,
+    found: {},
+    activeIndex: -1,
+    selection: [],
+    wrongFlash: -1,
+    roundsWon: 0,
+    roundsToWin: 0,
+    secondsLeft: 0,
+    feedback: null,
+  },
+  // The full-screen "finished every level" celebration for Word Search —
+  // same mechanism as state.memoryFinale/state.rollReadFinale.
+  wordSearchFinale: null,
   // Admin content-management mode — off by default, never persisted, so a
   // page reload always lands back in the plain learner experience. See the
   // "ADMIN MODE" section near the end of this file. `adminAvailable` gates
@@ -1253,6 +1285,7 @@ const ICONS = {
   play: '<path d="M7 4l14 8-14 8z" fill="currentColor" stroke="none"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   heart: '<path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4.5c2 0 3.6 1.1 4.4 2.7.8-1.6 2.4-2.7 4.4-2.7C18 4.5 19.6 8 18 11.7 15.5 16.4 12 21 12 21z"/>',
+  search: '<circle cx="10" cy="10" r="7"/><path d="M20 20l-5.2-5.2"/>',
 };
 function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g>${ICONS[name] || ''}</g></svg>`;
@@ -2683,6 +2716,7 @@ function beginGameCountdown(view) {
     else if (view === 'memory') state.memoryStarted = true;
     else if (view === 'rollread') state.rollReadStarted = true;
     else if (view === 'wordinvaders') state.wordInvadersStarted = true;
+    else if (view === 'wordsearch') state.wordSearchStarted = true;
     // render() re-runs every wire*Events(), whose own idle-mount check
     // (e.g. wireMemoryGameEvents()'s `if (state.memory.status === 'idle')
     // startMemoryLevel(...)`) is what actually kicks the round off now
@@ -3672,6 +3706,20 @@ const GAME_INSTRUCTIONS = {
       `أكمل ${WordInvadersLogic.ROUNDS_PER_LEVEL} جولات (${WordInvadersLogic.ROUNDS_PER_LEVEL * WordInvadersLogic.WORDS_PER_ROUND} كلمة) لإنهاء المستوى الأول وفتح المستوى الثاني — أنهِ المستوى الثاني للحصول على وسام «بطل غزاة الكلمات».`,
     ],
   },
+  wordsearch: {
+    en: () => [
+      'Click a word tile on the right to hear it — its spelling is never shown, only a number, so listening is the only way to know it.',
+      'Find that word in the grid on the left by clicking its letters in order, left-to-right, top-to-bottom, or diagonally — never backwards.',
+      "Trace it correctly and the tile turns green and its path stays shaded in the grid. Trace it wrong and both flash red — click the tile again to hear it and try again.",
+      `Find every word in the bank to win the round; clear ${WordSearchLogic.ROUNDS_PER_LEVEL} rounds before time runs out to finish a level and earn a badge — finish level ${WordSearchLogic.LEVELS.length} for the Word Search Champion badge.`,
+    ],
+    ar: () => [
+      'اضغط على بلاطة كلمة على اليمين لسماعها — لا تُعرض تهجئتها أبدًا، فقط رقم، فالاستماع هو الطريقة الوحيدة لمعرفتها.',
+      'ابحث عن تلك الكلمة في الشبكة على اليسار بالضغط على حروفها بالترتيب، من اليسار لليمين، من أعلى لأسفل، أو قطريًا — أبدًا للخلف.',
+      'إذا تتبعتها بشكل صحيح، تتحول البلاطة إلى اللون الأخضر ويبقى مسارها مظللًا في الشبكة. وإذا أخطأت، يومض كلاهما بالأحمر — اضغط على البلاطة مرة أخرى لسماعها والمحاولة مجددًا.',
+      `اعثر على كل كلمة في القائمة للفوز بالجولة؛ أكمل ${WordSearchLogic.ROUNDS_PER_LEVEL} جولات قبل نفاد الوقت لإنهاء المستوى والحصول على وسام — أنهِ المستوى ${WordSearchLogic.LEVELS.length} للحصول على وسام «بطل البحث عن الكلمات».`,
+    ],
+  },
 };
 
 function instructionsTemplate() {
@@ -3897,6 +3945,498 @@ function wireWordInvadersTabEvents() {
   }
   const field = $('[data-word-invaders-field]');
   if (field) field.addEventListener('pointerdown', handleWordInvadersPointerDown);
+}
+
+// ---------- Word Search ----------
+// A split-screen Fun Zone game: a letter grid on the left, a bank of
+// numbered audio tiles on the right (design mocked up and confirmed
+// before this was built). Clicking a tile speaks its word — it never
+// shows the spelling anywhere, so listening is the only way to know it —
+// then the player traces that word's real position in the grid by
+// clicking its letters IN ORDER. A correct trace turns the tile green and
+// keeps its path shaded in the grid; a wrong one flashes both red and
+// clears the in-progress selection, so the player clicks the tile again
+// to re-hear it and retry. Finding every word in the bank wins the round;
+// WordSearchLogic.ROUNDS_PER_LEVEL rounds wins the level. Grid size, word
+// count, and time budget all grow with level — see WordSearchLogic.LEVELS.
+// The pure grid-building/selection-checking logic lives in
+// word-search-logic.js (WordSearchLogic) so it's unit-testable without a
+// DOM; everything here is what actually touches the browser: picking the
+// level's real words from WORDS, speech, timers, and rendering.
+
+// Every active word that fits inside a gridSize x gridSize grid — same
+// shape as wordInvadersWordPool()/rollReadWordPool(), just filtered by
+// length instead of (not) needing a photo.
+function wordSearchWordPool(gridSize) {
+  return WordSearchLogic.filterWordPool(WORDS, gridSize);
+}
+
+// This round's countdown, ticking once a second — identical mechanism to
+// startRollReadTimer()/stopRollReadTimer(), right down to calling
+// loseWordSearchRound() the instant it reaches zero.
+let wordSearchTimer = null;
+function stopWordSearchTimer() {
+  if (wordSearchTimer) {
+    clearInterval(wordSearchTimer);
+    wordSearchTimer = null;
+  }
+}
+function startWordSearchTimer() {
+  stopWordSearchTimer();
+  wordSearchTimer = setInterval(() => {
+    state.wordSearch.secondsLeft -= 1;
+    if (state.wordSearch.secondsLeft <= 0) {
+      stopWordSearchTimer();
+      loseWordSearchRound();
+    } else {
+      render();
+    }
+  }, 1000);
+}
+
+// The pending "next round"/"next level"/"retry round" pause timer (see
+// winWordSearchRound()/winWordSearchLevel()/loseWordSearchRound()).
+// Cleared by stopWordSearchGame() so leaving the view mid-pause can never
+// leave a timer armed to silently start a round while unmounted.
+let wordSearchAdvanceTimer = null;
+function stopWordSearchAdvanceTimer() {
+  if (wordSearchAdvanceTimer) {
+    clearTimeout(wordSearchAdvanceTimer);
+    wordSearchAdvanceTimer = null;
+  }
+}
+
+// The wrong-guess flash reset timer (see onWordSearchCellClick()) — kept
+// separate from wordSearchAdvanceTimer since the two are never pending at
+// once (a wrong guess can't also be the round's last word resolving).
+let wordSearchWrongTimer = null;
+
+function stopWordSearchGame() {
+  stopWordSearchTimer();
+  stopWordSearchAdvanceTimer();
+  clearTimeout(wordSearchWrongTimer);
+  stopStartCountdown();
+}
+
+// Builds one fresh round's word bank + grid for the level in
+// state.wordSearch.level, without touching roundsWon/level — used for
+// every round within a level (see winWordSearchRound()). Retries with a
+// different random word subset a few times if WordSearchLogic.buildPuzzle()
+// can't place the chosen words on this attempt (rare on a crowded small
+// grid, but possible) — see the module's own comment for why it can
+// return null at all.
+function startWordSearchRound() {
+  const ws = state.wordSearch;
+  const config = WordSearchLogic.levelConfig(ws.level);
+  if (!config) return;
+  const pool = wordSearchWordPool(config.gridSize);
+  let words = [];
+  let puzzle = null;
+  for (let attempt = 0; attempt < 8 && !puzzle; attempt++) {
+    words = WordSearchLogic.pickRandom(pool, Math.min(config.wordCount, pool.length), Math.random);
+    puzzle = WordSearchLogic.buildPuzzle(words.map((word) => word.word.toUpperCase()), config.gridSize, Math.random);
+  }
+  ws.words = words;
+  ws.puzzle = puzzle;
+  ws.found = {};
+  ws.activeIndex = -1;
+  ws.selection = [];
+  ws.wrongFlash = -1;
+  ws.secondsLeft = config.seconds;
+  ws.status = 'playing';
+  ws.feedback = null;
+  render();
+  startWordSearchTimer();
+}
+
+// Starts (or restarts) one level with fresh rounds-won and a brand new
+// first round — used for advancing to the next level on a win, retrying
+// the same level on a loss, and jumping to any level from the "all
+// levels complete" replay screen. Mirrors startRollReadLevel()/
+// startWordInvadersLevel() exactly.
+function startWordSearchLevel(level) {
+  const config = WordSearchLogic.levelConfig(level);
+  if (!config) return;
+  stopWordSearchGame();
+  state.wordSearch = {
+    status: 'idle',
+    level,
+    words: [],
+    puzzle: null,
+    found: {},
+    activeIndex: -1,
+    selection: [],
+    wrongFlash: -1,
+    roundsWon: 0,
+    roundsToWin: WordSearchLogic.ROUNDS_PER_LEVEL,
+    secondsLeft: config.seconds,
+    feedback: null,
+  };
+  startWordSearchRound();
+}
+
+function startWordSearchSession() {
+  startWordSearchLevel(state.wordSearch.level || 1);
+}
+
+// All of this level's rounds won before the timer ran out. Awards this
+// level's badge through the shared celebration-toast plumbing, then
+// either starts the next level after a short pause, or — after the final
+// level — awards the master badge and sets state.wordSearchFinale to
+// trigger the full-screen finale overlay instead of advancing. Mirrors
+// winRollReadLevel()/winWordInvadersLevel() exactly.
+function winWordSearchLevel() {
+  stopWordSearchTimer();
+  const level = state.wordSearch.level;
+  state.wordSearch.status = 'won';
+  const isFinalLevel = level === WordSearchLogic.LEVELS[WordSearchLogic.LEVELS.length - 1].level;
+  const levelBadge = awardWordSearchBadgeIfEligible(level);
+  if (levelBadge) {
+    clearTimeout(celebrationTimer);
+    state.celebration = levelBadge;
+    celebrationTimer = setTimeout(() => {
+      state.celebration = null;
+      render();
+    }, 2200);
+  }
+  render();
+  wordSearchAdvanceTimer = setTimeout(() => {
+    if (isFinalLevel) {
+      state.wordSearchFinale = awardWordSearchMasterBadgeIfEligible() || wordSearchMasterBadge();
+      render();
+    } else {
+      startWordSearchLevel(level + 1);
+    }
+  }, 2400);
+}
+
+// Every word in the round's bank found. Counts toward this level's
+// roundsToWin, either wins the level (winWordSearchLevel()) or — after a
+// brief pause — starts a fresh round (new word bank, new grid) in the
+// same level. Mirrors guessRollReadWord()'s round-complete branch.
+function winWordSearchRound() {
+  const ws = state.wordSearch;
+  ws.roundsWon += 1;
+  if (WordSearchLogic.advanceAfterRound(ws.roundsWon, ws.roundsToWin) === 'level-complete') {
+    winWordSearchLevel();
+    return;
+  }
+  ws.status = 'round-complete';
+  ws.feedback = { kind: 'correct', text: 'Every word found — next round starting…' };
+  render();
+  wordSearchAdvanceTimer = setTimeout(() => {
+    wordSearchAdvanceTimer = null;
+    startWordSearchRound();
+  }, 1600);
+}
+
+// Timer hit zero before every word in the round was found — retry the
+// same level's current round (fresh word bank + grid, roundsWon kept)
+// after a brief pause. Mirrors loseRollReadLevel()/loseWordInvadersRound()
+// — a timeout costs only the current round's progress, never the level's.
+function loseWordSearchRound() {
+  stopWordSearchAdvanceTimer();
+  clearTimeout(wordSearchWrongTimer);
+  state.wordSearch.status = 'lost';
+  render();
+  wordSearchAdvanceTimer = setTimeout(() => startWordSearchRound(), 2200);
+}
+
+// A word-bank tile was clicked: speaks its word aloud (never its
+// spelling — see wordSearchBankTemplate()) and makes it the active
+// target for the next grid clicks, abandoning any in-progress selection
+// for whichever tile was active before. This is also how the spec's
+// "wrong guess: click the tile again to replay and retry" works — a
+// fresh click here always resets the selection regardless of why it was
+// stale.
+function onWordSearchTileClick(index) {
+  const ws = state.wordSearch;
+  if (ws.status !== 'playing') return;
+  const word = ws.words[index];
+  if (!word || ws.found[word.word.toUpperCase()]) return;
+  clearTimeout(wordSearchWrongTimer);
+  ws.activeIndex = index;
+  ws.selection = [];
+  ws.wrongFlash = -1;
+  render();
+  speak(word.say || word.word, word.lang || 'en-US');
+}
+
+// A grid cell was clicked while a tile is active: appends it to the
+// in-progress selection, and once the selection is exactly as long as
+// the active word, checks it against the word's real placement
+// (WordSearchLogic.isSelectionCorrect() — same cells, same order).
+// Correct: the tile turns green and its path stays shaded in the grid
+// (see wordSearchGridTemplate()); if that was the round's last word,
+// winWordSearchRound() fires. Incorrect: both the tile and the clicked
+// cells flash red for a beat, then the selection clears so the player
+// has to click the tile again to re-hear it and retry — exactly what the
+// spec calls for.
+function onWordSearchCellClick(row, col) {
+  const ws = state.wordSearch;
+  if (ws.status !== 'playing' || ws.activeIndex === -1) return;
+  const word = ws.words[ws.activeIndex];
+  const upper = word.word.toUpperCase();
+  if (ws.found[upper]) return;
+  ws.selection.push({ row, col });
+  if (ws.selection.length < upper.length) {
+    render();
+    return;
+  }
+  if (WordSearchLogic.isSelectionCorrect(ws.selection, ws.puzzle.placements[upper])) {
+    ws.found[upper] = true;
+    ws.activeIndex = -1;
+    ws.selection = [];
+    render();
+    if (Object.keys(ws.found).length === ws.words.length) winWordSearchRound();
+    return;
+  }
+  ws.wrongFlash = ws.activeIndex;
+  render();
+  clearTimeout(wordSearchWrongTimer);
+  wordSearchWrongTimer = setTimeout(() => {
+    ws.selection = [];
+    ws.wrongFlash = -1;
+    render();
+  }, 550);
+}
+
+// One badge per level (word-search::1..3), plus a single bigger "master"
+// badge for finishing every level — same id/storage convention as every
+// other game's xBadgeId()/xBadgeForLevel()/xMasterBadge().
+const WORD_SEARCH_BADGE_PREFIX = 'word-search';
+const WORD_SEARCH_MASTER_BADGE_ID = `${WORD_SEARCH_BADGE_PREFIX}::master`;
+
+function wordSearchBadgeId(level) {
+  return `${WORD_SEARCH_BADGE_PREFIX}::${level}`;
+}
+
+function wordSearchBadgeForLevel(level) {
+  const colors = badgeColor(level, WordSearchLogic.LEVELS.length);
+  return {
+    id: wordSearchBadgeId(level),
+    label: `Word Search ${level}`,
+    affirmation: badgeAffirmation(level),
+    color: colors.base,
+    colorLight: colors.light,
+  };
+}
+
+// Same warm gold as every other game's master badge — a visually
+// distinct "finished everything" tier.
+function wordSearchMasterBadge() {
+  return {
+    id: WORD_SEARCH_MASTER_BADGE_ID,
+    label: 'Word Search Champion',
+    affirmation: 'You found every word!',
+    color: 'hsl(42 88% 48%)',
+    colorLight: 'hsl(42 88% 88%)',
+  };
+}
+
+function awardWordSearchBadgeIfEligible(level) {
+  const id = wordSearchBadgeId(level);
+  if (state.badges[id]) return null;
+  state.badges[id] = { earnedAt: Date.now() };
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
+  return wordSearchBadgeForLevel(level);
+}
+
+function awardWordSearchMasterBadgeIfEligible() {
+  if (state.badges[WORD_SEARCH_MASTER_BADGE_ID]) return null;
+  state.badges[WORD_SEARCH_MASTER_BADGE_ID] = { earnedAt: Date.now() };
+  writeProgress('badgesPhonics', JSON.stringify(state.badges));
+  return wordSearchMasterBadge();
+}
+
+// ---------- Word Search: view ----------
+// Status pill + rounds/found counter, the same shape rollReadStatusTemplate()
+// uses: 'Level N of 3' normally, 'Level complete!'/'Round complete!'/
+// "Time's up!" while status is briefly 'won'/'round-complete'/'lost'.
+function wordSearchStatusTemplate() {
+  const ws = state.wordSearch;
+  const label = ws.status === 'won' ? 'Level complete!' : ws.status === 'lost' ? "Time's up!" : ws.status === 'round-complete' ? 'Round complete!' : `Level ${ws.level} of ${WordSearchLogic.LEVELS.length}`;
+  return `<div class="word-search-status-group">
+    <span class="word-search-status-badge ${ws.status === 'won' ? 'is-won' : ws.status === 'lost' ? 'is-lost' : ''}">${icon('search')}${escapeHtml(label)}</span>
+    <span class="word-search-rounds">${ws.roundsWon}/${ws.roundsToWin} rounds · ${Object.keys(ws.found).length}/${ws.words.length} found</span>
+  </div>`;
+}
+
+// The countdown as its own large, hard-to-miss display — mirrors
+// rollReadTimerTemplate() exactly (minus the time-bonus popup; finding a
+// word here doesn't add time, since the round's difficulty already scales
+// with level).
+function wordSearchTimerTemplate() {
+  const ws = state.wordSearch;
+  const urgent = ws.status === 'playing' && ws.secondsLeft <= 10;
+  return `<div class="word-search-timer-display ${urgent ? 'is-urgent' : ''}">
+    <span class="word-search-timer-icon">${icon('bolt')}</span>
+    <span class="word-search-timer-value">${Math.max(0, ws.secondsLeft)}</span>
+    <span class="word-search-timer-unit">sec</span>
+  </div>`;
+}
+
+function wordSearchFeedbackTemplate() {
+  const ws = state.wordSearch;
+  if (ws.status === 'won') {
+    const isFinalLevel = ws.level === WordSearchLogic.LEVELS[WordSearchLogic.LEVELS.length - 1].level;
+    return `<p class="word-search-feedback is-correct" aria-live="polite">${isFinalLevel ? 'Every level complete!' : 'Level complete! Next level starting…'}</p>`;
+  }
+  if (ws.status === 'lost') {
+    return `<p class="word-search-feedback is-incorrect" aria-live="polite">Time's up — let's try that round again…</p>`;
+  }
+  if (ws.feedback) {
+    return `<p class="word-search-feedback is-${ws.feedback.kind}" aria-live="polite">${escapeHtml(ws.feedback.text)}</p>`;
+  }
+  const hint = ws.activeIndex === -1 ? 'Click a word to hear it, then trace it in the grid.' : 'Click the matching letters in order.';
+  return `<p class="word-search-feedback" aria-live="polite">${hint}</p>`;
+}
+
+// The letter grid. Every cell is disabled until a tile is active (no
+// target word means no cell click can mean anything yet — see
+// onWordSearchCellClick()'s own guard); a found word's path stays shaded
+// permanently, like a normal word-search puzzle, and the cells in the
+// current in-progress selection show either the neutral "picking" tint
+// or, for the ~550ms after a wrong guess (see onWordSearchCellClick()),
+// a red flash — the selection itself isn't cleared until that flash's
+// own timeout fires, which is what keeps the wrong cells visibly
+// highlighted for the whole flash instead of vanishing instantly.
+function wordSearchGridTemplate() {
+  const ws = state.wordSearch;
+  if (!ws.puzzle) return '';
+  const gridSize = ws.puzzle.cells.length;
+  const foundCells = {};
+  Object.keys(ws.found).forEach((word) => {
+    ws.puzzle.placements[word].forEach((p) => { foundCells[`${p.row}:${p.col}`] = true; });
+  });
+  const selectingCells = {};
+  ws.selection.forEach((p) => { selectingCells[`${p.row}:${p.col}`] = true; });
+  let cells = '';
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      const key = `${r}:${c}`;
+      const classes = ['word-search-cell'];
+      if (foundCells[key]) classes.push('is-found');
+      else if (selectingCells[key]) classes.push(ws.wrongFlash !== -1 ? 'is-wrong' : 'is-selecting');
+      const disabled = ws.activeIndex === -1;
+      cells += `<button type="button" class="${classes.join(' ')}" ${disabled ? 'disabled aria-disabled="true"' : `data-word-search-cell="${r}::${c}"`} aria-label="Row ${r + 1}, column ${c + 1}">${escapeHtml(ws.puzzle.cells[r][c])}</button>`;
+    }
+  }
+  return `<div class="word-search-grid" style="--word-search-size:${gridSize}" role="grid" aria-label="Word search grid">${cells}</div>`;
+}
+
+// The word bank. A tile never shows its own spelling — only a number and
+// the speaker icon — so listening is the only way to know what it says;
+// `data-word-search-tile` click wiring plays its audio (see
+// onWordSearchTileClick()). A found word's tile turns green and locks
+// (no more clicks needed); the active tile shows its selection progress
+// as a small "N/len" counter.
+function wordSearchBankTemplate() {
+  const ws = state.wordSearch;
+  return `<div class="word-search-bank">
+    <p class="word-search-bank-hint">Click a word to hear it, then trace it in the grid.</p>
+    ${ws.words.map((word, index) => {
+      const upper = word.word.toUpperCase();
+      const isFound = !!ws.found[upper];
+      const isActive = ws.activeIndex === index;
+      const isWrong = ws.wrongFlash === index;
+      const classes = ['word-search-tile'];
+      if (isFound) classes.push('is-found');
+      else if (isWrong) classes.push('is-wrong');
+      else if (isActive) classes.push('is-active');
+      const progress = isActive && !isFound ? `<span class="word-search-tile-progress">${ws.selection.length}/${upper.length}</span>` : '';
+      return `<button type="button" class="${classes.join(' ')}" ${isFound ? 'disabled aria-disabled="true"' : `data-word-search-tile="${index}"`} aria-label="Play word ${index + 1}">${icon('speaker')}Word ${index + 1}${progress}</button>`;
+    }).join('')}
+  </div>`;
+}
+
+// The split-screen board: status/rounds bar + timer up top, the grid on
+// the left and the word bank on the right (see .word-search-board's
+// grid-template-columns), feedback text underneath.
+function wordSearchGameTemplate() {
+  if (state.startCountdown && state.startCountdown.view === 'wordsearch') return gameStartCountdownTemplate();
+  if (!state.wordSearchStarted) return gameStartPromptTemplate();
+  return `
+    <section class="word-search-game">
+      <div class="word-search-top">
+        ${wordSearchStatusTemplate()}
+        ${wordSearchTimerTemplate()}
+      </div>
+      <div class="word-search-board">
+        <div class="word-search-grid-panel">${wordSearchGridTemplate()}</div>
+        ${wordSearchBankTemplate()}
+      </div>
+      ${wordSearchFeedbackTemplate()}
+    </section>`;
+}
+
+// The Word Search badges, shown in the shelf alongside every other game's
+// — same pattern as wordInvadersBadgeShelfSectionTemplate() above.
+function wordSearchBadgeShelfSectionTemplate() {
+  const levelBadges = WordSearchLogic.LEVELS.map((entry) => wordSearchBadgeForLevel(entry.level));
+  const master = wordSearchMasterBadge();
+  return `<section class="badge-shelf-group">
+    <h3>Word Search</h3>
+    <div class="badge-shelf-grid">
+      ${[...levelBadges, master].map((badge) => {
+        const earned = !!state.badges[badge.id];
+        return `<div class="badge-shelf-item ${earned ? '' : 'is-locked'}">
+          ${badgeMedalTemplate(badge, { size: 'md', earned })}
+          <span class="badge-shelf-item-label">${escapeHtml(badge.label)}</span>
+          <span class="badge-shelf-item-affirmation">${earned ? escapeHtml(badge.affirmation) : 'Not yet earned'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
+// The grand finale for finishing every level — mirrors rollReadFinaleTemplate()/
+// wordInvadersFinaleTemplate() exactly (same full-screen overlay mechanism,
+// same confetti/close-button/replay-levels shape), just relabeled.
+function wordSearchFinaleTemplate() {
+  if (!state.wordSearchFinale) return '';
+  const badge = state.wordSearchFinale;
+  const confetti = Array.from({ length: 28 }, (_, i) => `<span class="confetti-piece" style="--i:${i}"></span>`).join('');
+  return `<div class="word-search-finale-overlay" role="dialog" aria-label="All Word Search levels complete">
+    <div class="word-search-finale-confetti" aria-hidden="true">${confetti}</div>
+    <button class="word-search-finale-close" data-dismiss-word-search-finale aria-label="Close">${icon('close')}</button>
+    <div class="word-search-finale-panel">
+      ${celebrationAvatarTemplate('md')}
+      ${badgeMedalTemplate(badge, { size: 'xl' })}
+      <p class="word-search-finale-kicker">Champion!</p>
+      <h2>All ${WordSearchLogic.LEVELS.length} levels complete!</h2>
+      <p>${escapeHtml(badge.affirmation)} You found every word across every level — pick one below to play again.</p>
+      <div class="word-search-replay-levels">
+        ${WordSearchLogic.LEVELS.map((entry) => `<button type="button" data-word-search-finale-replay-level="${entry.level}">${icon('search')}Level ${entry.level}</button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function dismissWordSearchFinale() {
+  state.wordSearchFinale = null;
+  render();
+}
+
+// This view's own controls: the word-bank tiles and grid cells, plus
+// starting the session for as long as the view is mounted — status is
+// only ever 'idle' right after mount or a Reset, so this can't
+// double-fire on every render() while a round is already in progress.
+// Mirrors wireRollReadTabEvents()/wireWordInvadersTabEvents() exactly.
+function wireWordSearchTabEvents() {
+  if (state.view !== 'wordsearch') {
+    stopWordSearchGame();
+    return;
+  }
+  const startButton = $('[data-start-game]');
+  if (startButton) startButton.onclick = () => beginGameCountdown('wordsearch');
+  if (!state.wordSearchStarted) return;
+  if (state.wordSearch.status === 'idle' && !state.wordSearch.words.length) startWordSearchSession();
+  document.querySelectorAll('[data-word-search-tile]').forEach((button) => button.onclick = () => onWordSearchTileClick(Number(button.dataset.wordSearchTile)));
+  document.querySelectorAll('[data-word-search-cell]').forEach((button) => button.onclick = () => {
+    const [row, col] = button.dataset.wordSearchCell.split('::').map(Number);
+    onWordSearchCellClick(row, col);
+  });
 }
 
 // ---------- ADMIN MODE ----------
@@ -4292,6 +4832,7 @@ function badgeShelfTemplate() {
       ${memoryBadgeShelfSectionTemplate()}
       ${rollReadBadgeShelfSectionTemplate()}
       ${wordInvadersBadgeShelfSectionTemplate()}
+      ${wordSearchBadgeShelfSectionTemplate()}
     </div>
   </div>`;
 }
@@ -5370,6 +5911,7 @@ function funZoneMenuTemplate() {
     <button data-view="memory" role="menuitem" class="${state.view === 'memory' ? 'active' : ''}">${icon('cards')}Memory Match</button>
     <button data-view="rollread" role="menuitem" class="${state.view === 'rollread' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
     <button data-view="wordinvaders" role="menuitem" class="${state.view === 'wordinvaders' ? 'active' : ''}">${icon('bolt')}Word Invaders</button>
+    <button data-view="wordsearch" role="menuitem" class="${state.view === 'wordsearch' ? 'active' : ''}">${icon('search')}Word Search</button>
   </div>`;
 }
 
@@ -5382,7 +5924,7 @@ function render() {
   const activeWords = WORDS.filter((word) => !word.archived);
   const score = activeWords.filter((word) => state.done[word.word]).length;
   const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
-  const isFunZoneView = ['game', 'memory', 'rollread', 'wordinvaders'].includes(state.view);
+  const isFunZoneView = ['game', 'memory', 'rollread', 'wordinvaders', 'wordsearch'].includes(state.view);
   document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''} ${state.dyslexia ? 'dyslexia' : ''}`;
   $('#app').innerHTML = `
     <div class="header-widgets">
@@ -5425,7 +5967,7 @@ function render() {
     </section>
     <div class="app-layout ${state.view === 'learn' ? 'has-sidebar' : ''}">
       ${state.view === 'learn' ? sidebarTemplate() : ''}
-      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : state.view === 'wordinvaders' ? wordInvadersGameTemplate() : practiceTemplate()}</div>
+      <div class="app-main">${state.view === 'learn' ? learnTemplate() : state.view === 'rules' ? rulesTemplate() : state.view === 'game' ? catchGameTemplate() : state.view === 'memory' ? memoryGameTemplate() : state.view === 'rollread' ? rollReadGameTemplate() : state.view === 'wordinvaders' ? wordInvadersGameTemplate() : state.view === 'wordsearch' ? wordSearchGameTemplate() : practiceTemplate()}</div>
     </div>
     ${state.adminAvailable ? `<footer class="app-footer">
       <button class="admin-toggle-btn" data-admin-toggle aria-label="Toggle admin mode"></button>
@@ -5437,6 +5979,7 @@ function render() {
     ${memoryFinaleTemplate()}
     ${rollReadFinaleTemplate()}
     ${wordInvadersFinaleTemplate()}
+    ${wordSearchFinaleTemplate()}
     ${badgeShelfTemplate()}`;
   $('[data-voice]').value = state.voiceMode;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => {
@@ -5445,6 +5988,7 @@ function render() {
     stopCatchGame();
     stopMemoryGame();
     stopWordInvadersGame();
+    stopWordSearchGame();
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
     state.funZoneOpen = false;
@@ -5478,6 +6022,7 @@ function render() {
     stopCatchGame();
     stopMemoryGame();
     stopWordInvadersGame();
+    stopWordSearchGame();
     openProfilePicker();
   };
   $('[data-reset]').onclick = () => {
@@ -5499,6 +6044,10 @@ function render() {
     state.wordInvaders = { status: 'idle', level: 1, round: 1, wordIndex: 0, roundWords: [], currentWord: null, lives: 3, score: 0, scoreFlash: false, shipPct: 50, feedback: null };
     state.wordInvadersFinale = null;
     state.wordInvadersStarted = false;
+    stopWordSearchGame();
+    state.wordSearch = { status: 'idle', level: 1, words: [], puzzle: null, found: {}, activeIndex: -1, selection: [], wrongFlash: -1, roundsWon: 0, roundsToWin: 0, secondsLeft: 0, feedback: null };
+    state.wordSearchFinale = null;
+    state.wordSearchStarted = false;
     stopStartCountdown();
     removeProgress('donePhonics');
     removeProgress('badgesPhonics');
@@ -5556,12 +6105,18 @@ function render() {
     state.wordInvadersFinale = null;
     startWordInvadersLevel(Number(el.dataset.wordInvadersFinaleReplayLevel));
   });
+  document.querySelectorAll('[data-dismiss-word-search-finale]').forEach((el) => el.onclick = () => dismissWordSearchFinale());
+  document.querySelectorAll('[data-word-search-finale-replay-level]').forEach((el) => el.onclick = () => {
+    state.wordSearchFinale = null;
+    startWordSearchLevel(Number(el.dataset.wordSearchFinaleReplayLevel));
+  });
   wireAdminEvents();
   wireReadingEvents();
   wireCatchGameEvents();
   wireMemoryGameEvents();
   wireRollReadTabEvents();
   wireWordInvadersTabEvents();
+  wireWordSearchTabEvents();
 }
 
 render();
