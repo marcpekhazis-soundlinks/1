@@ -242,15 +242,17 @@ const WORDS = [
   // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
   // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
   // flags it too.
-  // lang: 'en-GB' + say: 'gradjuate' — confirmed correct by ear (real
+  // lang: 'en-GB' + say: 'gradjoo-eight' — confirmed correct by ear (real
   // browser voice, via a side-by-side audition page) only on a UK English
-  // voice; three earlier attempts (no override, 'graduayt', 'gradjooayt')
-  // were each confirmed wrong on the American voice this app normally
-  // requests. `lang` is a per-word override of the 'en-US' every other
-  // word requests (see speak()'s callers) — everything else in the app
-  // still teaches American pronunciation; this one word just didn't land
-  // correctly on any American voice tested.
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], lang: 'en-GB', say: 'gradjuate', sentence: "She will graduate from high school this year." },
+  // voice; several earlier attempts (no override, 'graduayt', 'gradjooayt',
+  // 'gradjuate') were each confirmed wrong — the last two swallowed the
+  // /dʒ/ ("j") sound entirely. The hyphen before "eight" (the same
+  // respelling already used for "ate" elsewhere) keeps that syllable from
+  // being merged into the "joo" before it. `lang` is a per-word override
+  // of the 'en-US' every other word requests (see speak()'s callers) —
+  // everything else in the app still teaches American pronunciation; this
+  // one word just didn't land correctly on any American voice tested.
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], lang: 'en-GB', say: 'gradjoo-eight', sentence: "She will graduate from high school this year." },
   // say: 'inishiate' — bare "initiate" mispronounces the "ti"; the
   // respelling forces the correct /ʃ/ ("sh") sound. Confirmed by ear via
   // the same audition page as "graduate" above.
