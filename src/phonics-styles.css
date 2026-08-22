@@ -752,6 +752,19 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
+
+/* Flags a word's Rules-tab pattern (e.g. the "sh" in "shade") — a plain
+   underline rather than .vowel's color+background pill, and amber
+   (--warning) rather than .vowel's pink (--rose), so a letter carrying
+   both (rare, but possible if a rule pattern and the vowel-team overlap)
+   stays legible as two distinct, non-competing cues instead of one
+   style fighting the other. */
+.rule-pattern {
+  text-decoration: underline;
+  text-decoration-color: var(--warning);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
 .arabic {
   display: inline-block;
   font-family: var(--font-arabic);
@@ -2176,6 +2189,7 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .hint, .contrast .group, .contrast .rule p, .contrast .ink-soft { color: #ccc; background: transparent; }
 .contrast .ipa { color: #fff; background: transparent; }
 .contrast .vowel { color: #ff5252; background: transparent; }
+.contrast .rule-pattern { text-decoration-color: #fff; }
 .contrast .arabic { background: transparent; color: #fff; }
 .contrast .tier-dot { background: #fff; color: #000; }
 .contrast .tier-heading::after { background: #fff; }
