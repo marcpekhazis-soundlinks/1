@@ -242,16 +242,13 @@ const WORDS = [
   // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
   // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
   // flags it too.
-  // say: 'gradjooayt' — same noun/verb heteronym issue as "estimate"/
-  // "moderate": TTS defaults the isolated word to the noun's short final
-  // vowel /ˈɡrædʒuɪt/ ("a graduate"); the respelling forces the verb's
-  // long-a /ˈɡrædʒueɪt/ that this card is actually teaching. An earlier
-  // respelling ('graduayt') fixed the ending but dropped the "j" sound
-  // in the middle ("GRAD-oo-ayt" instead of "GRAD-joo-ate") on at least
-  // one TTS engine — verified against espeak-ng's IPA output, which
-  // reads 'graduayt' as /ɡɹˈæduːˌeɪt/ (missing dʒ) but 'gradjooayt' as
-  // /ɡɹˈædʒuːˌeɪt/ (correct), matching this file's other -ayt endings.
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], say: 'gradjooayt', sentence: "She will graduate from high school this year." },
+  // No `say` override: confirmed by ear (real browser voice, via a
+  // side-by-side audition page) that the bare word already reads
+  // correctly as the verb — the noun/verb heteronym concern a couple of
+  // earlier respelling attempts were guarding against didn't actually
+  // apply to the voice this was tested with. Don't re-add one based on
+  // IPA/espeak-ng analysis alone, only on an actual listen.
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], sentence: "She will graduate from high school this year." },
   { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', sentence: "The teacher will initiate the new project today." },
   // Arabic hint corrected to the verb sense used here ("moderate a
   // debate"), not the adjective sense ("in the middle").
