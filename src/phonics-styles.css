@@ -7,7 +7,8 @@
        incorrect H8°   (nearly complementary to 215°, reads as "wrong")
        warning   H40°  (amber, between the complement and yellow — for
                         technical/mic issues, distinct from "wrong answer")
-       accent    H335° (triadic magenta, used only for phonics highlighting) */
+       accent    H335° (triadic magenta, used only for phonics highlighting)
+       fun       H265° (violet, the Fun Zone nav tab only) */
   --cream: #f5f8fe;
   --surface: #ffffff;
   --surface-alt: #edf4fe;
@@ -36,6 +37,11 @@
 
   --rose: #d93a78;
   --rose-soft: #fbe0ec;
+
+  --fun: #7c4fd6;
+  --fun-dark: #5f37ac;
+  --fun-light: #a06be0;
+  --fun-soft: #efe6fb;
 
   /* Word-card illustration system: every icon draws from this same small
      palette (all pulled from tokens above, plus two warm neutrals for
@@ -184,9 +190,9 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 /* ---------- Toolbar / navigation ---------- */
 /* padding-right reserves room for the fixed .header-widgets corner
    cluster (avatar + badge shelf toggle, top:16px;right:16px;z-index:15) —
-   without it, a wide enough tab row (7 tabs, including Word Run) can
-   extend far enough right to sit underneath those buttons once the
-   sticky toolbar pins to the top of the viewport on scroll. */
+   without it, a wide enough tab row can extend far enough right to sit
+   underneath those buttons once the sticky toolbar pins to the top of
+   the viewport on scroll. */
 .toolbar { position: sticky; top: 0; z-index: 5; padding: 16px 90px 8px 0; background: linear-gradient(var(--cream) 78%, transparent); }
 .tabs {
   display: flex;
@@ -208,10 +214,6 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   border: 0;
   background: transparent;
   border-radius: var(--radius-pill);
-  /* Trimmed a touch (from 20px) now that a 7th tab (Word Run) shares this
-     row — keeps every tab visible without the pill needing to scroll on
-     a typical desktop width, per .toolbar's padding-right reserving room
-     for the fixed .header-widgets corner cluster. */
   padding: 11px 16px;
   font-family: var(--font-heading);
   font-weight: 700;
@@ -228,6 +230,72 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
+
+/* Every PARENT tab gets its own hue from across the wheel — Learn words
+   keeps the app's original blue (above), Rules is green (--success),
+   Sound Practice is amber (--warning), Fun Zone is violet (--fun, new) —
+   reusing tokens already in the palette rather than inventing more. The
+   4 games *inside* the Fun Zone dropdown stay plain blue below, since
+   they're destinations, not entry points — the spectrum is purely a
+   top-level wayfinding cue. Every rule here repeats ".tabs button" to
+   match (rather than lose to) the base .tabs button:hover/.active rules'
+   specificity — a bare class+class selector would silently never win. */
+.tabs button.tab-rules:hover { background: var(--success-soft); color: var(--success-dark); }
+.tabs button.tab-rules.active { background: var(--success); color: #fff; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.tabs button.tab-practice:hover { background: var(--warning-soft); color: var(--warning-dark); }
+.tabs button.tab-practice.active { background: var(--warning); color: #fff; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.tabs button.fun-zone-toggle:hover { background: var(--fun-soft); color: var(--fun-dark); }
+.tabs button.fun-zone-toggle.active, .tabs button.fun-zone-toggle.is-open {
+  background: linear-gradient(135deg, var(--fun), var(--fun-light));
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+.tabs button.fun-zone-toggle.active:hover, .tabs button.fun-zone-toggle.is-open:hover { background: linear-gradient(135deg, var(--fun-dark), var(--fun)); color: #fff; }
+.fun-zone-caret { display: inline-flex; margin-left: 2px; transition: transform 0.18s ease; }
+.fun-zone-caret .icon { width: 0.85em; height: 0.85em; margin: 0; }
+.tabs button.fun-zone-toggle.is-open .fun-zone-caret { transform: rotate(180deg); }
+
+/* The dropdown itself is deliberately NOT a descendant of .tabs — see
+   funZoneMenuTemplate()'s comment in phonics-app.js for why (.tabs's
+   overflow-x: auto would silently clip it). position: fixed + top/left
+   set from JS via the toggle button's real bounding rect is what lets it
+   float free of that clipping while still visually anchoring under the
+   toggle. */
+.fun-zone-menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 230px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: fun-zone-pop 0.14s ease;
+}
+@keyframes fun-zone-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
+.fun-zone-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.fun-zone-menu button:hover { background: var(--primary-tint-50); color: var(--primary-dark); }
+.fun-zone-menu button.active { background: var(--primary); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .fun-zone-menu { animation: none; } }
 
 .controls-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
 .controls-bar button, .controls-bar select, .controls-bar label {
@@ -358,7 +426,13 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
 .sidebar-group-caret.is-open { transform: rotate(180deg); }
 .sidebar-group.is-soon .sidebar-group-name { color: var(--ink-soft); }
 
-.sidebar-levels { list-style: none; margin: 0; padding: 0 0 4px 10px; display: grid; gap: 6px; border-left: 2px solid var(--primary-tint-100); }
+/* display: grid is scoped to :not([hidden]) rather than sitting on the
+   base rule — an unconditional "display: grid" here is an author-origin
+   rule, which beats the browser's default [hidden] { display: none } in
+   the cascade regardless of specificity, so the hidden attribute would
+   silently stop actually hiding anything the moment display got set. */
+.sidebar-levels { list-style: none; margin: 0; padding: 0 0 4px 10px; gap: 6px; border-left: 2px solid var(--primary-tint-100); }
+.sidebar-levels:not([hidden]) { display: grid; }
 .sidebar-level {
   display: flex;
   align-items: center;
@@ -2082,6 +2156,18 @@ body.big .ipa, body.big .rule strong { font-size: 1.15em; }
 .contrast .tabs { border: 2px solid #fff; }
 .contrast .tabs button { color: #fff; background: transparent; }
 .contrast .tabs button.active { background: #fff; color: #000; box-shadow: none; }
+/* The rainbow tab hues and the Fun Zone dropdown are cosmetic — high
+   contrast mode flattens all of them to the same plain white-on-black
+   every other active/hovered control already uses. The Fun Zone menu
+   itself needs its own override (unlike the rainbow tabs, which the
+   broad .contrast .tabs button.active rule above already catches) since
+   it's a fixed-position sibling of .tabs, not a descendant. */
+.contrast .tabs button.fun-zone-toggle:hover { background: #fff; color: #000; }
+.contrast .tabs button.fun-zone-toggle.active, .contrast .tabs button.fun-zone-toggle.is-open { background: #fff; color: #000; box-shadow: none; }
+.contrast .fun-zone-menu { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .fun-zone-menu button { color: #fff; }
+.contrast .fun-zone-menu button:hover { background: #222; }
+.contrast .fun-zone-menu button.active { background: #fff; color: #000; }
 .contrast .controls-bar button.is-on { background: #fff; color: #000; border-color: #fff; }
 .contrast .progress { background: #000; box-shadow: none; border: 2px solid #fff; }
 .contrast .progress::before { background: #000; }

@@ -945,9 +945,12 @@ let state = {
   newProfileAvatarId: randomAvatarId(),
   profilePickerError: '',
   // Sidebar group expand/collapse, keyed by group id. A group not present
-  // here defaults to expanded only while it's the active soundGroup — see
-  // isGroupExpanded().
+  // here defaults to collapsed — see isGroupExpanded().
   expandedGroups: {},
+  // Whether the "Fun Zone" nav dropdown (Catch the Sound / Memory Match /
+  // Roll and Read / Word Invaders) is open — see wireXxx wiring in
+  // render() and the document-level outside-click/Escape handlers below.
+  funZoneOpen: false,
   big: false,
   contrast: false,
   dyslexia: false,
@@ -3059,13 +3062,13 @@ function wordCardTemplate(item) {
     </article>`;
 }
 
-// A sidebar group is expanded (its levels visible) when explicitly toggled
-// that way, or — with no explicit toggle yet — when it's the group whose
-// level is currently on screen. This keeps the tree data-driven: nothing
-// here names a specific group.
+// A sidebar group is expanded (its levels visible) only once explicitly
+// toggled open — every group starts collapsed to just its name, same as
+// "Exceptions" always has. Selecting a level (see the data-sidebar-level
+// handler) sets its own group's entry true, so the active tier stays
+// visible once you've picked it; nothing here names a specific group.
 function isGroupExpanded(groupId) {
-  if (groupId in state.expandedGroups) return state.expandedGroups[groupId];
-  return groupId === state.soundGroup;
+  return !!state.expandedGroups[groupId];
 }
 
 // Renders one sound group's nested, individually-clickable level list —
@@ -4073,11 +4076,26 @@ document.addEventListener('keydown', (event) => {
   } else if (event.key === 'Escape' && state.showProfilePicker && state.profilePickerMode === 'add' && getProfiles().length) {
     state.profilePickerMode = 'select';
     render();
+  } else if (event.key === 'Escape' && state.funZoneOpen) {
+    state.funZoneOpen = false;
+    render();
   }
 });
 document.addEventListener('keyup', (event) => {
   if (event.key === 'ArrowLeft') { catchKeys.left = false; wordInvadersKeys.left = false; }
   else if (event.key === 'ArrowRight') { catchKeys.right = false; wordInvadersKeys.right = false; }
+});
+// Closes the Fun Zone dropdown on any click outside its toggle button or
+// its own menu — e.g. clicking the hero, the sidebar, or blank page area.
+// Clicking the toggle itself, or a game inside the menu, is already
+// handled by their own onclick handlers (see render()'s wiring), which
+// both leave state.funZoneOpen false/already-toggled by the time this
+// listener runs, so there's no double-toggle risk from also matching here.
+document.addEventListener('click', (event) => {
+  if (state.funZoneOpen && !event.target.closest('[data-fun-zone-toggle], #funZoneMenu')) {
+    state.funZoneOpen = false;
+    render();
+  }
 });
 
 // Keeps state.soundGroup/state.level pointing at something real and, for
@@ -5285,6 +5303,22 @@ function wireProfilePickerEvents() {
   if (saveButton) saveButton.onclick = () => createProfile();
 }
 
+// The Fun Zone dropdown's contents — rendered as a fixed-position sibling
+// of .tabs (not a descendant), positioned via JS right after the DOM is
+// built (see the funZoneToggle wiring below), because .tabs has
+// overflow-x: auto — and per the CSS overflow spec, setting only one axis
+// to a scrolling value forces the other axis to compute as auto too, so
+// any absolutely-positioned dropdown nested inside .tabs would get
+// silently clipped the moment it extends past the tab row's own height.
+function funZoneMenuTemplate() {
+  return `<div class="fun-zone-menu" id="funZoneMenu" role="menu">
+    <button data-view="game" role="menuitem" class="${state.view === 'game' ? 'active' : ''}">${icon('basket')}Catch the Sound</button>
+    <button data-view="memory" role="menuitem" class="${state.view === 'memory' ? 'active' : ''}">${icon('cards')}Memory Match</button>
+    <button data-view="rollread" role="menuitem" class="${state.view === 'rollread' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
+    <button data-view="wordinvaders" role="menuitem" class="${state.view === 'wordinvaders' ? 'active' : ''}">${icon('bolt')}Word Invaders</button>
+  </div>`;
+}
+
 function render() {
   if (state.showProfilePicker) {
     renderProfilePicker();
@@ -5294,6 +5328,7 @@ function render() {
   const activeWords = WORDS.filter((word) => !word.archived);
   const score = activeWords.filter((word) => state.done[word.word]).length;
   const pct = activeWords.length ? Math.round((score / activeWords.length) * 100) : 0;
+  const isFunZoneView = ['game', 'memory', 'rollread', 'wordinvaders'].includes(state.view);
   document.body.className = `${state.big ? 'big' : ''} ${state.contrast ? 'contrast' : ''} ${state.dyslexia ? 'dyslexia' : ''}`;
   $('#app').innerHTML = `
     <div class="header-widgets">
@@ -5310,13 +5345,12 @@ function render() {
     </header>
     <nav class="toolbar" aria-label="Learning controls">
       <div class="tabs" role="tablist">
+        <button data-view="rules" role="tab" aria-selected="${state.view === 'rules'}" class="tab-rules ${state.view === 'rules' ? 'active' : ''}">${icon('eye')}Rules</button>
         <button data-view="learn" role="tab" aria-selected="${state.view === 'learn'}" class="${state.view === 'learn' ? 'active' : ''}">${icon('book')}Learn words</button>
-        <button data-view="rules" role="tab" aria-selected="${state.view === 'rules'}" class="${state.view === 'rules' ? 'active' : ''}">${icon('eye')}Rules</button>
-        <button data-view="practice" role="tab" aria-selected="${state.view === 'practice'}" class="${state.view === 'practice' ? 'active' : ''}">${icon('mic')}Sound Practice</button>
-        <button data-view="game" role="tab" aria-selected="${state.view === 'game'}" class="${state.view === 'game' ? 'active' : ''}">${icon('basket')}Catch the Sound</button>
-        <button data-view="memory" role="tab" aria-selected="${state.view === 'memory'}" class="${state.view === 'memory' ? 'active' : ''}">${icon('cards')}Memory Match</button>
-        <button data-view="rollread" role="tab" aria-selected="${state.view === 'rollread'}" class="${state.view === 'rollread' ? 'active' : ''}">${icon('dice')}Roll and Read</button>
-        <button data-view="wordinvaders" role="tab" aria-selected="${state.view === 'wordinvaders'}" class="${state.view === 'wordinvaders' ? 'active' : ''}">${icon('bolt')}Word Invaders</button>
+        <button data-view="practice" role="tab" aria-selected="${state.view === 'practice'}" class="tab-practice ${state.view === 'practice' ? 'active' : ''}">${icon('mic')}Sound Practice</button>
+        <button class="fun-zone-toggle ${isFunZoneView ? 'active' : ''} ${state.funZoneOpen ? 'is-open' : ''}" data-fun-zone-toggle type="button" aria-haspopup="true" aria-expanded="${state.funZoneOpen}">
+          ${icon('play')}Fun Zone<span class="fun-zone-caret" aria-hidden="true">${icon('chevron')}</span>
+        </button>
       </div>
       <div class="controls-bar">
         <label>Voice <select data-voice aria-label="Choose text to speech voice"><option value="female">Female voice</option><option value="male">Male voice</option></select></label>
@@ -5326,6 +5360,7 @@ function render() {
         <button data-reset>${icon('reset')}Reset</button>
       </div>
     </nav>
+    ${state.funZoneOpen ? funZoneMenuTemplate() : ''}
     ${state.admin ? adminBannerTemplate() : ''}
     <section class="instructions">
       <div class="instructions-header">
@@ -5358,8 +5393,27 @@ function render() {
     stopWordInvadersGame();
     state.reading.playing = false;
     state.reading.activeWordIndex = -1;
+    state.funZoneOpen = false;
     setState('view', button.dataset.view);
   });
+  const funZoneToggle = $('[data-fun-zone-toggle]');
+  if (funZoneToggle) {
+    funZoneToggle.onclick = () => {
+      state.funZoneOpen = !state.funZoneOpen;
+      render();
+    };
+    const funZoneMenuEl = $('#funZoneMenu');
+    if (funZoneMenuEl) {
+      // Positioned here (not in CSS) because the menu is now a fixed-
+      // position sibling of .tabs rather than a descendant — see
+      // funZoneMenuTemplate()'s comment for why. getBoundingClientRect()
+      // forces a synchronous layout, so this reads real, current
+      // coordinates even though innerHTML was just replaced above.
+      const rect = funZoneToggle.getBoundingClientRect();
+      funZoneMenuEl.style.top = `${rect.bottom + 8}px`;
+      funZoneMenuEl.style.left = `${rect.left}px`;
+    }
+  }
   $('[data-big]').onclick = () => setState('big', !state.big);
   $('[data-contrast]').onclick = () => setState('contrast', !state.contrast);
   $('[data-dyslexia]').onclick = () => setState('dyslexia', !state.dyslexia);
