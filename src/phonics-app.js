@@ -253,10 +253,13 @@ const WORDS = [
   // everything else in the app still teaches American pronunciation; this
   // one word just didn't land correctly on any American voice tested.
   { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], lang: 'en-GB', say: 'gradjoo-eight', sentence: "She will graduate from high school this year." },
-  // say: 'inishiate' — bare "initiate" mispronounces the "ti"; the
-  // respelling forces the correct /ʃ/ ("sh") sound. Confirmed by ear via
-  // the same audition page as "graduate" above.
-  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', say: 'inishiate', sentence: "The teacher will initiate the new project today." },
+  // say: 'inishee-eight' — bare "initiate" mispronounces the "ti"; "sh"
+  // fixes that part. The plain concatenated 'inishiate' had the same
+  // ending problem as graduate's original 'gradjuate' (the "-ate" tail
+  // collapsing into something else), fixed the same way: a hyphen before
+  // the already-proven "ate" -> "eight" respelling keeps that syllable
+  // from merging into the one before it.
+  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', say: 'inishee-eight', sentence: "The teacher will initiate the new project today." },
   // Arabic hint corrected to the verb sense used here ("moderate a
   // debate"), not the adjective sense ("in the middle").
   // say: 'moderayt' — TTS defaults the isolated word to the adjective's
