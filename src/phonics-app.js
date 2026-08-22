@@ -242,14 +242,15 @@ const WORDS = [
   // longAIndices: [5] — only the second "a" (-ate) is genuinely long; the
   // first is a short vowel, but the open-syllable guess (a-d-u) wrongly
   // flags it too.
-  // No `say` override: confirmed by ear (real browser voice, via a
-  // side-by-side audition page) that the bare word already reads
-  // correctly as the verb — the noun/verb heteronym concern a couple of
-  // earlier respelling attempts were guarding against didn't actually
-  // apply to the voice this was tested with. Don't re-add one based on
-  // IPA/espeak-ng analysis alone, only on an actual listen.
-  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], sentence: "She will graduate from high school this year." },
-  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', sentence: "The teacher will initiate the new project today." },
+  // say: 'gradjooayt' — confirmed correct by ear (real browser voice, via
+  // a side-by-side audition page comparing the bare word against several
+  // respellings) after two earlier attempts (no override, then
+  // 'graduayt') both turned out wrong on the actual voice being tested.
+  { word: 'graduate', arabic: 'يَتَخَرَّجُ', hint: 'to finish school or college and earn a degree', visual: 'graduate', level: 1, image: 'src/assets/images/Long A/174-graduate.jpg', longAIndices: [5], say: 'gradjooayt', sentence: "She will graduate from high school this year." },
+  // say: 'inishiate' — bare "initiate" mispronounces the "ti"; the
+  // respelling forces the correct /ʃ/ ("sh") sound. Confirmed by ear via
+  // the same audition page as "graduate" above.
+  { word: 'initiate', arabic: 'يَبْدَأُ / يَسْتَهِلُّ', hint: 'to start something new', visual: 'initiate', level: 1, image: 'src/assets/images/Long A/175-initiate.jpg', say: 'inishiate', sentence: "The teacher will initiate the new project today." },
   // Arabic hint corrected to the verb sense used here ("moderate a
   // debate"), not the adjective sense ("in the middle").
   // say: 'moderayt' — TTS defaults the isolated word to the adjective's
