@@ -579,18 +579,33 @@ function highlightIndices(word, override) {
 }
 
 // Renders the vowel-team highlight (pink background+color) and the
-// rule-pattern underline (amber text-decoration) together, character by
-// character. The two are visually independent styles — one recolors a
-// letter, the other underlines it — so a letter needing both just gets
-// both classes on the same span; there's no precedence to pick between
-// them and no case where one has to win.
+// rule-pattern underline (amber text-decoration) together. The two are
+// visually independent styles — one recolors a letter, the other
+// underlines it — so a letter needing both just gets both classes on the
+// same span; there's no precedence to pick between them and no case where
+// one has to win.
+//
+// Consecutive letters carrying the exact same class set (e.g. both letters
+// of an "ai" digraph) are wrapped in one shared span rather than one span
+// per letter — a run of adjacent same-class spans each get their own
+// rounded corners and padding, which reads as a crooked, two-box highlight
+// instead of one clean pill behind the whole run.
 function highlightWord(item) {
   const vowelTargets = new Set(highlightIndices(item.word, item.longAIndices));
   const ruleTargets = new Set(wordRuleIndices(item));
-  return [...item.word].map((char, i) => {
-    const classes = [vowelTargets.has(i) ? 'vowel' : '', ruleTargets.has(i) ? 'rule-pattern' : ''].filter(Boolean).join(' ');
-    return classes ? `<span class="${classes}">${escapeHtml(char)}</span>` : escapeHtml(char);
-  }).join('');
+  const classesAt = (i) => [vowelTargets.has(i) ? 'vowel' : '', ruleTargets.has(i) ? 'rule-pattern' : ''].filter(Boolean).join(' ');
+  const chars = [...item.word];
+  let html = '';
+  let i = 0;
+  while (i < chars.length) {
+    const classes = classesAt(i);
+    let j = i + 1;
+    while (j < chars.length && classesAt(j) === classes) j++;
+    const run = chars.slice(i, j).map(escapeHtml).join('');
+    html += classes ? `<span class="${classes}">${run}</span>` : run;
+    i = j;
+  }
+  return html;
 }
 
 // Pacing levels are derived from word length, not the raw word.level field
