@@ -742,10 +742,22 @@ h2, h3 { margin-top: 0; font-family: var(--font-heading); }
   font-weight: 800;
   color: var(--ink);
   margin: 0.08em 0;
+  /* Pinned rather than left at the UA default of "normal": that default
+     is derived from the loaded font's own metrics, so the .vowel pill
+     below it would sit at a different height per font — whichever one a
+     given browser/network actually resolves the heading font-family to. */
+  line-height: 1.15;
 }
 .vowel {
   color: var(--rose);
-  font-weight: 900;
+  /* 800, not 900: 800 is the heaviest weight Baloo 2 (--font-heading)
+     ships in this project's Google Fonts request — Baloo 2 has no 900
+     face at all. Asking for 900 forced every browser to synthesize a
+     fake bold on top of 800, and synthetic-bold rendering differs
+     enough between engines (e.g. Windows/DirectWrite vs Linux/FreeType)
+     that the pill's padding looked crooked across environments even
+     though it was already one shared span. */
+  font-weight: 800;
   background: var(--rose-soft);
   border-radius: 6px;
   padding: 0 0.06em;
