@@ -533,12 +533,14 @@ function wordsInSoundGroup(groupId) {
 }
 
 // Which letter index(es) inside a word carry the long-vowel sound, for the
-// red highlight on its card — e.g. just the "a" in "cake", "rain", "day",
-// not the whole "ai"/"ay" spelling. This is a deliberate approximation
-// rather than a full pronunciation model: for the "ai"/"ay" chapters it's
-// the "a" of that digraph; for the plain "a" chapter it's the "a" in a
-// silent-e syllable (cake, translate) or an open syllable (potato),
-// falling back to the last "a" in the word when neither pattern is found.
+// red highlight on its card — e.g. just the "a" in "cake" or "day", or both
+// letters of the "ai" digraph together in "rain" (the "ai" chapter's target
+// sound is the two-letter team, not a single letter within it) — not the
+// whole "ay" spelling though, since that chapter's approximation stays a
+// single-letter highlight. This is a deliberate approximation rather than a
+// full pronunciation model: for the plain "a" chapter it's the "a" in a
+// silent-e syllable (cake, translate) or an open syllable (potato), falling
+// back to the last "a" in the word when neither pattern is found.
 //
 // The open-syllable guess can't distinguish a genuinely long, stressed "a"
 // (radiate, aviator) from an unstressed one that merely happens to match
@@ -549,9 +551,16 @@ function highlightIndices(word, override) {
   if (override) return override;
   const lower = word.toLowerCase();
   const group = soundGroupId(word);
-  if (group === 'ay' || group === 'ai') {
+  if (group === 'ai') {
     const indices = [];
-    const digraph = new RegExp(group, 'g');
+    const digraph = /ai/g;
+    let match;
+    while ((match = digraph.exec(lower))) indices.push(match.index, match.index + 1);
+    return indices;
+  }
+  if (group === 'ay') {
+    const indices = [];
+    const digraph = /ay/g;
     let match;
     while ((match = digraph.exec(lower))) indices.push(match.index);
     return indices;
