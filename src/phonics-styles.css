@@ -1,67 +1,3166 @@
 :root {
-  --red: #e00000;
-  --blue: #194a8d;
-  --gold: #ffd166;
-  --green: #2a9d8f;
-  --cream: #fff8ef;
-  color: #151515;
+  /* Clean white base with a single confident blue primary (H215°); every
+     other accent is either a tint/shade of it, or — for feedback states —
+     a hue picked deliberately around the color wheel from that same 215°
+     starting point, so nothing feels arbitrary next to it:
+       success   H150° (blue-leaning green, analogous toward cyan)
+       incorrect H8°   (nearly complementary to 215°, reads as "wrong")
+       warning   H40°  (amber, between the complement and yellow — for
+                        technical/mic issues, distinct from "wrong answer")
+       accent    H335° (triadic magenta, used only for phonics highlighting)
+       fun       H265° (violet, the Fun Zone nav tab only) */
+  --cream: #f5f8fe;
+  --surface: #ffffff;
+  --surface-alt: #edf4fe;
+  --ink: #3a2e2b;
+  --ink-soft: #6e5d57;
+
+  --primary: #0c6ff9;
+  --primary-dark: #0956c6;
+  --primary-darker: #063e8f;
+  --primary-tint-50: #f2f7ff;
+  --primary-tint-100: #e4effe;
+  --primary-tint-200: #cadffd;
+  --primary-tint-300: #a6c9fb;
+
+  --success: #17a672;
+  --success-dark: #12805a;
+  --success-soft: #dff5ec;
+
+  --incorrect: #e14b3a;
+  --incorrect-dark: #b83a2c;
+  --incorrect-soft: #fce3e0;
+
+  --warning: #d98a1f;
+  --warning-dark: #a9690f;
+  --warning-soft: #fbedd6;
+
+  --rose: #d93a78;
+  --rose-soft: #fbe0ec;
+
+  --fun: #7c4fd6;
+  --fun-dark: #5f37ac;
+  --fun-light: #a06be0;
+  --fun-soft: #efe6fb;
+
+  /* Word-card illustration system: every icon draws from this same small
+     palette (all pulled from tokens above, plus two warm neutrals for
+     things like hay/wood/skin) so the whole set reads as one family. */
+  --illus-water: var(--primary);
+  --illus-leaf: var(--success);
+  --illus-sun: var(--warning);
+  --illus-sand: #f0c78a;
+  --illus-sand-dark: #c98f3e;
+  --illus-rose: var(--rose);
+  --illus-sky: var(--primary-tint-200);
+  --illus-outline: var(--primary-dark);
+  --illus-shade: rgba(6, 62, 143, 0.16);
+  --illus-shine: rgba(255, 255, 255, 0.6);
+  --illus-shadow: rgba(6, 62, 143, 0.14);
+  /* Catch the Sound's woven basket — its own warm-brown trio (distinct
+     from --illus-sand/-sand-dark above so the basket reads as a separate
+     prop sitting on the sand, not the same material). */
+  --illus-basket: #e2a75c;
+  --illus-basket-shade: #9c6425;
+  --illus-basket-weave: #7a4e1c;
+
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 14px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 2px 6px rgba(12, 40, 80, 0.08);
+  --shadow-md: 0 8px 20px rgba(12, 40, 80, 0.1);
+  --shadow-lg: 0 16px 36px rgba(12, 40, 80, 0.16);
+
+  --font-heading: 'Baloo 2', 'Segoe UI Rounded', Verdana, sans-serif;
+  --font-body: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  --font-arabic: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+  --font-dyslexia: 'Lexend', 'Segoe UI', Arial, sans-serif;
+
+  /* Dyslexia-friendly mode: soft cream surfaces + dark gray (not pure
+     black) text, lower-glare than the app's default white cards. */
+  --dyslexia-bg: #faf2df;
+  --dyslexia-surface: #f6ecd4;
+  --dyslexia-ink: #3a3a3a;
+  --dyslexia-ink-soft: #55524c;
+
+  color: var(--ink);
   background: var(--cream);
-  font-family: Inter, Arial, sans-serif;
+  font-family: var(--font-body);
 }
+
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--cream); }
-main { max-width: 1180px; margin: auto; padding: 24px; }
-.hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; background: linear-gradient(135deg, #fff, #ffe3d6); border: 4px solid #111; border-radius: 28px; padding: 28px; box-shadow: 10px 10px 0 #111; }
-.eyebrow { font-weight: 800; color: var(--blue); letter-spacing: .08em; text-transform: uppercase; }
-h1 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1; margin: .2em 0; }
-h2, h3 { margin-top: 0; }
-.progress { background: #111; color: #fff; border-radius: 24px; padding: 22px; text-align: center; min-width: 150px; }
-.progress strong { display: block; font-size: 2.5rem; }
-.toolbar { position: sticky; top: 0; z-index: 5; background: #fff8efdd; backdrop-filter: blur(8px); display: flex; gap: 10px; flex-wrap: wrap; padding: 18px 0; align-items: center; }
-.toolbar button, .toolbar select, .toolbar label, .actions button, .rule button { border: 3px solid #111; border-radius: 16px; background: #fff; padding: 12px 14px; font-weight: 800; box-shadow: 4px 4px 0 #111; cursor: pointer; }
-.toolbar label { display: inline-flex; align-items: center; gap: 8px; }
-.toolbar label select { border: 0; box-shadow: none; padding: 0; }
-.toolbar .active, .actions button:first-child { background: var(--gold); }
-.instructions, .rule, .card { background: #fff; border: 3px solid #111; border-radius: 24px; padding: 22px; box-shadow: 6px 6px 0 #111; }
-.instructions { margin: 12px 0 24px; }
-.instructions ol { line-height: 1.8; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
-.card { display: grid; grid-template-rows: auto 1fr auto; gap: 14px; }
-.card.done { background: #effaf7; border-color: var(--green); }
-.pic { border-radius: 20px; overflow: hidden; border: 2px dashed #777; background: #f7fbff; }
-.word-image { width: 100%; display: block; }
-.svgBg { fill: url(#none); fill: #eaf5ff; }
-.svgStroke { fill: none; stroke: #194a8d; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
-.svgText, .svgCaption { fill: #111; font: 800 28px Arial, sans-serif; }
-.svgCaption { font-size: 22px; }
-.group { color: var(--blue); font-weight: 900; }
-.card h2 { font-size: 2.4rem; margin: .1em 0; }
-.vowel { color: var(--red); font-weight: 950; text-decoration: underline; text-decoration-thickness: 5px; text-underline-offset: 6px; }
-.arabic { font-size: 1.45rem; font-weight: 800; }
-.hint { color: #555; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.actions button:last-child { background: #d9f99d; }
-.rules { display: grid; gap: 18px; }
-.rules > h2 { text-align: center; font-size: 2.4rem; text-decoration: underline; }
-.rule p { color: #444; font-weight: 700; }
-.rule ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin: 0; padding-left: 24px; }
-.rule li { font-size: 1.2rem; line-height: 2; }
-.rule strong { font-size: 1.35rem; }
-.ipa { color: var(--red); font-weight: 950; }
-.rule b { font-size: 1rem; margin-inline: 6px; }
-.big { font-size: 125%; }
-.contrast { background: #000; color: #fff; }
-.contrast .hero, .contrast .instructions, .contrast .card, .contrast .rule, .contrast button, .contrast select, .contrast label { background: #000; color: #fff; border-color: #fff; box-shadow: 6px 6px 0 #ff0; }
-.contrast .pic { background: #111; border-color: #ff0; }
-.contrast .hint, .contrast .group, .contrast .rule p { color: #ff0; }
-.contrast .vowel, .contrast .ipa { color: #ff5252; }
-.contrast .svgBg { fill: #111; }
-.contrast .svgStroke { stroke: #ff0; }
-.contrast .svgText, .contrast .svgCaption { fill: #fff; }
-@media (max-width: 700px) {
-  .hero { grid-template-columns: 1fr; box-shadow: 5px 5px 0 #111; }
-  main { padding: 12px; }
-  .toolbar { position: static; }
-  .toolbar button, .toolbar select, .toolbar label { width: 100%; justify-content: center; }
-  .card h2 { font-size: 2rem; }
+
+body {
+  margin: 0;
+  background-color: var(--cream);
+  background-image: radial-gradient(circle at 1px 1px, rgba(12, 111, 249, 0.07) 1px, transparent 0);
+  background-size: 26px 26px;
+  -webkit-font-smoothing: antialiased;
 }
+
+main { max-width: 1180px; margin: auto; padding: 28px 24px 60px; }
+
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
+
+.icon {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  vertical-align: -0.16em;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon.icon-fill-only { stroke: none; }
+button .icon, .tabs button .icon { margin-right: 0.4em; }
+
+/* ---------- Hero ---------- */
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 28px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 34px 38px;
+  box-shadow: var(--shadow-lg);
+  isolation: isolate;
+}
+.hero::before, .hero::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  z-index: -1;
+}
+.hero::before { width: 220px; height: 220px; background: var(--primary); opacity: 0.08; top: -90px; right: 60px; }
+.hero::after { width: 160px; height: 160px; background: var(--primary); opacity: 0.06; bottom: -70px; left: 20%; }
+.eyebrow {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: #fff;
+  background: var(--primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+h1 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(1.9rem, 4.4vw, 3.4rem);
+  line-height: 1.08;
+  margin: 0.35em 0 0.2em;
+  color: var(--ink);
+}
+h2, h3 { margin-top: 0; font-family: var(--font-heading); }
+.hero p:last-child { margin: 0; color: var(--ink-soft); line-height: 1.6; max-width: 56ch; font-size: 1.02rem; }
+
+.progress {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: conic-gradient(var(--primary) calc(var(--pct, 0) * 1%), var(--primary-tint-100) 0);
+  display: grid;
+  place-items: center;
+  padding: 9px;
+  box-shadow: var(--shadow-md);
+}
+.progress::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.progress-inner { position: relative; z-index: 1; text-align: center; }
+.progress strong { display: block; font-family: var(--font-heading); font-size: 1.7rem; color: var(--ink); line-height: 1; }
+.progress span { display: block; margin-top: 4px; font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.02em; }
+
+/* ---------- Toolbar / navigation ---------- */
+/* padding-right reserves room for the fixed .header-widgets corner
+   cluster (avatar + badge shelf toggle, top:16px;right:16px;z-index:15) —
+   without it, a wide enough tab row can extend far enough right to sit
+   underneath those buttons once the sticky toolbar pins to the top of
+   the viewport on scroll. */
+.toolbar { position: sticky; top: 0; z-index: 5; padding: 16px 90px 8px 0; background: linear-gradient(var(--cream) 78%, transparent); }
+.tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  padding: 6px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--primary-tint-100);
+  overflow-x: auto;
+  scrollbar-width: none;
+  width: fit-content;
+  max-width: 100%;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  padding: 11px 16px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+}
+.tabs button:hover { background: var(--primary-tint-50); color: var(--primary-dark); }
+.tabs button.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Every PARENT tab gets its own hue from across the wheel — Learn words
+   keeps the app's original blue (above), Rules is green (--success),
+   Sound Practice is amber (--warning), Fun Zone is violet (--fun, new) —
+   reusing tokens already in the palette rather than inventing more. The
+   4 games *inside* the Fun Zone dropdown stay plain blue below, since
+   they're destinations, not entry points — the spectrum is purely a
+   top-level wayfinding cue. Every rule here repeats ".tabs button" to
+   match (rather than lose to) the base .tabs button:hover/.active rules'
+   specificity — a bare class+class selector would silently never win. */
+.tabs button.tab-rules:hover { background: var(--success-soft); color: var(--success-dark); }
+.tabs button.tab-rules.active { background: var(--success); color: #fff; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.tabs button.tab-practice:hover { background: var(--warning-soft); color: var(--warning-dark); }
+.tabs button.tab-practice.active { background: var(--warning); color: #fff; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.tabs button.fun-zone-toggle:hover { background: var(--fun-soft); color: var(--fun-dark); }
+.tabs button.fun-zone-toggle.active, .tabs button.fun-zone-toggle.is-open {
+  background: linear-gradient(135deg, var(--fun), var(--fun-light));
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+.tabs button.fun-zone-toggle.active:hover, .tabs button.fun-zone-toggle.is-open:hover { background: linear-gradient(135deg, var(--fun-dark), var(--fun)); color: #fff; }
+.fun-zone-caret { display: inline-flex; margin-left: 2px; transition: transform 0.18s ease; }
+.fun-zone-caret .icon { width: 0.85em; height: 0.85em; margin: 0; }
+.tabs button.fun-zone-toggle.is-open .fun-zone-caret { transform: rotate(180deg); }
+
+/* The dropdown itself is deliberately NOT a descendant of .tabs — see
+   funZoneMenuTemplate()'s comment in phonics-app.js for why (.tabs's
+   overflow-x: auto would silently clip it). position: fixed + top/left
+   set from JS via the toggle button's real bounding rect is what lets it
+   float free of that clipping while still visually anchoring under the
+   toggle. */
+.fun-zone-menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 230px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: fun-zone-pop 0.14s ease;
+}
+@keyframes fun-zone-pop { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
+.fun-zone-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.fun-zone-menu button:hover { background: var(--primary-tint-50); color: var(--primary-dark); }
+.fun-zone-menu button.active { background: var(--primary); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .fun-zone-menu { animation: none; } }
+
+.controls-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+.controls-bar button, .controls-bar select, .controls-bar label {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint-50);
+  color: var(--primary-dark);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.controls-bar label { display: inline-flex; align-items: center; gap: 8px; cursor: default; color: var(--ink-soft); background: var(--surface); }
+.controls-bar label select { border: 0; box-shadow: none; padding: 0; background: transparent; font-size: 0.85rem; color: var(--ink); }
+.controls-bar button:hover, .controls-bar select:hover { border-color: var(--primary-tint-300); color: var(--primary-darker); }
+.controls-bar button.is-on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ---------- Sound-group tabs / level filter / group progress ---------- */
+.tab-soon {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.35);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+.tabs button.active .tab-soon { background: rgba(255, 255, 255, 0.28); }
+.tabs button:not(.active) .tab-soon { background: var(--primary-tint-100); color: var(--primary-dark); }
+
+.group-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin: 0 0 26px;
+  box-shadow: var(--shadow-sm);
+}
+.group-progress-label {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  color: var(--primary-darker);
+  font-size: 0.92rem;
+}
+.group-progress-track {
+  flex: 1 1 160px;
+  min-width: 120px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-tint-100);
+  overflow: hidden;
+}
+.group-progress-fill {
+  height: 100%;
+  width: calc(var(--pct, 0) * 1%);
+  background: var(--primary);
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+.group-progress-value { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+
+.empty-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px dashed var(--primary-tint-300);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  color: var(--ink-soft);
+}
+.empty-group .icon { width: 1.6em; height: 1.6em; color: var(--primary-tint-300); }
+.empty-group p { margin: 0; font-size: 0.98rem; }
+
+/* ---------- Sidebar navigation (sound groups → levels) ----------
+   A course-roadmap-style tree: one collapsible branch per sound group,
+   each expanding to its levels as individually clickable rows. Layout
+   only — which levels exist and whether they're locked is entirely
+   data-driven (see groupLevels()/isLevelUnlocked() in phonics-app.js),
+   so nothing here assumes a particular group or level count. */
+.app-layout { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
+.app-layout.has-sidebar { grid-template-columns: 260px 1fr; }
+.app-main { min-width: 0; }
+
+.sidebar {
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-md);
+}
+.sidebar-tree { display: grid; gap: 6px; }
+.sidebar-group { display: grid; gap: 4px; }
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  padding: 10px 10px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sidebar-group-header:hover:not(:disabled) { background: var(--primary-tint-50); color: var(--primary-dark); }
+.sidebar-group-header:disabled { color: var(--ink-soft); opacity: 0.6; cursor: default; }
+.sidebar-group-name { flex: 1 1 auto; }
+.sidebar-group-caret { display: inline-flex; transition: transform 0.18s ease; color: var(--ink-soft); }
+.sidebar-group-caret .icon { width: 0.95em; height: 0.95em; }
+.sidebar-group-caret.is-open { transform: rotate(180deg); }
+.sidebar-group.is-soon .sidebar-group-name { color: var(--ink-soft); }
+
+/* display: grid is scoped to :not([hidden]) rather than sitting on the
+   base rule — an unconditional "display: grid" here is an author-origin
+   rule, which beats the browser's default [hidden] { display: none } in
+   the cascade regardless of specificity, so the hidden attribute would
+   silently stop actually hiding anything the moment display got set. */
+.sidebar-levels { list-style: none; margin: 0; padding: 0 0 4px 10px; gap: 6px; border-left: 2px solid var(--primary-tint-100); }
+.sidebar-levels:not([hidden]) { display: grid; }
+.sidebar-level {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  width: 100%;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint-50);
+  color: var(--ink);
+  padding: 9px 12px;
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.sidebar-level:hover:not(:disabled) { border-color: var(--primary-tint-300); }
+.sidebar-level.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.sidebar-level.active .sidebar-level-count { color: rgba(255, 255, 255, 0.85); }
+.sidebar-level.active .sidebar-level-track { background: rgba(255, 255, 255, 0.35); }
+.sidebar-level.active .sidebar-level-fill { background: #fff; }
+.sidebar-level.is-locked, .sidebar-level:disabled {
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.sidebar-level-lock { display: inline-flex; flex: none; color: var(--ink-soft); }
+.sidebar-level-lock .icon { width: 0.95em; height: 0.95em; margin: 0; }
+.sidebar-level-done { display: inline-flex; flex: none; color: var(--success); }
+.sidebar-level-done .icon { width: 1em; height: 1em; margin: 0; }
+.sidebar-level.active .sidebar-level-done { color: #fff; }
+.sidebar-level-name { flex: 1 1 auto; font-family: var(--font-heading); font-weight: 800; font-size: 0.88rem; }
+.sidebar-level-progress { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; }
+.sidebar-level-track { flex: 1 1 auto; height: 6px; min-width: 40px; border-radius: var(--radius-pill); background: var(--primary-tint-200); overflow: hidden; }
+.sidebar-level-fill { display: block; height: 100%; width: calc(var(--pct, 0) * 1%); background: var(--primary); border-radius: inherit; transition: width 0.25s ease; }
+.sidebar-level.is-complete:not(.active) .sidebar-level-fill { background: var(--success); }
+.sidebar-level-count { font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+
+.level-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; margin: 0 0 18px; }
+.level-heading h2 { font-size: 1.15rem; color: var(--ink); margin: 0; }
+.level-heading-sep { color: var(--primary-tint-300); }
+.level-heading-progress { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+
+.level-complete-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 0 0 22px;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--success-soft);
+  border: 2px solid rgba(23, 166, 114, 0.3);
+  color: var(--success-dark);
+  font-weight: 700;
+}
+.level-complete-banner .icon { flex: none; width: 1.2em; height: 1.2em; }
+.level-complete-banner span { flex: 1 1 auto; }
+.level-complete-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+  color: #fff;
+  padding: 8px 16px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.level-complete-action:hover { background: var(--success-dark); }
+.level-complete-action .icon { width: 0.9em; height: 0.9em; transform: rotate(-90deg); }
+
+/* ---------- Shared surfaces ---------- */
+.instructions, .rule, .card {
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-md);
+}
+.instructions { margin: 18px 0 30px; }
+.instructions-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.instructions h2 { font-size: 1.25rem; color: var(--ink); margin: 0; }
+.instructions ol {
+  line-height: 1.85;
+  color: var(--ink-soft);
+  padding-left: 0;
+  margin: 12px 0 0;
+  list-style: none;
+  counter-reset: step;
+}
+.instructions ol li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 38px;
+  margin-bottom: 6px;
+}
+.instructions ol li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0; top: 0.05em;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: grid;
+  place-items: center;
+}
+/* Arabic instructions (see GAME_INSTRUCTIONS/instructionsTemplate() in
+   JS) render the list right-to-left via dir="rtl" — mirror the numbered
+   badge and its indent onto the right edge instead of the left. */
+.instructions ol[dir="rtl"] li { padding-left: 0; padding-right: 38px; }
+.instructions ol[dir="rtl"] li::before { left: auto; right: 0; }
+
+/* The small "English / العربية" pill next to a game's instructions (see
+   instructionsLangToggleTemplate()) — same pill-toggle visual language as
+   .reading-style-toggle, reused rather than duplicated. */
+.instructions-lang-toggle { display: inline-flex; gap: 4px; padding: 3px; background: var(--primary-tint-50); border-radius: var(--radius-pill); }
+.instructions-lang-toggle button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 7px 13px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.instructions-lang-toggle button.active { background: var(--primary); color: #fff; }
+
+/* ---------- Start Game flow (shared by Catch the Sound, Memory Match,
+   and Roll and Read) ----------
+   gameStartPromptTemplate()'s gate, shown in place of a game's own
+   board/field until state.<game>Started flips true, and
+   gameStartCountdownTemplate()'s brief "Ready… Set… Go!" flourish that
+   follows a click — see beginGameCountdown() in JS. Both replace the
+   game's whole <section>, so they inherit that section's normal width;
+   only the fixed height keeps every game's panel from jumping around as
+   it swaps between the prompt/countdown/live board. */
+.game-start-prompt {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  min-height: 320px;
+  align-content: center;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  box-shadow: var(--shadow-md);
+}
+.game-start-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+}
+.game-start-icon .icon { width: 1.8em; height: 1.8em; }
+.game-start-hint { margin: 0; color: var(--ink-soft); font-size: 0.95rem; max-width: 40ch; }
+.game-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  padding: 14px 28px;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.game-start-btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.game-start-btn .icon { width: 1.1em; height: 1.1em; margin: 0; }
+
+.game-start-countdown {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.game-start-countdown-word {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(2.4rem, 8vw, 4rem);
+  color: #fff;
+  animation: game-start-countdown-pop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.game-start-countdown-word.is-go { color: var(--success); }
+@keyframes game-start-countdown-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-start-countdown-word { animation: none !important; }
+}
+
+/* ---------- Tier grouping (by letter count, within a sound tab) ---------- */
+.tier-group { margin-bottom: 34px; }
+.tier-group:last-child { margin-bottom: 0; }
+.tier-heading { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.tier-heading .tier-dot {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-heading); font-weight: 800; color: #fff; font-size: 1rem;
+  background: var(--primary); flex: none;
+  box-shadow: var(--shadow-sm);
+}
+.tier-heading h2 { font-size: 1.15rem; color: var(--ink); margin: 0; }
+.tier-heading::after { content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, var(--primary-tint-200), transparent); }
+
+/* auto-fill (not auto-fit): a tier with a single card — e.g. "participate",
+   alone in its own 11-letter tier — must not have its lone column track
+   collapse away and let that one card stretch to fill the whole row. */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+
+/* ---------- Cards ---------- */
+.card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.card.done { background: var(--success-soft); border-color: rgba(23, 166, 114, 0.3); }
+.done-badge {
+  position: absolute; top: -12px; right: -10px;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--success); color: #fff;
+  display: grid; place-items: center;
+  box-shadow: var(--shadow-md);
+  animation: pop-in 0.3s ease;
+}
+.done-badge .icon { width: 1.05em; height: 1.05em; margin: 0; }
+
+.pic { border-radius: var(--radius-md); overflow: hidden; background: var(--primary-tint-50); }
+.word-image { width: 100%; display: block; }
+/* A real illustration photo (item.image), shown instead of .word-image
+   when a word has one — see wordCardPic() in JS. Matches .word-image's
+   own viewBox aspect ratio (300x230) via object-fit: cover so photo and
+   SVG cards stay the same height in the same grid, regardless of the
+   source photo's native dimensions. */
+.word-photo { width: 100%; aspect-ratio: 300 / 230; display: block; object-fit: cover; }
+.svgBg { fill: var(--primary-tint-50); }
+/* Legacy fallback for any icon not yet migrated to the .i-* illustration
+   system below (kept only as a safety net, e.g. the generic "display"
+   icon) — children with their own .i-* class override this via the
+   normal cascade, so migrated and not-yet-migrated icons can coexist. */
+.svgStroke { fill: none; stroke: var(--primary-dark); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.svgText, .svgCaption { fill: var(--ink); font: 800 28px var(--font-heading), Arial, sans-serif; }
+.svgCaption { font-size: 22px; }
+
+/* Word-card illustrations: one class per shape, drawing from the palette
+   above, so every icon in the app shares the same fills/outline/depth
+   cues. i-shade/i-shine/i-shadow are translucent overlays used on top of
+   a base shape for simple two-tone volume, a highlight, or a ground
+   shadow — the same three tricks reused everywhere for consistency. */
+.word-image .i-sand-dark { fill: var(--illus-sand-dark); stroke: none; }
+.word-image .i-water   { fill: var(--illus-water); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-leaf    { fill: var(--illus-leaf); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-sun     { fill: var(--illus-sun); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-sand    { fill: var(--illus-sand); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-rose    { fill: var(--illus-rose); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-sky     { fill: var(--illus-sky); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-white   { fill: var(--surface); stroke: var(--illus-outline); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-ink     { fill: var(--illus-outline); stroke: none; }
+.word-image .i-line    { fill: none; stroke: var(--illus-outline); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.word-image .i-shade   { fill: var(--illus-shade); stroke: none; }
+.word-image .i-shine   { fill: var(--illus-shine); stroke: none; }
+.word-image .i-shadow  { fill: var(--illus-shadow); stroke: none; }
+
+.group {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+  background: var(--primary-tint-100);
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  margin: 0 0 8px;
+}
+.card h2 {
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0.08em 0;
+}
+.vowel {
+  color: var(--rose);
+  font-weight: 900;
+  background: var(--rose-soft);
+  border-radius: 6px;
+  padding: 0 0.06em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Flags a word's Rules-tab pattern (e.g. the "sh" in "shade") — a plain
+   underline rather than .vowel's color+background pill, and amber
+   (--warning) rather than .vowel's pink (--rose), so a letter carrying
+   both (rare, but possible if a rule pattern and the vowel-team overlap)
+   stays legible as two distinct, non-competing cues instead of one
+   style fighting the other. */
+.rule-pattern {
+  text-decoration: underline;
+  text-decoration-color: var(--warning);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+.arabic {
+  display: inline-block;
+  font-family: var(--font-arabic);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-darker);
+  background: var(--primary-tint-100);
+  padding: 5px 13px;
+  border-radius: var(--radius-sm);
+}
+.hint { color: var(--ink-soft); font-size: 0.96rem; line-height: 1.5; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.actions button, .rule button {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+  padding: 10px 15px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.actions button:hover, .rule button:hover { background: var(--primary); color: #fff; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.actions button:active, .rule button:active { transform: translateY(0); }
+.actions button:last-child { background: var(--success-soft); color: var(--success-dark); }
+.actions button:last-child:hover { background: var(--success); color: #fff; }
+.actions button:last-child.is-done { background: var(--success); color: #fff; }
+
+/* ---------- Reading Activity ----------
+   A per-level alternative to the word-card grid: one word's picture +
+   sentence at a time, with a play button that speaks the sentence via the
+   app's existing TTS and highlights each word in sync as it's spoken (see
+   playReadingSentence()/updateReadingWordHighlight() in JS). Two highlight
+   styles share the same markup: .style-sweep colors words in place as
+   .reading-word.is-active/.is-read change; .style-ball instead moves a
+   floating dot (.reading-ball) to sit on the active word, leaving the text
+   itself unstyled so the two styles read as genuinely different visual
+   metaphors, not just a palette swap. */
+.learn-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 20px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+.learn-mode-toggle button {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 9px 16px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.learn-mode-toggle button:hover { color: var(--primary-dark); }
+.learn-mode-toggle button.active { background: var(--primary); color: #fff; }
+
+.reading-activity { position: relative; }
+.reading-focus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  background: rgba(245, 248, 254, 0.82);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.reading-focus-overlay.is-active { opacity: 1; }
+
+.reading-stage {
+  position: relative;
+  z-index: 13;
+  display: grid;
+  gap: 22px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+}
+.reading-word-meta { display: flex; align-items: center; gap: 20px; }
+.reading-pic { width: 120px; flex: none; }
+.reading-target-word { font-size: clamp(1.7rem, 3.4vw, 2.2rem); font-weight: 800; color: var(--ink); margin: 0 0 0.15em; }
+
+.reading-sentence-wrap { position: relative; padding: 6px 4px; }
+/* Ball mode needs headroom above the text for the ball to hop into without
+   crowding the picture/word row above it — the sweep style has no floating
+   element, so it doesn't need the extra top padding. */
+.reading-sentence-wrap.style-ball { padding-top: 42px; }
+.reading-sentence {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 3.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 2;
+  color: var(--ink);
+}
+.reading-word {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 0 0.12em;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.style-sweep .reading-word.is-read { color: var(--ink-soft); }
+.style-sweep .reading-word.is-active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+.style-ball .reading-word.is-active {
+  text-decoration: underline;
+  text-decoration-color: var(--warning);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+
+.reading-ball {
+  position: absolute;
+  top: 0; left: 0;
+  width: 0; height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.16s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s ease;
+}
+.reading-ball-dot {
+  position: absolute;
+  top: -30px; left: -11px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #ffd873, var(--warning-dark));
+  box-shadow: var(--shadow-md);
+}
+.reading-ball-dot.is-bouncing { animation: reading-ball-hop 0.32s ease; }
+@keyframes reading-ball-hop {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-12px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.reading-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.reading-nav, .reading-play, .reading-known {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+  padding: 11px 16px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.reading-nav:hover:not(:disabled), .reading-known:hover { background: var(--primary); color: #fff; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.reading-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.reading-nav .icon { transform: rotate(90deg); }
+.reading-nav-next .icon { transform: rotate(-90deg); }
+.reading-play { background: var(--primary); color: #fff; margin-inline: auto 0; }
+.reading-play:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.reading-play.is-playing { background: var(--incorrect); }
+.reading-play.is-playing:hover { background: var(--incorrect-dark); }
+.reading-known { background: var(--success-soft); color: var(--success-dark); }
+.reading-known:hover { background: var(--success); color: #fff; }
+.reading-known.is-done { background: var(--success); color: #fff; }
+
+.reading-progress-track { text-align: center; }
+.reading-progress-label { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
+
+.reading-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding-top: 18px;
+  border-top: 1px solid var(--primary-tint-100);
+}
+.reading-options-label { font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
+.reading-style-toggle { display: inline-flex; gap: 4px; padding: 3px; background: var(--primary-tint-50); border-radius: var(--radius-pill); }
+.reading-style-toggle button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 7px 13px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.reading-style-toggle button.active { background: var(--primary); color: #fff; }
+.reading-line-focus-toggle {
+  display: inline-flex; align-items: center;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 7px 14px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  margin-left: auto;
+}
+.reading-line-focus-toggle.is-on { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+@media (max-width: 700px) {
+  .reading-stage { padding: 20px; }
+  .reading-word-meta { flex-direction: column; align-items: flex-start; }
+  .reading-pic { width: 100px; }
+  .reading-play { margin-inline: 0; flex: 1 1 auto; justify-content: center; }
+  .reading-nav { flex: 1 1 auto; justify-content: center; }
+  .reading-known { flex: 1 1 100%; justify-content: center; }
+  .reading-line-focus-toggle { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-word, .reading-ball, .reading-ball-dot, .reading-focus-overlay { transition: none !important; animation: none !important; }
+}
+
+/* ---------- Roll and Read ----------
+   Its own tab (see rollReadGameTemplate() in JS), structured like Memory
+   Match: five levels, each with its own countdown timer (see
+   .roll-read-timer-display, mirroring .memory-timer-display down to the
+   "+10s" bonus popup), a status/rounds bar up top, a purely decorative
+   die, and the word grid. The die rolls on its own for visual flavor but
+   never narrows the board — every tile is live and clickable every round,
+   and nothing marks which one is the audio's actual target, so the
+   student has to listen rather than look. Finishing all five levels
+   triggers .roll-read-finale-overlay, the same full-screen treatment as
+   .memory-finale-overlay. */
+.roll-read-game { display: flex; flex-direction: column; gap: 16px; }
+.roll-read-game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.roll-read-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.roll-read-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.roll-read-status-badge .icon { width: 1.1em; height: 1.1em; }
+.roll-read-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.roll-read-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.roll-read-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+.roll-read-repeat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+.roll-read-repeat-btn:hover { background: var(--primary-tint-50); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.roll-read-repeat-btn .icon { width: 1.1em; height: 1.1em; margin: 0; }
+
+/* The countdown as a large, hard-to-miss display — deliberately its own
+   prominent element rather than a small pill, since it's the number a
+   player needs to track at a glance while listening for the next word.
+   Mirrors .memory-timer-display exactly. */
+.roll-read-timer-display {
+  position: relative;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 8px 22px 8px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.roll-read-timer-icon { display: inline-flex; align-self: center; width: 1.6rem; height: 1.6rem; color: var(--warning); }
+.roll-read-timer-icon .icon { width: 100%; height: 100%; }
+.roll-read-timer-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 2.4rem; line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.roll-read-timer-unit { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.roll-read-timer-display.is-urgent { border-color: var(--incorrect); animation: roll-read-timer-pulse 0.6s ease infinite; }
+.roll-read-timer-display.is-urgent .roll-read-timer-value { color: var(--incorrect-dark); }
+.roll-read-timer-display.is-urgent .roll-read-timer-icon { color: var(--incorrect); }
+@keyframes roll-read-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Floating "+10s" reward on a correct guess — rendered as part of the
+   template (see rollReadTimerTemplate()) rather than a directly-inserted
+   DOM node, for the same reason .memory-time-bonus-popup is: render()
+   rebuilds the whole page and would wipe out a one-off element before its
+   animation ever painted. */
+.roll-read-time-bonus-popup {
+  position: absolute;
+  top: -6px; right: -10px;
+  background: var(--success);
+  color: #fff;
+  font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  animation: roll-read-time-bonus-rise 0.9s ease forwards;
+  pointer-events: none;
+}
+@keyframes roll-read-time-bonus-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  25% { transform: translateY(-6px) scale(1.1); opacity: 1; }
+  75% { transform: translateY(-14px) scale(1); opacity: 1; }
+  100% { transform: translateY(-24px) scale(1); opacity: 0; }
+}
+
+.roll-read-board { display: grid; gap: 22px; grid-template-columns: minmax(140px, 180px) 1fr; align-items: start; }
+.roll-read-die-panel {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--primary-tint-100);
+  border-radius: var(--radius-lg);
+  padding: 24px 16px;
+  box-shadow: var(--shadow-md);
+}
+.roll-die { width: 64px; height: 64px; }
+.roll-die svg { width: 100%; height: 100%; }
+.roll-die rect { fill: var(--surface); stroke: var(--primary-tint-300); stroke-width: 4; }
+.roll-die circle { fill: var(--primary-dark); }
+
+.roll-read-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--roll-read-cols, 6), 1fr);
+  gap: 10px;
+}
+.roll-read-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 64px;
+  padding: 8px 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  cursor: default;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+.roll-read-cell.is-empty { background: transparent; border: 2px dashed var(--primary-tint-100); box-shadow: none; }
+.roll-read-cell-word { font-family: var(--font-heading); font-weight: 700; font-size: clamp(0.85rem, 1.6vw, 1.1rem); color: var(--ink); text-align: center; }
+/* Every tile gets identical treatment while a round is actively
+   listening (rollReadCellTemplate() renders every tile with `disabled`
+   otherwise) — no tile or region is ever visually distinguished from any
+   other, so the only way to find the right one is by listening. */
+.roll-read-cell:not(:disabled) { cursor: pointer; }
+.roll-read-cell:not(:disabled):hover {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 4px var(--rose-soft), var(--shadow-md);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.roll-read-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
+.roll-read-feedback.is-correct { color: var(--success-dark); }
+.roll-read-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+/* Reused inside the finale overlay below (see .roll-read-finale-panel) —
+   kept as its own block since it isn't specific to the overlay's layout.
+   Visually identical to .memory-replay-levels. */
+.roll-read-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.roll-read-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.roll-read-replay-levels button:hover { background: var(--primary-dark); }
+.roll-read-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+/* ---------- Roll and Read: finale overlay ----------
+   The "finished every level" moment — the exact same mechanism
+   .memory-finale-overlay uses (full-screen fixed overlay, confetti burst
+   via the shared .confetti-piece, XL medal, springy scale-in), just
+   relabeled for this game. */
+.roll-read-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.roll-read-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.roll-read-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.roll-read-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.roll-read-finale-close .icon { width: 1.1em; height: 1.1em; }
+.roll-read-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: roll-read-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.roll-read-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.roll-read-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.roll-read-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes roll-read-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@media (max-width: 780px) {
+  .roll-read-board { grid-template-columns: 1fr; }
+  .roll-read-die-panel { flex-direction: row; justify-content: center; }
+}
+@media (max-width: 480px) {
+  .roll-read-grid { gap: 7px; }
+  .roll-read-cell { min-height: 52px; padding: 6px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roll-read-cell { transition: none !important; }
+  .roll-read-timer-display.is-urgent { animation: none; }
+  .roll-read-time-bonus-popup { animation: none; opacity: 1; }
+  .roll-read-finale-panel { animation: none; }
+}
+
+/* ---------- Catch the Sound ----------
+   An arcade word-catching game (see catchGameTemplate()/playCatchRound()
+   in JS): a target word plays automatically, 2-3 spelling options fall
+   from the top of .catch-game-field over a randomly-picked photo backdrop
+   (see CATCH_BACKGROUNDS/wireCatchGameEvents()), and a woven basket (see
+   catchBasketSvg()) controlled by the ← / → arrow keys has to catch the
+   correct one before it reaches the bottom. Rounds advance on their own —
+   see beginCatchCountdown() — so the only manual controls left are the
+   arrow keys and the small repeat-audio/music-mute buttons below. The
+   falling chips' motion is the one animation in this app that's core
+   gameplay rather than decoration — unlike the Roll and Read/Reading
+   Activity transitions above (and the catch/miss flourishes below), it's
+   deliberately left out of the prefers-reduced-motion rule, since
+   removing it would remove the only signal a player has to react to. */
+.catch-game { display: flex; flex-direction: column; gap: 16px; }
+
+.catch-game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.catch-status-group { display: inline-flex; align-items: center; gap: 8px; }
+.catch-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  padding: 12px 22px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: var(--shadow-sm);
+}
+.catch-status-badge.is-counting { background: var(--primary-tint-100); color: var(--primary-dark); box-shadow: none; }
+.catch-repeat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+.catch-repeat-btn:hover { background: var(--primary-tint-50); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.catch-repeat-btn .icon { width: 1.1em; height: 1.1em; margin: 0; }
+
+/* Same pill-toggle visual language as the global Voice/High contrast/
+   Dyslexia-friendly mode buttons in the toolbar (see .controls-bar button
+   in the layout rules above) — reused here rather than duplicated in that
+   always-visible global bar, since ambient music is meaningful only on
+   this one screen and a toggle that does nothing audible on every other
+   tab would be a confusing dead control there. */
+.catch-music-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--primary-tint-200);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.catch-music-toggle:hover { border-color: var(--primary-tint-300); color: var(--ink); }
+.catch-music-toggle.is-on { background: var(--primary-tint-100); border-color: var(--primary-tint-300); color: var(--primary-dark); }
+
+.catch-game-scoreboard { display: grid; justify-items: end; line-height: 1.2; }
+.catch-game-score-label { font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); }
+.catch-game-score-value { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--primary-darker); }
+.catch-game-score-goal { font-size: 1rem; font-weight: 700; color: var(--ink-soft); }
+
+/* The background-image itself is set inline per-render (see
+   catchGameTemplate()) since it's one of twelve random photos, not a
+   fixed asset — this just handles how that image is cropped/positioned.
+   `cover` + `bottom center` matters more than it might look: every photo
+   in CATCH_BACKGROUNDS is a tall portrait shot with its subject/detail in
+   the bottom third and plain sky filling the rest, while this field is a
+   short, wide rectangle — anchoring the crop to the bottom keeps the
+   ground the basket "stands in" on screen and trims the empty sky above
+   it, at any field width. */
+.catch-game-field {
+  position: relative;
+  height: 560px;
+  border-radius: var(--radius-lg);
+  background-color: var(--primary-tint-100); /* shows briefly while the photo loads */
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  border: 2px solid var(--primary-tint-200);
+  overflow: hidden;
+}
+
+.catch-word {
+  position: absolute;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+.catch-word.is-correct { background: var(--success-soft); border-color: var(--success); color: var(--success-dark); animation: catch-word-pop 420ms ease; }
+.catch-word.is-wrong { background: var(--incorrect-soft); border-color: var(--incorrect); color: var(--incorrect-dark); animation: catch-word-shake 400ms ease; }
+.catch-word.is-missed { background: var(--warning-soft); border-color: var(--warning); color: var(--warning-dark); animation: catch-word-fade-out 550ms ease forwards; }
+
+@keyframes catch-word-pop {
+  0% { transform: translateX(-50%) scale(1); }
+  35% { transform: translateX(-50%) scale(1.25); }
+  60% { transform: translateX(-50%) scale(0.95); }
+  100% { transform: translateX(-50%) scale(1.05); }
+}
+@keyframes catch-word-shake {
+  0%, 100% { transform: translateX(-50%); }
+  20% { transform: translateX(-50%) translateX(-8px) rotate(-4deg); }
+  40% { transform: translateX(-50%) translateX(7px) rotate(3deg); }
+  60% { transform: translateX(-50%) translateX(-5px) rotate(-2deg); }
+  80% { transform: translateX(-50%) translateX(3px) rotate(1deg); }
+}
+@keyframes catch-word-fade-out {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+}
+
+/* The basket is sized noticeably larger than a typical UI icon so it feels
+   substantial to catch words with — width/height are tuned together with
+   CATCH_GAME_CONFIG.basketWidthPct in JS, which must stay in sync with the
+   width below since collision detection reads the element's live
+   bounding box, not this file. */
+.catch-basket {
+  position: absolute;
+  bottom: 4px;
+  width: 32%;
+  height: 108px;
+  transform-origin: 50% 100%;
+}
+/* Photo backgrounds are far busier than the old flat beach illustration
+   — this drop shadow gives the basket a bit of separation/grounding
+   against any of them, the same way a game sprite reads clearly over a
+   detailed scene. */
+.catch-basket-svg { width: 100%; height: 100%; overflow: visible; display: block; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.32)); }
+.catch-basket-svg .cb-body { fill: var(--illus-basket); }
+.catch-basket-svg .cb-line { stroke: var(--illus-basket-shade); stroke-width: 4; stroke-linejoin: round; }
+.catch-basket-svg .cb-weave path { stroke: var(--illus-basket-weave); stroke-width: 3; fill: none; opacity: 0.55; }
+.catch-basket-svg .cb-rim { fill: var(--illus-basket-shade); }
+.catch-basket-svg .cb-rim-line { stroke: var(--illus-basket-weave); stroke-width: 2; }
+.catch-basket-svg .cb-shine { fill: var(--illus-shine); }
+
+/* A quick squash-and-stretch on a successful catch — restarted per catch
+   by bounceBasket() in JS (remove/reflow/re-add the class, the same
+   restart trick positionReadingBall() uses for the reading ball's hop). */
+.catch-basket.is-catching { animation: catch-basket-bounce 380ms ease; }
+@keyframes catch-basket-bounce {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.18, 0.8); }
+  55% { transform: scale(0.92, 1.12); }
+  80% { transform: scale(1.04, 0.97); }
+  100% { transform: scale(1, 1); }
+}
+
+/* A brief radial sparkle burst at the basket on a correct catch — see
+   spawnCatchParticles() in JS, which creates/removes this element
+   directly rather than modeling it in state. Each .catch-particle is
+   rotated to its own slice of the circle (360°/7 ≈ 51.4°) and animates
+   outward along that rotated axis, producing a burst without any
+   per-particle JS math. */
+.catch-particles { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
+.catch-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px;
+  background: var(--illus-sun);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  opacity: 0;
+  animation: catch-particle-burst 600ms ease-out forwards;
+  animation-delay: calc(var(--i) * 15ms);
+}
+@keyframes catch-particle-burst {
+  0% { opacity: 1; transform: rotate(calc(var(--i) * 51.4deg)) translateY(0) scale(0.6); }
+  100% { opacity: 0; transform: rotate(calc(var(--i) * 51.4deg)) translateY(-48px) scale(1.1); }
+}
+
+/* The floating "+2"/"-1" pop-up at the moment a chip is caught — see
+   spawnCatchScorePopup() in JS, which sets left/top inline to the catch
+   point and removes the element after the animation finishes. */
+.catch-score-popup {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.3rem;
+  pointer-events: none;
+  z-index: 3;
+  animation: catch-score-popup-rise 850ms ease-out forwards;
+}
+/* Bright, saturated text plus a soft dark halo (rather than the single
+   light-side emboss this had over the old flat illustration) so the
+   number stays legible over any of the twelve photo backgrounds — light
+   sky, dark space, mid-tone forest — not just a pale one. The old
+   --success-dark/--incorrect-dark tokens are tuned for text on a plain
+   white card and read as muddy against a dark photo, so these use
+   brighter, higher-contrast variants instead. */
+.catch-score-popup.is-positive { color: #34d399; text-shadow: 0 0 6px rgba(0, 0, 0, 0.65), 0 0 3px rgba(0, 0, 0, 0.65), 0 2px 2px rgba(0, 0, 0, 0.5); }
+.catch-score-popup.is-negative { color: #ff6b5b; text-shadow: 0 0 6px rgba(0, 0, 0, 0.65), 0 0 3px rgba(0, 0, 0, 0.65), 0 2px 2px rgba(0, 0, 0, 0.5); }
+@keyframes catch-score-popup-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  30% { transform: translate(-50%, -60%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -140%) scale(1); }
+}
+
+.catch-game-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
+.catch-game-feedback.is-correct { color: var(--success-dark); }
+.catch-game-feedback.is-wrong { color: var(--incorrect-dark); }
+.catch-game-feedback.is-missed { color: var(--warning-dark); }
+
+@media (max-width: 700px) {
+  .catch-game-field { height: 440px; }
+  .catch-basket { width: 40%; height: 92px; }
+  .catch-word { padding: 8px 12px; font-size: 1rem; }
+}
+@media (max-width: 480px) {
+  .catch-game-top { flex-direction: column; align-items: stretch; }
+  .catch-game-scoreboard { justify-items: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catch-word.is-correct, .catch-word.is-wrong, .catch-basket.is-catching, .catch-particle, .catch-score-popup { animation: none !important; }
+}
+
+.contrast .catch-status-badge { background: #fff; color: #000; }
+.contrast .catch-status-badge.is-counting { background: #000; color: #fff; box-shadow: inset 0 0 0 2px #fff; }
+.contrast .catch-repeat-btn { background: #000; color: #fff; border-color: #fff; }
+.contrast .catch-repeat-btn:hover { background: #222; }
+.contrast .catch-music-toggle { background: #000; color: #fff; border-color: #fff; }
+.contrast .catch-music-toggle.is-on { background: #fff; color: #000; }
+.contrast .catch-game-score-label, .contrast .catch-game-score-goal { color: #ccc; }
+.contrast .catch-game-score-value { color: #fff; }
+/* The `!important` is load-bearing here, not a convenience — the photo
+   backdrop is set as an inline style per-render (see catchGameTemplate()),
+   which normally beats any stylesheet rule; high contrast mode has to win
+   that fight to guarantee a plain black field regardless of which of the
+   twelve photos got picked. */
+.contrast .catch-game-field { background-image: none !important; background-color: #000; border: 2px solid #fff; }
+.contrast .catch-score-popup.is-positive { color: #7cffb2; text-shadow: none; }
+.contrast .catch-score-popup.is-negative { color: #ff8a80; text-shadow: none; }
+.contrast .catch-word { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .catch-word.is-correct { background: #001a12; border-color: #0f0; color: #7cffb2; }
+.contrast .catch-word.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
+.contrast .catch-word.is-missed { background: #2a1c00; border-color: #ffd27f; color: #ffd27f; }
+.contrast .catch-basket-svg .cb-body, .contrast .catch-basket-svg .cb-rim { fill: #fff; }
+.contrast .catch-basket-svg .cb-line, .contrast .catch-basket-svg .cb-rim-line { stroke: #000; }
+.contrast .catch-basket-svg .cb-weave, .contrast .catch-basket-svg .cb-shine { display: none; }
+.contrast .catch-particle { background: #fff; }
+.contrast .catch-game-feedback { color: #ccc; }
+
+/* ---------- Memory Match (Pelmanism) ---------- */
+.memory-game { display: flex; flex-direction: column; gap: 16px; }
+.memory-game-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.memory-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.memory-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.memory-status-badge .icon { width: 1.1em; height: 1.1em; }
+.memory-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.memory-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.memory-pairs { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+
+/* The countdown as a large, hard-to-miss display — deliberately its own
+   prominent element rather than a small pill, since it's the number a
+   player needs to track at a glance while looking at the card grid. */
+.memory-timer-display {
+  position: relative;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 8px 22px 8px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.memory-timer-icon { display: inline-flex; align-self: center; width: 1.6rem; height: 1.6rem; color: var(--warning); }
+.memory-timer-icon .icon { width: 100%; height: 100%; }
+.memory-timer-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 2.4rem; line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.memory-timer-unit { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.memory-timer-display.is-urgent { border-color: var(--incorrect); animation: memory-timer-pulse 0.6s ease infinite; }
+.memory-timer-display.is-urgent .memory-timer-value { color: var(--incorrect-dark); }
+.memory-timer-display.is-urgent .memory-timer-icon { color: var(--incorrect); }
+
+@keyframes memory-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Floating "+10s" reward on a correct match — rendered as part of the
+   template (see memoryTimerTemplate()) rather than a directly-inserted DOM
+   node, since render() rebuilds the whole page and would wipe out a
+   one-off element before its animation ever painted; a fresh element born
+   from a render always starts its animation from frame one. */
+.memory-time-bonus-popup {
+  position: absolute;
+  top: -6px; right: -10px;
+  background: var(--success);
+  color: #fff;
+  font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  animation: memory-time-bonus-rise 0.9s ease forwards;
+  pointer-events: none;
+}
+@keyframes memory-time-bonus-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  25% { transform: translateY(-6px) scale(1.1); opacity: 1; }
+  75% { transform: translateY(-14px) scale(1); opacity: 1; }
+  100% { transform: translateY(-24px) scale(1); opacity: 0; }
+}
+
+/* Explicit column count per level (see MEMORY_LEVELS' `cols`), set inline
+   as --memory-cols, so the board is always a clean, balanced rectangle —
+   never however many 120px-ish columns happen to fit the container. */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--memory-cols, 4), 1fr);
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--primary-tint-50);
+  border: 2px solid var(--primary-tint-200);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.memory-card {
+  aspect-ratio: 3 / 4;
+  perspective: 900px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.memory-card:disabled { cursor: default; }
+.memory-card-inner {
+  display: block;
+  position: relative;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s ease;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+.memory-card.is-flipped .memory-card-inner { transform: rotateY(180deg); box-shadow: var(--shadow-md); }
+.memory-card:not(.is-flipped):hover .memory-card-inner { transform: translateY(-3px) rotateY(0); box-shadow: var(--shadow-md); }
+
+.memory-card-face {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  border-radius: var(--radius-sm);
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+/* Card back: solid blue with the "soundlinks" wordmark, standing in for a
+   logo — every face-down card reads as a branded card back, not a blank
+   placeholder. */
+.memory-card-back {
+  background: var(--primary);
+  color: #fff;
+}
+.memory-card-logo {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(0.7rem, 1.7vw, 0.95rem);
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-align: center;
+  padding: 0 6px;
+}
+.memory-card-front {
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  transform: rotateY(180deg);
+  padding: 8px;
+}
+.memory-card.is-matched .memory-card-front { background: var(--success-soft); border-color: var(--success); }
+.memory-card-word {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(0.85rem, 2.4vw, 1.15rem);
+  color: var(--ink);
+  text-align: center;
+  word-break: break-word;
+}
+.memory-card.is-matched .memory-card-word { color: var(--success-dark); }
+.memory-card-image { width: 100%; height: 100%; object-fit: cover; border-radius: calc(var(--radius-sm) - 2px); }
+
+.memory-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
+.memory-feedback.is-correct { color: var(--success-dark); }
+.memory-feedback.is-wrong { color: var(--warning-dark); }
+
+/* Reused inside the finale overlay below (see .memory-finale-panel) — kept
+   as its own block since it isn't specific to the overlay's layout. */
+.memory-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.memory-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.memory-replay-levels button:hover { background: var(--primary-dark); }
+.memory-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+/* ---------- Memory Match: finale overlay ----------
+   The "finished every level" moment — a full-screen fixed overlay (the
+   same mechanism .group-celebration-overlay uses) but pushed further:
+   a bigger confetti burst, an XL medal, and its own springier scale-in
+   with a slight overshoot, so it reads as a bigger deal than either a
+   single-level badge toast or a sound-group's completion screen. */
+.memory-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.memory-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.memory-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.memory-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.memory-finale-close .icon { width: 1.1em; height: 1.1em; }
+.memory-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: memory-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.memory-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.memory-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.memory-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes memory-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.contrast .memory-status-badge { background: #fff; color: #000; }
+.contrast .memory-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .memory-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .memory-pairs { color: #ccc; }
+.contrast .memory-timer-display { background: #000; border-color: #fff; }
+.contrast .memory-timer-value { color: #fff; }
+.contrast .memory-timer-unit { color: #ccc; }
+.contrast .memory-timer-icon { color: #fff; }
+.contrast .memory-timer-display.is-urgent { border-color: #ff5252; }
+.contrast .memory-timer-display.is-urgent .memory-timer-value { color: #ff8a80; }
+.contrast .memory-timer-display.is-urgent .memory-timer-icon { color: #ff5252; }
+.contrast .memory-grid { background: #000; border: 2px solid #fff; }
+.contrast .memory-card-back { background: #000; color: #fff; box-shadow: inset 0 0 0 2px #fff; }
+.contrast .memory-card-logo { color: #fff; }
+.contrast .memory-card-front { background: #000; color: #fff; border: 2px solid #fff; }
+.contrast .memory-card-word { color: #fff; }
+.contrast .memory-card.is-matched .memory-card-front { background: #001a12; border-color: #0f0; }
+.contrast .memory-card.is-matched .memory-card-word { color: #7cffb2; }
+.contrast .memory-feedback { color: #ccc; }
+.contrast .memory-feedback.is-correct { color: #7cffb2; }
+.contrast .memory-feedback.is-wrong { color: #ffd27f; }
+.contrast .memory-replay-levels button { background: #fff; color: #000; }
+.contrast .memory-replay-levels button:hover { background: #ccc; }
+.contrast .memory-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .memory-finale-kicker { color: #ffd27f; }
+.contrast .memory-finale-panel h2 { color: #fff; }
+.contrast .memory-finale-panel p { color: #ccc; }
+.contrast .memory-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-card-inner, .memory-card:hover .memory-card-inner { transition: none; }
+  .memory-timer-display.is-urgent { animation: none; }
+  .memory-time-bonus-popup { animation: none; opacity: 1; }
+  .memory-finale-panel { animation: none; }
+}
+
+/* ---------- Word Invaders ---------- */
+.word-invaders-game { display: flex; flex-direction: column; gap: 16px; }
+.word-invaders-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.word-invaders-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.word-invaders-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.word-invaders-status-badge .icon { width: 1.1em; height: 1.1em; }
+.word-invaders-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.word-invaders-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.word-invaders-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+
+.word-invaders-hud { display: flex; align-items: center; gap: 18px; }
+.word-invaders-lives { display: flex; gap: 4px; }
+.word-invaders-heart { display: inline-flex; width: 1.5rem; height: 1.5rem; color: var(--incorrect); }
+.word-invaders-heart .icon { width: 100%; height: 100%; }
+.word-invaders-heart.is-full .icon { fill: var(--incorrect); }
+.word-invaders-heart.is-empty { color: var(--primary-tint-200); opacity: 0.7; }
+.word-invaders-score {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-family: var(--font-heading); font-weight: 800; font-size: 1.1rem;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+.word-invaders-score .icon { width: 1.2em; height: 1.2em; color: var(--warning); }
+.word-invaders-score.is-flash { transform: scale(1.14); }
+
+/* The field is a deliberately narrow, portrait "arcade screen" — not
+   stretched to the column's full width — matching the visual mockup
+   shared and confirmed before this was built. Everything falling inside
+   it (word-cards, coins, obstacles, bullets) is injected directly by
+   phonics-app.js's spawnWordInvadersWave()/addWordInvadersItem(), not
+   rendered here — see that section's opening comment for why. */
+.word-invaders-field {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 600px;
+  margin: 0 auto;
+  background: radial-gradient(120% 70% at 50% 0%, #2a3a72 0%, #182352 46%, #0c1436 100%);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+.word-invaders-field:active { cursor: grabbing; }
+
+.word-invaders-prompt {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 28px);
+  background: rgba(10, 16, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-pill);
+  padding: 6px 10px 6px 12px;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: #dbe4ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.word-invaders-ear { display: inline-flex; width: 1.1em; height: 1.1em; flex: none; }
+.word-invaders-ear .icon { width: 100%; height: 100%; }
+.word-invaders-repeat {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; width: 26px; height: 26px;
+  border: none; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #eef3ff;
+  cursor: pointer;
+}
+.word-invaders-repeat .icon { width: 1em; height: 1em; }
+
+/* Every falling item (word-card, coin, obstacle) shares this box:
+   absolute, centered on its own `left`, fixed size for its whole descent
+   — phonics-app.js only ever animates `top`, never scale, which is the
+   entire point (the word has to be legible on frame one, not just once
+   it's close). */
+.word-invaders-item {
+  position: absolute;
+  transform: translateX(-50%);
+  aspect-ratio: 1 / 0.92;
+  will-change: top;
+}
+.word-invaders-item-word {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(4, 10, 30, 0.28);
+  overflow: hidden;
+  padding: 8px 6px 6px;
+}
+.word-invaders-item-word img { width: 62%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); }
+.word-invaders-item-label { font-family: var(--font-heading); font-weight: 700; font-size: 0.86rem; color: var(--ink); }
+.word-invaders-item-coin, .word-invaders-item-obstacle { display: flex; align-items: center; justify-content: center; }
+.word-invaders-coin-svg { width: 82%; height: 82%; }
+.word-invaders-coin-svg .wic-face { fill: #f0c14b; }
+.word-invaders-coin-svg .wic-ring { stroke: #c9932a; stroke-width: 1.6; }
+.word-invaders-coin-svg .wic-glyph { fill: #8a6114; font-size: 11px; font-weight: 800; font-family: var(--font-heading); }
+.word-invaders-meteor-svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 6px rgba(4, 10, 30, 0.35)); }
+.word-invaders-meteor-svg .wim-body { fill: #8a7d74; }
+.word-invaders-meteor-svg .wim-shine { fill: #a89a8d; opacity: 0.7; }
+.word-invaders-meteor-svg .wim-crater { fill: #5f564f; }
+
+/* A shot card gets a brief pop (correct) or shake (wrong/missed) before
+   phonics-app.js removes it — reuses the same keyframes Catch the
+   Sound's falling chips use (.catch-word.is-correct/.is-wrong), since
+   both share the identical translateX(-50%)-centered absolute box. */
+.word-invaders-item.is-hit-correct { animation: catch-word-pop 340ms ease forwards; }
+.word-invaders-item.is-hit-wrong { animation: catch-word-shake 340ms ease forwards; }
+.word-invaders-item.is-hit { animation: word-invaders-bonus-pop 340ms ease forwards; }
+@keyframes word-invaders-bonus-pop {
+  0% { transform: translateX(-50%) scale(1); opacity: 1; }
+  40% { transform: translateX(-50%) scale(1.3); opacity: 1; }
+  100% { transform: translateX(-50%) scale(0.6); opacity: 0; }
+}
+
+.word-invaders-bullet {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 6px; height: 16px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fff, var(--primary-tint-200));
+  box-shadow: 0 0 8px 2px rgba(120, 170, 255, 0.8);
+}
+
+.word-invaders-ship {
+  position: absolute;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: 15%;
+  aspect-ratio: 0.8;
+  z-index: 4;
+}
+.word-invaders-ship-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.word-invaders-ship-svg .wis-flame { fill: #ffb14a; transform-origin: 50% 0%; animation: word-invaders-flicker 0.22s ease-in-out infinite alternate; }
+.word-invaders-ship-svg .wis-flame-inner { fill: #fff2c4; transform-origin: 50% 0%; animation: word-invaders-flicker 0.22s ease-in-out infinite alternate; }
+.word-invaders-ship-svg .wis-hull { fill: var(--illus-sand); }
+.word-invaders-ship-svg .wis-hull-shade { fill: var(--primary-tint-200); }
+.word-invaders-ship-svg .wis-fin { fill: var(--primary); }
+.word-invaders-ship-svg .wis-window-ring { fill: var(--primary); }
+.word-invaders-ship-svg .wis-window { fill: var(--primary-tint-50); }
+@keyframes word-invaders-flicker {
+  from { transform: scaleY(0.75) scaleX(0.9); }
+  to { transform: scaleY(1.15) scaleX(1.05); }
+}
+
+.word-invaders-fire-btn {
+  position: absolute;
+  right: 14px; bottom: 14px;
+  z-index: 5;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px;
+  border: none; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a6a, var(--incorrect) 78%);
+  box-shadow: 0 6px 16px rgba(225, 75, 58, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.word-invaders-fire-btn:active { transform: scale(0.92); }
+.word-invaders-fire-btn .icon { width: 1.5em; height: 1.5em; }
+
+.word-invaders-feedback { margin: 0; text-align: center; font-weight: 700; color: var(--ink-soft); min-height: 1.4em; }
+.word-invaders-feedback.is-correct { color: var(--success-dark); }
+.word-invaders-feedback.is-wrong, .word-invaders-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+/* ---------- Word Invaders: finale overlay ----------
+   Same mechanism/proportions as .memory-finale-overlay — see its comment
+   above for why (bigger confetti, XL medal, springier scale-in than a
+   single-level badge toast or sound-group completion screen). */
+.word-invaders-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.word-invaders-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.word-invaders-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.word-invaders-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.word-invaders-finale-close .icon { width: 1.1em; height: 1.1em; }
+.word-invaders-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: word-invaders-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.word-invaders-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.word-invaders-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.word-invaders-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes word-invaders-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.word-invaders-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.word-invaders-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.word-invaders-replay-levels button:hover { background: var(--primary-dark); }
+.word-invaders-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+/* The field is a deliberately single, fixed visual world (a night sky,
+   like a lit-up handheld screen) — it does not follow high-contrast mode,
+   the same way an embedded game or video keeps its own palette. Only the
+   surrounding HUD/feedback text (which does need to stay readable in
+   high-contrast) gets overrides here. */
+.contrast .word-invaders-status-badge { background: #fff; color: #000; }
+.contrast .word-invaders-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .word-invaders-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .word-invaders-rounds { color: #ccc; }
+.contrast .word-invaders-score { background: #000; border-color: #fff; color: #fff; }
+.contrast .word-invaders-score .icon { color: #ffd27f; }
+.contrast .word-invaders-feedback { color: #ccc; }
+.contrast .word-invaders-feedback.is-correct { color: #7cffb2; }
+.contrast .word-invaders-feedback.is-wrong, .contrast .word-invaders-feedback.is-incorrect { color: #ffd27f; }
+.contrast .word-invaders-replay-levels button { background: #fff; color: #000; }
+.contrast .word-invaders-replay-levels button:hover { background: #ccc; }
+.contrast .word-invaders-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-invaders-finale-kicker { color: #ffd27f; }
+.contrast .word-invaders-finale-panel h2 { color: #fff; }
+.contrast .word-invaders-finale-panel p { color: #ccc; }
+.contrast .word-invaders-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+@media (max-width: 700px) {
+  .word-invaders-field { height: 68vh; max-height: 560px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-invaders-ship-svg .wis-flame, .word-invaders-ship-svg .wis-flame-inner { animation: none; }
+  .word-invaders-score { transition: none; }
+  .word-invaders-finale-panel { animation: none; }
+}
+
+/* ---------- Word Search ----------
+   A split-screen Fun Zone game (see wordSearchGameTemplate() in JS): a
+   letter grid on the left, a bank of numbered audio tiles on the right —
+   never showing a tile's own spelling, so listening is the only way to
+   know a word (see .word-search-tile). Status/rounds bar and countdown
+   timer up top mirror .roll-read-status-badge/.roll-read-timer-display
+   exactly; the finale overlay below mirrors .roll-read-finale-overlay
+   just as closely. */
+.word-search-game { display: flex; flex-direction: column; gap: 16px; }
+.word-search-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.word-search-status-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.word-search-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary-tint-100); color: var(--primary-dark);
+  font-weight: 800; font-size: 0.92rem;
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+.word-search-status-badge .icon { width: 1.1em; height: 1.1em; }
+.word-search-status-badge.is-won { background: var(--success-soft); color: var(--success-dark); }
+.word-search-status-badge.is-lost { background: var(--warning-soft); color: var(--warning-dark); }
+.word-search-rounds { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
+
+/* Mirrors .roll-read-timer-display exactly, minus the "+time" bonus
+   popup — finding a word here doesn't add time, since difficulty already
+   scales with level (see WordSearchLogic.LEVELS). */
+.word-search-timer-display {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-300);
+  border-radius: var(--radius-pill);
+  padding: 8px 22px 8px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.word-search-timer-icon { display: inline-flex; align-self: center; width: 1.6rem; height: 1.6rem; color: var(--warning); }
+.word-search-timer-icon .icon { width: 100%; height: 100%; }
+.word-search-timer-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 2.4rem; line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.word-search-timer-unit { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.word-search-timer-display.is-urgent { border-color: var(--incorrect); animation: word-search-timer-pulse 0.6s ease infinite; }
+.word-search-timer-display.is-urgent .word-search-timer-value { color: var(--incorrect-dark); }
+.word-search-timer-display.is-urgent .word-search-timer-icon { color: var(--incorrect); }
+@keyframes word-search-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* The split screen itself: grid on the left, word bank on the right —
+   the exact ratio and breakpoint confirmed in the mockup shared before
+   this was built. */
+.word-search-board { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.8fr); gap: 22px; align-items: start; }
+.word-search-grid-panel {
+  background: var(--surface-alt);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+.word-search-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--word-search-size, 6), 1fr);
+  gap: 4px;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1;
+}
+.word-search-cell {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-100);
+  border-radius: 8px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(0.8rem, 2.2vw, 1.1rem);
+  color: var(--ink);
+  cursor: default;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+/* Every cell is `disabled` in the template until a word-bank tile is
+   active (see wordSearchGridTemplate()) — no target word means a click
+   here can't mean anything yet. */
+.word-search-cell:not(:disabled) { cursor: pointer; }
+.word-search-cell:not(:disabled):hover { border-color: var(--primary-tint-300); transform: scale(1.04); }
+.word-search-cell.is-selecting { background: var(--primary-tint-100); border-color: var(--primary); color: var(--primary-dark); }
+.word-search-cell.is-found { background: var(--success-soft); border-color: var(--success); color: var(--success-dark); }
+.word-search-cell.is-wrong { background: var(--incorrect-soft); border-color: var(--incorrect); color: var(--incorrect-dark); animation: word-search-shake 0.32s ease; }
+@keyframes word-search-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.word-search-bank { display: flex; flex-direction: column; gap: 10px; }
+.word-search-bank-hint { margin: 0; font-size: 0.82rem; color: var(--ink-soft); }
+/* A tile never renders its own word's spelling (see wordSearchBankTemplate())
+   — a number plus the speaker icon is its only visible identity, so the
+   word itself is only ever conveyed by ear. */
+.word-search-tile {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left;
+  background: var(--surface);
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.98rem;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.word-search-tile:hover { transform: translateY(-1px); border-color: var(--primary-tint-300); }
+.word-search-tile .icon { color: var(--primary); margin: 0; }
+.word-search-tile.is-active { border-color: var(--primary); background: var(--primary-tint-50); box-shadow: 0 0 0 3px var(--primary-tint-100); }
+.word-search-tile.is-found { background: var(--success); border-color: var(--success); color: #fff; cursor: default; }
+.word-search-tile.is-found .icon { color: #fff; }
+.word-search-tile.is-wrong { background: var(--incorrect); border-color: var(--incorrect); color: #fff; animation: word-search-tile-shake 0.32s ease; }
+.word-search-tile.is-wrong .icon { color: #fff; }
+@keyframes word-search-tile-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.word-search-tile-progress { margin-left: auto; font-size: 0.78rem; opacity: 0.85; font-variant-numeric: tabular-nums; }
+
+.word-search-feedback { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--ink-soft); }
+.word-search-feedback.is-correct { color: var(--success-dark); }
+.word-search-feedback.is-incorrect { color: var(--incorrect-dark); }
+
+.word-search-replay-levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.word-search-replay-levels button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 18px; font-weight: 700; font-size: 0.9rem;
+  cursor: pointer;
+}
+.word-search-replay-levels button:hover { background: var(--primary-dark); }
+.word-search-replay-levels button .icon { width: 1.05em; height: 1.05em; }
+
+/* ---------- Word Search: finale overlay ----------
+   The "finished every level" moment — the exact same mechanism
+   .roll-read-finale-overlay/.word-invaders-finale-overlay use (full-
+   screen fixed overlay, confetti burst, XL medal, springy scale-in),
+   just relabeled for this game. */
+.word-search-finale-overlay {
+  position: fixed; inset: 0;
+  z-index: 35;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 28%, rgba(217, 154, 31, 0.4), rgba(10, 12, 24, 0.85));
+  overflow: hidden;
+}
+.word-search-finale-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.word-search-finale-close {
+  position: absolute; top: 22px; right: 22px;
+  z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.word-search-finale-close:hover { background: rgba(0, 0, 0, 0.45); }
+.word-search-finale-close .icon { width: 1.1em; height: 1.1em; }
+.word-search-finale-panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 40px 32px 32px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: word-search-finale-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.4);
+}
+.word-search-finale-kicker {
+  margin: 4px 0 0;
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warning-dark);
+}
+.word-search-finale-panel h2 { margin: 0; font-size: 1.7rem; color: var(--ink); }
+.word-search-finale-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+@keyframes word-search-finale-in {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.contrast .word-search-status-badge { background: #fff; color: #000; }
+.contrast .word-search-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .word-search-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .word-search-rounds { color: #ccc; }
+.contrast .word-search-timer-display { background: #000; border-color: #fff; }
+.contrast .word-search-timer-value { color: #fff; }
+.contrast .word-search-timer-unit { color: #ccc; }
+.contrast .word-search-timer-icon { color: #fff; }
+.contrast .word-search-timer-display.is-urgent { border-color: #ff5252; }
+.contrast .word-search-timer-display.is-urgent .word-search-timer-value { color: #ff8a80; }
+.contrast .word-search-timer-display.is-urgent .word-search-timer-icon { color: #ff5252; }
+.contrast .word-search-grid-panel { background: #000; }
+.contrast .word-search-cell { background: #000; color: #fff; border: 2px solid #fff; }
+.contrast .word-search-cell:not(:disabled):hover { border-color: #ff5252; }
+.contrast .word-search-cell.is-selecting { background: #002a5c; border-color: #7cb3ff; color: #7cb3ff; }
+.contrast .word-search-cell.is-found { background: #001a12; border-color: #0f0; color: #7cffb2; }
+.contrast .word-search-cell.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
+.contrast .word-search-tile { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-search-tile .icon { color: #fff; }
+.contrast .word-search-tile.is-active { background: #002a5c; border-color: #7cb3ff; box-shadow: none; }
+.contrast .word-search-tile.is-found { background: #001a12; border-color: #0f0; color: #7cffb2; }
+.contrast .word-search-tile.is-found .icon { color: #7cffb2; }
+.contrast .word-search-tile.is-wrong { background: #2a0000; border-color: #ff5252; color: #ff8a80; }
+.contrast .word-search-tile.is-wrong .icon { color: #ff8a80; }
+.contrast .word-search-bank-hint { color: #ccc; }
+.contrast .word-search-feedback { color: #ccc; }
+.contrast .word-search-feedback.is-correct { color: #7cffb2; }
+.contrast .word-search-feedback.is-incorrect { color: #ffd27f; }
+.contrast .word-search-replay-levels button { background: #fff; color: #000; }
+.contrast .word-search-replay-levels button:hover { background: #ccc; }
+.contrast .word-search-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .word-search-finale-kicker { color: #ffd27f; }
+.contrast .word-search-finale-panel h2 { color: #fff; }
+.contrast .word-search-finale-panel p { color: #ccc; }
+.contrast .word-search-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+@media (max-width: 780px) {
+  .word-search-board { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .word-search-grid { gap: 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-search-cell, .word-search-tile { transition: none; }
+  .word-search-cell.is-wrong, .word-search-tile.is-wrong { animation: none; }
+  .word-search-timer-display.is-urgent { animation: none; }
+  .word-search-finale-panel { animation: none; }
+}
+
+/* ---------- Rules ---------- */
+.rules { display: grid; gap: 18px; }
+.rules > h2 { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); color: var(--ink); position: relative; padding-bottom: 10px; }
+.rules > h2::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 72px; height: 4px; border-radius: var(--radius-pill);
+  background: var(--primary);
+}
+.rule h3 { color: var(--primary-dark); font-size: 1.2rem; }
+.rule p { color: var(--ink-soft); font-weight: 600; }
+.rule ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 12px 0 0; padding-left: 0; list-style: none; }
+.rule li {
+  font-size: 1.05rem; line-height: 1.9;
+  background: var(--primary-tint-50);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+}
+.rule strong { font-size: 1.1rem; color: var(--ink); }
+.rule button { padding: 6px 12px; font-size: 0.78rem; }
+.ipa { color: var(--rose); font-weight: 800; }
+.rule b { font-size: 0.85rem; color: var(--ink-soft); font-weight: 700; margin-inline: 2px; }
+
+/* ---------- Practice feedback ---------- */
+.practice-feedback {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 11px 15px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  animation: pop-in 0.25s ease;
+}
+.practice-feedback .feedback-icon { display: inline-flex; flex: none; }
+.practice-feedback .feedback-icon .icon { width: 1.3em; height: 1.3em; }
+.practice-feedback em { font-style: normal; font-weight: 600; opacity: 0.85; }
+.practice-correct { background: var(--success-soft); color: var(--success-dark); }
+.practice-incorrect { background: var(--incorrect-soft); color: var(--incorrect-dark); animation: pop-in 0.25s ease, shake 0.4s ease 0.1s; }
+.practice-error { background: var(--warning-soft); color: var(--warning-dark); }
+.practice-listening { background: var(--primary-tint-100); color: var(--primary-dark); }
+
+/* Temporary debug visibility: what the recognizer actually heard vs. what
+   the target word being matched against was. Not styled as an alert (it's
+   diagnostic, not feedback), just a small muted line under the feedback. */
+.practice-debug {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ink-soft);
+}
+.practice-debug strong { color: var(--ink); font-weight: 700; }
+
+[data-practice].is-listening {
+  background: var(--primary);
+  color: #fff;
+  position: relative;
+  box-shadow: var(--shadow-md);
+}
+[data-practice].is-listening::after {
+  content: '';
+  position: absolute; inset: -4px;
+  border-radius: inherit;
+  border: 2px solid var(--primary);
+  animation: pulse-ring 1.3s ease-out infinite;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.9) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, .practice-feedback, .done-badge, [data-practice].is-listening::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Large text ---------- */
+body.big { font-size: 118%; }
+body.big h1 { font-size: clamp(2.2rem, 5.6vw, 4.2rem); }
+body.big .card h2 { font-size: clamp(2.2rem, 5vw, 3rem); }
+body.big .group { font-size: 0.82rem; }
+body.big .arabic { font-size: 1.45rem; }
+body.big .reading-target-word { font-size: clamp(2rem, 4vw, 2.6rem); }
+body.big .reading-sentence { font-size: clamp(1.6rem, 3.8vw, 2.3rem); }
+body.big .ipa, body.big .rule strong { font-size: 1.15em; }
+
+/* ---------- High contrast ----------
+   Pure black/white throughout, per WCAG AA+. The ONLY accent color in this
+   mode is the bright red used for the target long-vowel letter (.vowel) —
+   every other element (borders, icons, labels, buttons) is white or light
+   gray on black so that one highlight is the sole thing that "pops". */
+.contrast { background: #000; color: #fff; background-image: none; }
+.contrast .hero { background: #000; box-shadow: none; border: 3px solid #fff; }
+.contrast .hero::before, .contrast .hero::after { display: none; }
+.contrast .eyebrow { background: #fff; color: #000; }
+.contrast h1, .contrast .instructions h2, .contrast .tier-heading h2,
+.contrast .card h2, .contrast .rules > h2, .contrast .rule h3, .contrast .rule strong {
+  color: #fff;
+}
+.contrast .hero p:last-child, .contrast .rule b { color: #ccc; }
+.contrast .toolbar { background: #000; }
+.contrast .controls-bar label { background: #000; color: #fff; border-color: #fff; }
+.contrast .controls-bar label select { color: #fff; }
+.contrast .instructions ol { color: #ccc; }
+.contrast .rules > h2::after { background: #fff; }
+.contrast .rule li { background: #111; }
+.contrast .tabs button:not(.active) .tab-soon { background: #fff; color: #000; }
+.contrast .instructions, .contrast .card, .contrast .rule,
+.contrast .tabs, .contrast .controls-bar button, .contrast .controls-bar select,
+.contrast .actions button, .contrast .rule button {
+  background: #000; color: #fff; border: 2px solid #fff; box-shadow: none;
+}
+.contrast .tabs { border: 2px solid #fff; }
+.contrast .tabs button { color: #fff; background: transparent; }
+.contrast .tabs button.active { background: #fff; color: #000; box-shadow: none; }
+/* The rainbow tab hues and the Fun Zone dropdown are cosmetic — high
+   contrast mode flattens all of them to the same plain white-on-black
+   every other active/hovered control already uses. The Fun Zone menu
+   itself needs its own override (unlike the rainbow tabs, which the
+   broad .contrast .tabs button.active rule above already catches) since
+   it's a fixed-position sibling of .tabs, not a descendant. */
+.contrast .tabs button.fun-zone-toggle:hover { background: #fff; color: #000; }
+.contrast .tabs button.fun-zone-toggle.active, .contrast .tabs button.fun-zone-toggle.is-open { background: #fff; color: #000; box-shadow: none; }
+.contrast .fun-zone-menu { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .fun-zone-menu button { color: #fff; }
+.contrast .fun-zone-menu button:hover { background: #222; }
+.contrast .fun-zone-menu button.active { background: #fff; color: #000; }
+.contrast .controls-bar button.is-on { background: #fff; color: #000; border-color: #fff; }
+.contrast .progress { background: #000; box-shadow: none; border: 2px solid #fff; }
+.contrast .progress::before { background: #000; }
+.contrast .progress strong, .contrast .progress span { color: #fff; }
+.contrast .pic { background: #111; border: 2px solid #fff; }
+.contrast .hint, .contrast .group, .contrast .rule p, .contrast .ink-soft { color: #ccc; background: transparent; }
+.contrast .ipa { color: #fff; background: transparent; }
+.contrast .vowel { color: #ff5252; background: transparent; }
+.contrast .rule-pattern { text-decoration-color: #fff; }
+.contrast .arabic { background: transparent; color: #fff; }
+.contrast .tier-dot { background: #fff; color: #000; }
+.contrast .tier-heading::after { background: #fff; }
+.contrast .instructions ol li::before { background: #fff; color: #000; }
+.contrast .instructions-lang-toggle { background: #111; }
+.contrast .instructions-lang-toggle button { color: #ccc; }
+.contrast .instructions-lang-toggle button.active { background: #fff; color: #000; }
+.contrast .game-start-prompt { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .game-start-icon { background: #fff; color: #000; }
+.contrast .game-start-hint { color: #ccc; }
+.contrast .game-start-btn { background: #fff; color: #000; }
+.contrast .game-start-btn:hover { background: #ccc; }
+.contrast .game-start-countdown { background: #000; border: 2px solid #fff; box-shadow: none; }
+.contrast .game-start-countdown-word.is-go { color: #7cffb2; }
+.contrast .group-progress, .contrast .empty-group { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .group-progress-label { color: #ccc; }
+.contrast .group-progress-value { color: #fff; }
+.contrast .group-progress-track { background: #333; }
+.contrast .group-progress-fill { background: #fff; }
+.contrast .tab-soon { background: #fff; color: #000; }
+.contrast .sidebar { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .sidebar-group-header { color: #fff; }
+.contrast .sidebar-group-header:hover:not(:disabled) { background: #111; color: #fff; }
+.contrast .sidebar-group-header:disabled { color: #999; }
+.contrast .sidebar-group-caret { color: #fff; }
+.contrast .sidebar-levels { border-left-color: #333; }
+.contrast .sidebar-level { background: #111; color: #fff; border-color: transparent; }
+.contrast .sidebar-level:hover:not(:disabled) { border-color: #fff; }
+.contrast .sidebar-level.active { background: #fff; color: #000; border-color: #fff; }
+.contrast .sidebar-level.active .sidebar-level-count { color: #333; }
+.contrast .sidebar-level.active .sidebar-level-track { background: #ccc; }
+.contrast .sidebar-level.active .sidebar-level-fill { background: #000; }
+.contrast .sidebar-level.is-locked, .contrast .sidebar-level:disabled { background: transparent; color: #999; border-color: #333; }
+.contrast .sidebar-level-lock { color: #999; }
+.contrast .sidebar-level-track { background: #333; }
+.contrast .sidebar-level-fill { background: #fff; }
+.contrast .sidebar-level-count { color: #ccc; }
+.contrast .sidebar-level-done { color: #fff; }
+.contrast .sidebar-level.active .sidebar-level-done { color: #000; }
+.contrast .sidebar-level.is-complete:not(.active) .sidebar-level-fill { background: #fff; }
+.contrast .level-heading h2 { color: #fff; }
+.contrast .level-heading-sep { color: #666; }
+.contrast .level-heading-progress { color: #ccc; }
+.contrast .level-complete-banner { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .level-complete-action { background: #fff; color: #000; }
+.contrast .level-complete-action:hover { background: #ccc; }
+.contrast .svgBg { fill: #111; }
+.contrast .svgStroke { stroke: #fff; }
+.contrast .svgText, .contrast .svgCaption { fill: #fff; }
+/* High contrast: collapse every illustration back to plain white line
+   art on black — flat colors and translucent overlays don't meet the
+   contrast/simplicity goal of this mode, so decorative fills are hidden
+   and structural shapes become stroke-only. */
+.contrast .word-image .i-water, .contrast .word-image .i-leaf, .contrast .word-image .i-sun,
+.contrast .word-image .i-sand, .contrast .word-image .i-sand-dark, .contrast .word-image .i-rose,
+.contrast .word-image .i-sky, .contrast .word-image .i-white, .contrast .word-image .i-line {
+  fill: none; stroke: #fff; stroke-width: 6;
+}
+.contrast .word-image .i-ink, .contrast .word-image .i-shade,
+.contrast .word-image .i-shine, .contrast .word-image .i-shadow { display: none; }
+.contrast .card.done { background: #001a12; border-color: #0f0; }
+.contrast .done-badge { background: #0f0; color: #000; }
+.contrast .actions button:last-child.is-done { background: #0f0; color: #000; }
+.contrast .practice-correct { background: #001a12; color: #7cffb2; }
+.contrast .practice-incorrect { background: #2a0000; color: #ff8a80; }
+.contrast .practice-error { background: #2a1c00; color: #ffd27f; }
+.contrast .practice-listening { background: #001830; color: #7fd0ff; }
+.contrast [data-practice].is-listening, .contrast [data-practice].is-listening::after { background: #000; border-color: #fff; color: #fff; }
+
+.contrast .learn-mode-toggle { background: #000; border: 2px solid #fff; box-shadow: none; }
+.contrast .learn-mode-toggle button { color: #fff; }
+.contrast .learn-mode-toggle button.active { background: #fff; color: #000; }
+.contrast .reading-focus-overlay { background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.contrast .reading-stage { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .reading-target-word { color: #fff; }
+.contrast .reading-sentence { color: #fff; }
+.contrast .style-sweep .reading-word.is-read { color: #999; }
+.contrast .style-sweep .reading-word.is-active { color: #000; background: #fff; }
+.contrast .style-ball .reading-word.is-active { text-decoration-color: #ff5252; }
+.contrast .reading-ball-dot { background: #fff; box-shadow: none; }
+.contrast .reading-nav, .contrast .reading-known { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .reading-nav:hover:not(:disabled) { background: #fff; color: #000; }
+.contrast .reading-play { background: #fff; color: #000; }
+.contrast .reading-play:hover { background: #ccc; }
+.contrast .reading-play.is-playing { background: #ff5252; color: #000; }
+.contrast .reading-known.is-done { background: #0f0; color: #000; }
+.contrast .reading-progress-label { color: #ccc; }
+.contrast .reading-options { border-top-color: #333; }
+.contrast .reading-options-label { color: #ccc; }
+.contrast .reading-style-toggle { background: #111; }
+.contrast .reading-style-toggle button { color: #ccc; }
+.contrast .reading-style-toggle button.active { background: #fff; color: #000; }
+.contrast .reading-line-focus-toggle { background: #000; color: #fff; border-color: #fff; }
+.contrast .reading-line-focus-toggle.is-on { background: #fff; color: #000; }
+
+.contrast .roll-read-status-badge { background: #fff; color: #000; }
+.contrast .roll-read-status-badge.is-won { background: #001a12; color: #7cffb2; box-shadow: inset 0 0 0 2px #0f0; }
+.contrast .roll-read-status-badge.is-lost { background: #2a1c00; color: #ffd27f; box-shadow: inset 0 0 0 2px #ffd27f; }
+.contrast .roll-read-rounds { color: #ccc; }
+.contrast .roll-read-repeat-btn { background: #000; color: #fff; border-color: #fff; }
+.contrast .roll-read-repeat-btn:hover { background: #222; }
+.contrast .roll-read-timer-display { background: #000; border-color: #fff; }
+.contrast .roll-read-timer-value { color: #fff; }
+.contrast .roll-read-timer-unit { color: #ccc; }
+.contrast .roll-read-timer-icon { color: #fff; }
+.contrast .roll-read-timer-display.is-urgent { border-color: #ff5252; }
+.contrast .roll-read-timer-display.is-urgent .roll-read-timer-value { color: #ff8a80; }
+.contrast .roll-read-timer-display.is-urgent .roll-read-timer-icon { color: #ff5252; }
+.contrast .roll-read-die-panel { background: #000; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-die rect { fill: #000; stroke: #fff; }
+.contrast .roll-die circle { fill: #fff; }
+.contrast .roll-read-cell { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-read-cell.is-empty { border: 2px dashed #333; }
+.contrast .roll-read-cell-word { color: #fff; }
+.contrast .roll-read-cell:not(:disabled):hover { border-color: #ff5252; box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.35); }
+.contrast .roll-read-feedback { color: #ccc; }
+.contrast .roll-read-feedback.is-correct { color: #7cffb2; }
+.contrast .roll-read-feedback.is-incorrect { color: #ffd27f; }
+.contrast .roll-read-replay-levels button { background: #fff; color: #000; }
+.contrast .roll-read-replay-levels button:hover { background: #ccc; }
+.contrast .roll-read-finale-panel { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .roll-read-finale-kicker { color: #ffd27f; }
+.contrast .roll-read-finale-panel h2 { color: #fff; }
+.contrast .roll-read-finale-panel p { color: #ccc; }
+.contrast .roll-read-finale-close { border-color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+/* ---------- Dyslexia-friendly mode ----------
+   Fully independent of Large text / High contrast and combinable with
+   either. Font, spacing, and line-height rules always apply. The
+   cream-background/gray-text swap is skipped while High contrast is also
+   on (:not(.contrast) below) so that mode's black/white/red scheme still
+   owns color — the two are layered, not fighting over the same pixels. */
+/* Redefining --font-heading/--font-body (rather than only setting
+   font-family on body) is required: many elements declare their own
+   explicit font-family: var(--font-heading/--font-body), and an
+   element's own declared value always wins over an inherited one
+   regardless of the inherited rule's specificity. Overriding the custom
+   properties themselves means every var(--font-heading)/var(--font-body)
+   reference resolves to Lexend wherever it's used, including on those
+   elements — e.g. word titles (.card h2), section headers (h1/h2/h3),
+   and toolbar/control labels. */
+body.dyslexia {
+  --font-heading: var(--font-dyslexia);
+  --font-body: var(--font-dyslexia);
+  font-family: var(--font-dyslexia);
+}
+body.dyslexia .hero p,
+body.dyslexia .instructions ol li,
+body.dyslexia .rule p,
+body.dyslexia .rule li,
+body.dyslexia .hint,
+body.dyslexia .card h2,
+body.dyslexia .reading-target-word,
+body.dyslexia .reading-sentence,
+body.dyslexia .roll-read-cell-word {
+  letter-spacing: 0.02em;
+  word-spacing: 0.12em;
+}
+body.dyslexia .reading-sentence { line-height: 2.2; }
+/* Arabic script is cursive/connected — added letter-spacing distorts it. */
+body.dyslexia .arabic { letter-spacing: normal; word-spacing: normal; }
+body.dyslexia .hint { line-height: 1.9; }
+body.dyslexia .instructions ol { line-height: 2.15; }
+body.dyslexia .rule p, body.dyslexia .rule li { line-height: 1.8; }
+
+body.dyslexia:not(.contrast) { background-color: var(--dyslexia-bg); }
+body.dyslexia:not(.contrast) .instructions,
+body.dyslexia:not(.contrast) .card,
+body.dyslexia:not(.contrast) .rule,
+body.dyslexia:not(.contrast) .sidebar,
+body.dyslexia:not(.contrast) .reading-stage,
+body.dyslexia:not(.contrast) .roll-read-die-panel,
+body.dyslexia:not(.contrast) .roll-read-cell,
+body.dyslexia:not(.contrast) .game-start-prompt {
+  background: var(--dyslexia-surface);
+  color: var(--dyslexia-ink);
+}
+body.dyslexia:not(.contrast) .card h2,
+body.dyslexia:not(.contrast) .instructions h2,
+body.dyslexia:not(.contrast) .tier-heading h2,
+body.dyslexia:not(.contrast) .rule h3,
+body.dyslexia:not(.contrast) .rule strong,
+body.dyslexia:not(.contrast) .sidebar-group-header,
+body.dyslexia:not(.contrast) .level-heading h2,
+body.dyslexia:not(.contrast) .reading-target-word,
+body.dyslexia:not(.contrast) .reading-sentence,
+body.dyslexia:not(.contrast) .roll-read-cell-word {
+  color: var(--dyslexia-ink);
+}
+body.dyslexia:not(.contrast) .hint,
+body.dyslexia:not(.contrast) .rule p,
+body.dyslexia:not(.contrast) .ink-soft,
+body.dyslexia:not(.contrast) .instructions ol,
+body.dyslexia:not(.contrast) .sidebar-level-count,
+body.dyslexia:not(.contrast) .level-heading-progress,
+body.dyslexia:not(.contrast) .roll-read-feedback,
+body.dyslexia:not(.contrast) .roll-read-rounds,
+body.dyslexia:not(.contrast) .game-start-hint {
+  color: var(--dyslexia-ink-soft);
+}
+body.dyslexia:not(.contrast) .sidebar-level { background: var(--dyslexia-bg); color: var(--dyslexia-ink); }
+body.dyslexia:not(.contrast) .sidebar-level-name { color: var(--dyslexia-ink); }
+body.dyslexia:not(.contrast) .reading-focus-overlay { background: rgba(250, 242, 223, 0.85); }
+body.dyslexia:not(.contrast) .style-sweep .reading-word.is-read { color: var(--dyslexia-ink-soft); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; text-align: left; }
+  .progress { justify-self: start; }
+  .app-layout.has-sidebar { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+}
+@media (max-width: 700px) {
+  main { padding: 16px 14px 48px; }
+  .hero { padding: 26px 22px; box-shadow: var(--shadow-md); }
+  /* Not sticky here, so it can never pin under the fixed .header-widgets
+     corner cluster the way it can at desktop widths — no need to reserve
+     padding-right for it. */
+  .toolbar { position: static; padding-right: 0; }
+  .tabs { width: 100%; flex-wrap: wrap; justify-content: center; border-radius: var(--radius-md); }
+  .tabs button { flex: 1 1 auto; justify-content: center; }
+  .controls-bar { width: 100%; }
+  .controls-bar button, .controls-bar select, .controls-bar label { flex: 1 1 auto; justify-content: center; text-align: center; }
+  .card h2 { font-size: clamp(1.7rem, 7vw, 2.1rem); }
+  .grid { gap: 16px; }
+  .level-heading { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  h1 { font-size: clamp(1.6rem, 8vw, 2.1rem); }
+  .progress { width: 104px; height: 104px; }
+  .progress strong { font-size: 1.4rem; }
+  .actions { gap: 8px; }
+  .actions button, .rule button { flex: 1 1 auto; min-height: 44px; justify-content: center; }
+  .instructions, .rule, .card { padding: 18px; border-radius: var(--radius-md); }
+  .rule ul { grid-template-columns: 1fr; }
+}
+
+/* ---------- Profile picker ("Who's practicing today?") ----------
+   Netflix-style gate shown instead of the normal app whenever
+   state.showProfilePicker is true (see renderProfilePicker()). It's the
+   only thing in #app while it's up — no header/nav render alongside it —
+   so it just needs to fill the available height and center its content,
+   not escape the layout with position:fixed like the modal/finale
+   overlays do. */
+.profile-picker {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+}
+.profile-picker-panel {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+}
+.profile-picker-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  color: var(--ink);
+}
+
+.profile-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 22px;
+}
+.profile-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 130px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-md);
+}
+.profile-tile-avatar {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--primary-tint-100);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  place-items: center;
+  border: 3px solid transparent;
+  color: var(--primary);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.profile-tile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-tile:hover .profile-tile-avatar, .profile-tile:focus-visible .profile-tile-avatar { border-color: var(--primary); transform: translateY(-3px); }
+.profile-tile-name {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.95rem;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.profile-tile-avatar-add { border: 3px dashed var(--primary-tint-300); }
+.profile-tile-avatar-add .icon { width: 2.2em; height: 2.2em; }
+.profile-tile-add:hover .profile-tile-avatar-add, .profile-tile-add:focus-visible .profile-tile-avatar-add { border-color: var(--primary); border-style: dashed; }
+
+.profile-name-field {
+  display: grid;
+  gap: 6px;
+  width: min(320px, 100%);
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.profile-name-field input {
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 12px 14px;
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--primary-tint-50);
+  text-align: center;
+}
+
+.profile-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+}
+.avatar-tile {
+  border: 3px solid transparent;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: var(--primary-tint-100);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.avatar-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-tile:hover, .avatar-tile:focus-visible { transform: translateY(-2px); }
+.avatar-tile.is-selected { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint-200); }
+
+.profile-picker-error {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0;
+  color: var(--incorrect-dark);
+  background: var(--incorrect-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.profile-picker-actions { display: flex; gap: 10px; }
+.profile-picker-actions button {
+  display: inline-flex; align-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 11px 20px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.profile-picker-save { background: var(--primary); color: #fff; }
+.profile-picker-save:hover { background: var(--primary-dark); }
+.profile-picker-cancel { background: var(--primary-tint-100); color: var(--primary-dark); }
+.profile-picker-cancel:hover { background: var(--primary-tint-200); }
+
+@media (max-width: 480px) {
+  .profile-tile { width: 105px; }
+  .profile-tile-avatar { width: 90px; height: 90px; }
+  .profile-avatar-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.contrast .profile-picker-title { color: #fff; }
+.contrast .profile-tile-name { color: #fff; }
+.contrast .profile-name-field { color: #ccc; }
+.contrast .profile-name-field input { background: #111; border-color: #444; color: #fff; }
+.contrast .avatar-tile, .contrast .profile-tile-avatar { background: #111; }
+.contrast .profile-picker-cancel { background: #222; color: #fff; }
+
+/* ---------- Admin content-management mode ----------
+   Deliberately unobtrusive: a bare 6px dot in the footer is the only
+   always-present entry point, so a learner has nothing to notice or
+   stumble into. Everything else here only ever renders once admin mode
+   has been switched on. (Switch profile used to live here too, but a
+   footer that sits after all page content — including the Learn tab's
+   full level list — was routinely a couple of screens below the fold, so
+   it moved to the fixed .header-widgets corner instead; see
+   profileAvatarButtonTemplate().) */
+.app-footer { display: flex; justify-content: flex-end; padding: 18px 4px 4px; }
+.admin-toggle-btn {
+  width: 14px; height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  opacity: 0.18;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.admin-toggle-btn::before {
+  content: '';
+  display: block;
+  width: 6px; height: 6px;
+  margin: 4px auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+.admin-toggle-btn:hover, .admin-toggle-btn:focus-visible { opacity: 0.7; }
+
+.admin-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 14px;
+  padding: 12px 18px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.88rem;
+}
+.admin-banner-label { display: inline-flex; align-items: center; font-family: var(--font-heading); font-weight: 800; letter-spacing: 0.02em; }
+.admin-banner-hint { opacity: 0.75; }
+.admin-banner-actions { display: flex; gap: 8px; margin-left: auto; }
+.admin-banner-actions button {
+  display: inline-flex; align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.admin-banner-actions button:hover { background: rgba(255, 255, 255, 0.22); }
+.admin-error { flex-basis: 100%; display: flex; align-items: center; gap: 8px; margin: 0; color: var(--warning-soft); background: rgba(217, 138, 31, 0.25); border-radius: var(--radius-sm); padding: 8px 12px; }
+
+.admin-card-controls { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px; }
+.admin-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.admin-icon-btn .icon { margin: 0; }
+.admin-icon-btn:hover { background: var(--primary-tint-100); }
+.admin-icon-btn.admin-icon-danger { color: var(--incorrect); }
+.admin-icon-btn.admin-icon-danger:hover { background: var(--incorrect-soft); }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20, 20, 25, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 20;
+}
+.modal-panel {
+  width: min(560px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-lg);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-header h2 { margin: 0; font-size: 1.2rem; }
+.modal-panel form { display: grid; gap: 12px; }
+.modal-panel label { display: grid; gap: 6px; font-weight: 700; font-size: 0.85rem; color: var(--ink-soft); }
+.modal-panel input, .modal-panel textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border: 2px solid var(--primary-tint-100);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--primary-tint-50);
+}
+.modal-panel textarea { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.8rem; resize: vertical; }
+.modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+.modal-actions button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--primary-tint-100);
+  color: var(--primary-dark);
+}
+.modal-actions button[type="submit"] { background: var(--primary); color: #fff; }
+
+.archived-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.archived-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--primary-tint-50);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.archived-list button {
+  display: inline-flex; align-items: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--success-soft);
+  color: var(--success-dark);
+  padding: 7px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.archived-list button:hover { background: var(--success); color: #fff; }
+
+/* ---------- Badges & celebrations ----------
+   Every badge is a colored "medal" (--badge-color/--badge-color-light set
+   inline per badge by badgeColor() in JS) holding the power-up bolt icon.
+   The same .badge-medal is reused by the toast, the full-screen overlay,
+   and the badge-shelf grid so the one visual design carries through all
+   three moments. */
+.badge-medal {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, var(--badge-color-light), var(--badge-color));
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.65) inset, var(--shadow-md);
+}
+.badge-medal .icon { width: 1.5em; height: 1.5em; margin: 0; }
+.badge-medal.is-locked { background: var(--primary-tint-200); color: var(--ink-soft); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4) inset; }
+.badge-medal-sm { width: 34px; height: 34px; }
+.badge-medal-sm .icon { width: 1.3em; height: 1.3em; }
+.badge-medal-lg { width: 96px; height: 96px; }
+.badge-medal-lg .icon { width: 2.4em; height: 2.4em; }
+/* Only used by the Memory Match finale overlay (see memoryFinaleTemplate())
+   for a medal noticeably bigger than any other celebration moment. */
+.badge-medal-xl { width: 140px; height: 140px; }
+.badge-medal-xl .icon { width: 3.2em; height: 3.2em; }
+
+/* Persistent corner cluster — present on every view, fixed regardless of
+   scroll or which tab (Learn/Rules/Practice) is active: the active
+   profile's avatar (also the Switch profile trigger) beside the badge
+   shelf toggle, in that order so the "who" reads before the "how many
+   badges". */
+.header-widgets {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 15;
+  display: flex; align-items: center; gap: 10px;
+}
+.header-avatar-btn {
+  width: 44px; height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  flex: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.header-avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.header-avatar-btn:hover, .header-avatar-btn:focus-visible { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.badge-shelf-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 0;
+  padding: 8px 14px 8px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  cursor: pointer;
+}
+.badge-shelf-toggle:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.badge-shelf-toggle .icon { width: 1.3em; height: 1.3em; color: var(--warning); }
+.badge-shelf-toggle-count { font-size: 0.95rem; }
+
+/* Brief per-level celebration — a corner toast, not a takeover. Pops in,
+   holds, then fades on its own; the 2.2s animation is timed to match the
+   JS timeout in toggleDone() that clears state.celebration. */
+.celebration-toast {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  z-index: 25;
+  display: flex; align-items: center; gap: 12px;
+  max-width: min(340px, calc(100vw - 40px));
+  padding: 10px 18px 10px 10px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  animation: celebration-pop 2.2s ease forwards;
+}
+.celebration-toast-text { display: grid; gap: 2px; }
+.celebration-toast-text strong { font-family: var(--font-heading); font-size: 1.05rem; color: var(--ink); }
+.celebration-toast-text span { font-size: 0.8rem; color: var(--ink-soft); }
+
+/* Avatar + name row dropped into every badge/celebration moment (toast,
+   sound-group panel, and each game's finale panel) — see
+   celebrationAvatarTemplate(). `xs` sits inline inside the toast's text
+   column; `md` centers as its own row above a full-screen panel's medal. */
+.celebration-avatar { display: flex; align-items: center; gap: 6px; }
+.celebration-avatar img { border-radius: 50%; object-fit: cover; flex: none; }
+.celebration-avatar span { font-weight: 700; }
+.celebration-avatar-xs { margin-top: 2px; }
+.celebration-avatar-xs img { width: 18px; height: 18px; }
+.celebration-avatar-xs span { font-size: 0.72rem; color: var(--ink-soft); }
+.celebration-avatar-md img { width: 32px; height: 32px; }
+.celebration-avatar-md span { font-size: 0.85rem; color: var(--ink-soft); }
+@keyframes celebration-pop {
+  0% { transform: translateY(16px) scale(0.9); opacity: 0; }
+  12% { transform: translateY(0) scale(1); opacity: 1; }
+  86% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-10px) scale(0.96); opacity: 0; }
+}
+
+/* Bigger, full-screen sound-group celebration — deliberately more
+   elaborate than the toast (backdrop + confetti + a panel that has to be
+   dismissed) so finishing a whole sound family reads as a bigger deal
+   than finishing one level of it. */
+.group-celebration-overlay {
+  position: fixed; inset: 0;
+  z-index: 30;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 30%, rgba(12, 111, 249, 0.35), rgba(10, 12, 24, 0.78));
+  overflow: hidden;
+}
+.group-celebration-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 32px 28px 26px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: group-celebration-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1.3);
+}
+.group-celebration-panel h2 { margin: 6px 0 0; font-size: 1.5rem; color: var(--ink); }
+.group-celebration-panel p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+.group-celebration-continue {
+  margin-top: 6px;
+  display: inline-flex; align-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 10px 20px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  cursor: pointer;
+}
+.group-celebration-continue:hover { background: var(--primary-dark); }
+.group-celebration-continue .icon { margin-right: 0.4em; }
+@keyframes group-celebration-in {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.group-celebration-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti-piece {
+  position: absolute;
+  top: -10%;
+  left: calc(var(--i) * 6.5%);
+  width: 9px; height: 14px;
+  background: hsl(calc(var(--i) * 24deg) 85% 62%);
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: confetti-fall 2.6s ease-in infinite;
+  animation-delay: calc(var(--i) * 0.09s);
+}
+.confetti-piece:nth-child(odd) { border-radius: 50%; }
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 0.95; }
+  100% { transform: translateY(110vh) rotate(340deg); opacity: 0.4; }
+}
+
+/* Badge shelf — reuses .modal-overlay/.modal-panel from the admin edit
+   modal so it looks like part of the same app, not a bolted-on feature. */
+.badge-shelf-panel { width: min(640px, 100%); }
+.badge-shelf-total { margin-left: 8px; font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); vertical-align: middle; }
+.badge-shelf-group { margin-top: 18px; }
+.badge-shelf-group:first-of-type { margin-top: 6px; }
+.badge-shelf-group h3 { margin: 0 0 10px; font-size: 1rem; color: var(--ink); }
+.badge-shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px; }
+.badge-shelf-item { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.badge-shelf-item-label { font-size: 0.72rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.badge-shelf-item-affirmation { font-size: 0.7rem; color: var(--ink-soft); }
+.badge-shelf-item.is-locked .badge-shelf-item-label,
+.badge-shelf-item.is-locked .badge-shelf-item-affirmation { color: var(--ink-soft); opacity: 0.7; }
+
+.contrast .badge-shelf-toggle { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .badge-shelf-toggle .icon { color: #fff; }
+.contrast .header-avatar-btn { border: 2px solid #fff; box-shadow: none; }
+.contrast .celebration-toast { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
+.contrast .celebration-toast-text strong { color: #fff; }
+.contrast .celebration-toast-text span { color: #ccc; }
+.contrast .celebration-avatar span { color: #ccc; }
+.contrast .group-celebration-panel { background: #000; color: #fff; border: 2px solid #fff; }
+.contrast .group-celebration-panel h2 { color: #fff; }
+.contrast .group-celebration-panel p { color: #ccc; }
+.contrast .group-celebration-continue { background: #fff; color: #000; }
+.contrast .badge-medal { box-shadow: 0 0 0 3px #000 inset; }
+.contrast .badge-shelf-item-label { color: #fff; }
+.contrast .badge-shelf-item-affirmation { color: #ccc; }
