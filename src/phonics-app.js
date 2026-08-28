@@ -1,26 +1,26 @@
 const WORDS = [
-  { word: "bay", arabic: "خَلِيجٌ", hint: "a curve of ocean by land", visual: "bay", level: 1, archived: true, sentence: "The boats sat quietly in the bay." },
-  { word: "day", arabic: "يَوْمٌ", hint: "sun-up time", visual: "day", level: 1, archived: true, sentence: "Today is a sunny day." },
-  { word: "hay", arabic: "تِبْنٌ", hint: "dry grass", visual: "hay", level: 1, archived: true, sentence: "The horse ate some hay." },
-  { word: "jay", arabic: "طَائِرُ القَيْقِ", hint: "a colorful, noisy bird", visual: "jay", level: 1, archived: true, sentence: "A blue jay landed on the fence." },
-  { word: "lay", arabic: "يَضَعُ / يَسْتَلْقِي", hint: "put down or rest", visual: "bed", level: 1, archived: true, sentence: "Please lay the book on the table." },
-  { word: "may", arabic: "قَدْ / شَهْرُ مَايُو", hint: "might, or the month May", visual: "calendar", level: 1, archived: true, sentence: "You may go outside and play." },
-  { word: "pay", arabic: "يَدْفَعُ", hint: "give money", visual: "pay", level: 1, archived: true, sentence: "I will pay for the food." },
-  { word: "ray", arabic: "شُعَاعٌ", hint: "a line of light", visual: "ray", level: 1, archived: true, sentence: "A ray of sunlight came through the window." },
-  { word: "say", arabic: "يَقُولُ", hint: "speak words", visual: "speech", level: 1, archived: true, sentence: "What did you say to her?" },
-  { word: "way", arabic: "طَرِيقٌ / أُسْلُوبٌ", hint: "a path, or how something is done", visual: "road", level: 1, archived: true, sentence: "This is the way to the park." },
-  { word: "away", arabic: "بَعِيدًا / ذَهَبَ", hint: "gone, or not in this place", visual: "arrows", level: 1, archived: true, sentence: "The cat ran away from the dog." },
-  { word: "bray", arabic: "نَهِيقُ الْحِمَارِ", hint: "the loud, harsh cry a donkey makes", visual: "bray", level: 1, archived: true, sentence: "The donkey let out a loud bray." },
-  { word: "clay", arabic: "طِينٌ", hint: "soft, wet earth used for pottery", visual: "clay", level: 1, archived: true, sentence: "She made a pot out of clay." },
-  { word: "fray", arabic: "مُشَاجَرَةٌ / يَتَهَرَّأُ", hint: "a scuffle, or threads wearing loose at an edge", visual: "fray", level: 1, archived: true, sentence: "The rope began to fray at the end." },
-  { word: "gray", arabic: "رَمَادِيٌّ", hint: "the color between black and white", visual: "gray", level: 1, archived: true, sentence: "The sky turned gray before the storm." },
-  { word: "play", arabic: "يَلْعَبُ", hint: "have fun or join a game", visual: "game", level: 1, archived: true, sentence: "The children love to play outside." },
-  { word: "pray", arabic: "يُصَلِّي / يَدْعُو", hint: "to speak to God", visual: "pray", level: 1, archived: true, sentence: "They pray together every morning." },
-  { word: "slay", arabic: "يَقْتُلُ / يَذْبَحُ", hint: "to kill with a weapon", visual: "sword", level: 1, archived: true, sentence: "The knight will slay the dragon in the story." },
-  { word: "stay", arabic: "يَبْقَى", hint: "remain in one place", visual: "house", level: 1, archived: true, sentence: "Please stay here until I return." },
-  { word: "sway", arabic: "يَتَأَرْجَحُ / يَتَمَايَلُ", hint: "to rock gently from side to side", visual: "sway", level: 1, archived: true, sentence: "The trees sway gently in the wind." },
-  { word: "spray", arabic: "يَرُشُّ", hint: "send out small drops", visual: "spray", level: 1, archived: true, sentence: "She used a spray to clean the window." },
-  { word: "tray", arabic: "صِينِيَّةٌ", hint: "a flat holder for food", visual: "tray", level: 1, archived: true, sentence: "He carried the cups on a tray." },
+  { word: "bay", arabic: "خَلِيجٌ", hint: "a curve of ocean by land", visual: "bay", level: 1, sentence: "The boats sat quietly in the bay." },
+  { word: "day", arabic: "يَوْمٌ", hint: "sun-up time", visual: "day", level: 1, sentence: "Today is a sunny day." },
+  { word: "hay", arabic: "تِبْنٌ", hint: "dry grass", visual: "hay", level: 1, sentence: "The horse ate some hay." },
+  { word: "jay", arabic: "طَائِرُ القَيْقِ", hint: "a colorful, noisy bird", visual: "jay", level: 1, sentence: "A blue jay landed on the fence." },
+  { word: "lay", arabic: "يَضَعُ / يَرْقُدُ", hint: "put down or rest", visual: "bed", level: 1, sentence: "Please lay the book on the table." },
+  { word: "may", arabic: "قَدْ / شَهْرُ مَايُو", hint: "might, or the month May", visual: "calendar", level: 1, sentence: "You may go outside and play." },
+  { word: "pay", arabic: "يَدْفَعُ", hint: "give money", visual: "pay", level: 1, sentence: "I will pay for the food." },
+  { word: "ray", arabic: "شُعَاعٌ / أَشِعَّةٌ", hint: "a line of light", visual: "ray", level: 1, sentence: "A ray of sunlight came through the window." },
+  { word: "say", arabic: "يَقُولُ", hint: "speak words", visual: "speech", level: 1, sentence: "What did you say to her?" },
+  { word: "way", arabic: "طَرِيقٌ / أُسْلُوبٌ", hint: "a path, or how something is done", visual: "road", level: 1, sentence: "This is the way to the park." },
+  { word: "away", arabic: "بَعِيدًا / ذَهَبَ", hint: "gone, or not in this place", visual: "arrows", level: 1, sentence: "The cat ran away from the dog." },
+  { word: "bray", arabic: "نَهِيقُ الحِمَارِ", hint: "the loud, harsh cry a donkey makes", visual: "bray", level: 1, sentence: "The donkey let out a loud bray." },
+  { word: "clay", arabic: "طِينٌ", hint: "soft, wet earth used for pottery", visual: "clay", level: 1, sentence: "She made a pot out of clay." },
+  { word: "fray", arabic: "مُشَاجَرَةٌ / يَتَهَرَّأُ", hint: "a scuffle, or threads wearing loose at an edge", visual: "fray", level: 1, sentence: "The rope began to fray at the end." },
+  { word: "gray", arabic: "رَمَادِيٌّ", hint: "the color between black and white", visual: "gray", level: 1, sentence: "The sky turned gray before the storm." },
+  { word: "play", arabic: "يَلْعَبُ / لُعْبَةٌ", hint: "have fun or join a game", visual: "game", level: 1, sentence: "The children love to play outside." },
+  { word: "pray", arabic: "يُصَلِّي / يَدْعُو", hint: "to speak to God", visual: "pray", level: 1, sentence: "They pray together every morning." },
+  { word: "slay", arabic: "يَقْتُلُ / يَذْبَحُ", hint: "to kill with a weapon", visual: "sword", level: 1, sentence: "The knight will slay the dragon in the story." },
+  { word: "stay", arabic: "يَبْقَى / يَمْكُثُ", hint: "remain in one place", visual: "house", level: 1, sentence: "Please stay here until I return." },
+  { word: "sway", arabic: "يَتَأَرْجَحُ / يَتَمَايَلُ", hint: "to rock gently from side to side", visual: "sway", level: 1, sentence: "The trees sway gently in the wind." },
+  { word: "spray", arabic: "رَذَاذٌ / يَرُشُّ", hint: "send out small drops", visual: "spray", level: 1, sentence: "She used a spray to clean the window." },
+  { word: "tray", arabic: "صِينِيَّةٌ", hint: "a flat holder for food", visual: "tray", level: 1, sentence: "He carried the cups on a tray." },
   { word: "ace", arabic: "بَطَلٌ", hint: "a champion or expert", visual: "ace", level: 1, image: 'src/assets/images/Long A/001-ace.png', svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"205\" rx=\"70\" ry=\"12\"/><path class=\"i-water\" d=\"M118 100 L95 195 L130 175 L140 100Z\"/><path class=\"i-water\" d=\"M182 100 L205 195 L170 175 L160 100Z\"/><circle class=\"i-sun\" cx=\"150\" cy=\"95\" r=\"55\"/><circle class=\"i-line\" cx=\"150\" cy=\"95\" r=\"55\"/><path class=\"i-ink\" d=\"M150 62 L159 85 L184 85 L164 100 L172 123 L150 108 L128 123 L136 100 L116 85 L141 85Z\"/><ellipse class=\"i-shine\" cx=\"130\" cy=\"76\" rx=\"10\" ry=\"7\"/>", sentence: "He is an ace football player." },
   { word: "ape", arabic: "قِرْدٌ", hint: "a large tailless monkey", visual: "ape", level: 1, image: 'src/assets/images/Long A/002-ape.png', svg: "<ellipse class=\"i-shadow\" cx=\"150\" cy=\"205\" rx=\"75\" ry=\"12\"/><circle class=\"i-sand-dark\" cx=\"90\" cy=\"92\" r=\"28\"/><circle class=\"i-sand-dark\" cx=\"210\" cy=\"92\" r=\"28\"/><circle class=\"i-sand\" cx=\"150\" cy=\"112\" r=\"68\"/><circle class=\"i-line\" cx=\"150\" cy=\"112\" r=\"68\"/><ellipse class=\"i-sand-dark\" cx=\"150\" cy=\"142\" rx=\"42\" ry=\"32\"/><ellipse class=\"i-line\" cx=\"150\" cy=\"142\" rx=\"42\" ry=\"32\"/><circle class=\"i-ink\" cx=\"128\" cy=\"100\" r=\"7\"/><circle class=\"i-ink\" cx=\"172\" cy=\"100\" r=\"7\"/><circle class=\"i-ink\" cx=\"140\" cy=\"145\" r=\"4\"/><circle class=\"i-ink\" cx=\"160\" cy=\"145\" r=\"4\"/><path class=\"i-line\" d=\"M122 165q28 18 56 0\"/><ellipse class=\"i-shine\" cx=\"122\" cy=\"86\" rx=\"9\" ry=\"6\"/>", sentence: "The ape likes to swing from branch to branch." },
   // say: 'eight' — TTS reads bare "ate" with a short vowel (like "at"); the
@@ -139,21 +139,21 @@ const WORDS = [
   { word: 'wane', arabic: 'يَتَضَاءَلُ / يَخْبُو', hint: 'to slowly get smaller, like the moon losing its light', visual: 'wane', level: 1, image: 'src/assets/images/Long A/105-wane.png', sentence: "The moon will wane after tonight." },
   { word: 'ware', arabic: 'سِلْعَةٌ / بِضَاعَةٌ', hint: 'goods that are made to be sold', visual: 'ware', level: 1, archived: true, sentence: "The shop sells fine glass ware." },
   { word: 'wave', arabic: 'مَوْجَةٌ / يُلَوِّحُ', hint: 'a moving ridge of water, or to move your hand in greeting', visual: 'wave', level: 1, image: 'src/assets/images/Long A/107-wave.png', sentence: "She waved at her friend across the street." },
-  { word: "always", arabic: "دَائِمًا", hint: "all the time", visual: "infinity", level: 2, archived: true, sentence: "I always brush my teeth before bed." },
-  { word: "runaway", arabic: "هَارِبٌ", hint: "someone who escapes", visual: "runner", level: 2, archived: true, sentence: "The police searched for the runaway dog." },
-  { word: "birthday", arabic: "يَوْمُ الْمِيلَادِ", hint: "a yearly celebration", visual: "cake", level: 2, archived: true, sentence: "Today is my little sister's birthday." },
-  { word: "causeway", arabic: "طَرِيقٌ مَشْهُودٌ / مَمَرٌّ مُرْتَفِعٌ", hint: "a raised road over water", visual: "road", level: 2, archived: true, sentence: "The causeway connects the island to the mainland." },
-  { word: "claymore", arabic: "سَيْفٌ اسْكُتْلَنْدِيٌّ / لُغْمٌ مُسَطَّحٌ", hint: "a large old sword", visual: "sword", level: 2, archived: true, sentence: "The museum displayed an old Scottish claymore." },
-  { word: "daybreak", arabic: "بُزُوغُ الْفَجْرِ / شُرُوقُ الشَّمْسِ", hint: "first light in the morning", visual: "sunrise", level: 2, archived: true, sentence: "We woke up at daybreak to watch the sunrise." },
-  { word: "dayshift", arabic: "وَرْدِيَّةُ النَّهَارِ", hint: "work time during the day", visual: "worker", level: 2, archived: true, sentence: "My brother works the dayshift at the hospital." },
-  { word: "display", arabic: "يَعْرِضُ / عَرْضٌ", hint: "show something clearly", visual: "display", level: 2, archived: true, sentence: "The store has a new display in the window." },
-  { word: "doorstay", arabic: "مِزْلَاجَةُ الْبَابِ / دِعَامَةُ الْبَابِ", hint: "a support that holds a door", visual: "door", level: 2, archived: true, sentence: "The doorstay keeps the door from slamming shut." },
-  { word: "fairplay", arabic: "لَعِبٌ نَزِيهٌ / نَزَاهَةٌ", hint: "playing by the rules", visual: "handshake", level: 2, archived: true, sentence: "The coach always talks about fairplay." },
-  { word: "gateway", arabic: "بَوَّابَةٌ / مَدْخَلٌ", hint: "an entrance", visual: "gate", level: 2, archived: true, sentence: "The old arch is the gateway to the city." },
-  { word: "haystack", arabic: "كُدْسُ التِّبْنِ / رُزْمَةُ قَشٍّ", hint: "a pile of hay", visual: "haystack", level: 2, archived: true, sentence: "The farmer built a tall haystack in the barn." },
-  { word: "overstay", arabic: "يَبْقَى أَكْثَرَ مِنَ الْمُدَّةِ", hint: "stay too long", visual: "clock", level: 2, archived: true, sentence: "Please don't overstay your welcome." },
-  { word: "playbook", arabic: "كِتَابُ اللَّعِبِ / خِطَّةُ اللَّعِبِ", hint: "a book of game plans", visual: "book", level: 2, archived: true, sentence: "The coach studied the team's playbook." },
-  { word: "sideways", arabic: "إِلَى الْجَانِبِ / جَانِبِيًّا", hint: "to or from the side", visual: "arrows", level: 2, archived: true, sentence: "The car skidded sideways on the ice." },
+  { word: "always", arabic: "دَائِمًا", hint: "all the time", visual: "infinity", level: 2, sentence: "I always brush my teeth before bed." },
+  { word: "runaway", arabic: "هَارِبٌ", hint: "someone who escapes", visual: "runner", level: 2, sentence: "The police searched for the runaway dog." },
+  { word: "birthday", arabic: "يَوْمُ المِيلَادِ", hint: "a yearly celebration", visual: "cake", level: 2, sentence: "Today is my little sister's birthday." },
+  { word: "causeway", arabic: "طَرِيقٌ مَمْهُودٌ / مَمَرٌّ مُرْتَفِعٌ", hint: "a raised road over water", visual: "road", level: 2, sentence: "The causeway connects the island to the mainland." },
+  { word: "claymore", arabic: "سَيْفٌ اسْكُتْلَنْدِيٌّ / لَغَمٌ مُتَشَظٍّ", hint: "a large old sword", visual: "sword", level: 2, sentence: "The museum displayed an old Scottish claymore." },
+  { word: "daybreak", arabic: "بُزُوغُ الفَجْرِ / شُرُوقُ الشَّمْسِ", hint: "first light in the morning", visual: "sunrise", level: 2, sentence: "We woke up at daybreak to watch the sunrise." },
+  { word: "dayshift", arabic: "وَرْدِيَّةُ النَّهَارِ", hint: "work time during the day", visual: "worker", level: 2, sentence: "My brother works the dayshift at the hospital." },
+  { word: "display", arabic: "يَعْرِضُ / عَرْضٌ", hint: "show something clearly", visual: "display", level: 2, sentence: "The store has a new display in the window." },
+  { word: "doorstay", arabic: "مِزْلَجَةُ البَابِ / دَعَامَةُ البَابِ", hint: "a support that holds a door", visual: "door", level: 2, sentence: "The doorstay keeps the door from slamming shut." },
+  { word: "fairplay", arabic: "لَعِبٌ نَزِيهٌ / نَزَاهَةٌ", hint: "playing by the rules", visual: "handshake", level: 2, sentence: "The coach always talks about fairplay." },
+  { word: "gateway", arabic: "بَوَّابَةٌ / مَدْخَلٌ", hint: "an entrance", visual: "gate", level: 2, sentence: "The old arch is the gateway to the city." },
+  { word: "haystack", arabic: "كَدْسُ التِّبْنِ / رُزْمَةُ قَشٍّ", hint: "a pile of hay", visual: "haystack", level: 2, sentence: "The farmer built a tall haystack in the barn." },
+  { word: "overstay", arabic: "الإِقَامَةُ المُطَوَّلَةُ / يَبْقَى أَكْثَرَ مِنَ المُدَّةِ", hint: "stay too long", visual: "clock", level: 2, sentence: "Please don't overstay your welcome." },
+  { word: "playbook", arabic: "كِتَابُ اللَّعِبِ / خُطَّةُ اللُّعَبِ", hint: "a book of game plans", visual: "book", level: 2, sentence: "The coach studied the team's playbook." },
+  { word: "sideways", arabic: "إِلَى الجَانِبِ / جَانِبِيًّا", hint: "to or from the side", visual: "arrows", level: 2, sentence: "The car skidded sideways on the ice." },
   { word: 'blame', arabic: 'يَلُومُ', hint: 'to say someone caused something bad', visual: 'blame', level: 1, image: 'src/assets/images/Long A/108-blame.png', sentence: "Don't blame me for the mistake." },
   { word: 'brace', arabic: 'دِعَامَةٌ', hint: 'a support that holds something steady', visual: 'brace', level: 1, image: 'src/assets/images/Long A/109-brace.png', sentence: "The metal brace held the shelf in place." },
   { word: 'brave', arabic: 'شُجَاعٌ', hint: 'not afraid; willing to face danger', visual: 'brave', level: 1, image: 'src/assets/images/Long A/110-brave.png', sentence: "The firefighter was very brave during the rescue." },
@@ -382,6 +382,63 @@ const WORDS = [
   { word: 'mountain', arabic: 'جَبَلٌ', hint: 'a very tall, rocky landform', visual: 'mountain', level: 1, sentence: "They hiked to the top of the mountain." },
   { word: 'paintbox', arabic: 'عُلْبَةُ أَلْوَانٍ', hint: 'a box that holds paints for art', visual: 'paintbox', level: 1, sentence: "She opened her paintbox to start painting." },
   { word: 'plaintiff', arabic: 'المُدَّعِي', hint: 'the person who brings a case to court', visual: 'plaintiff', level: 1, sentence: "The plaintiff explained her case to the judge." },
+
+  // ---------- 'ay' sound group ----------
+  // From the manuscript's "ay" chapter. No `image`/`svg` yet — real DALL-E
+  // photos come in a later pass, so these words fall back to the plain
+  // generated SVG (see wordCardPic()/imageSvg()) exactly like any other
+  // image-less word; soundGroupId() buckets every word below into the
+  // 'ay' tab purely because its spelling contains "ay", so no other wiring
+  // is needed for the sidebar, tiers, level-locking, badges, Roll and
+  // Read, Word Search, or Reading Activity.
+  //
+  // The 3-, 4-, and 8-letter tiers were already sitting in WORDS above as
+  // `archived: true` placeholders from before the sound-group system
+  // existed (several — bay/day/hay.../claymore/haystack/playbook — even
+  // had hand-drawn WORD_SVGS illustrations already keyed to them); this
+  // pass un-archives those in place, corrects a few of their Arabic
+  // translations/harakat against the manuscript (lay, ray, play, stay,
+  // spray, causeway, claymore, doorstay, haystack, overstay, playbook, and
+  // a handful of sukun-before-sun-letter spellings), and adds every
+  // 5-, 6-, and 7-letter word plus this section's own new entries below.
+  //
+  // One manuscript entry needed a judgment call: its "4-Letter Words"
+  // list has a bullet literally spelled "cray" but glossed with the
+  // Arabic for "crayfish" (سَمَكُ الجَرَادِ البَحْرِيّ) — "cray" on its own isn't
+  // a real word carrying that meaning, so this uses "crayfish" (the word
+  // the definition actually describes) instead, auto-tiered to Level 6
+  // (8 letters) like everything else here.
+  { word: 'array', arabic: 'تَرْتِيبٌ / مَجْمُوعَةٌ', hint: 'an ordered arrangement, or a wide selection', visual: 'array', level: 1, sentence: "The store had a wide array of colors to choose from." },
+  { word: 'belay', arabic: 'يُؤَمِّنُ حَبْلَ التَّسَلُّقِ', hint: 'to secure a rope so a climber does not fall', visual: 'belay', level: 1, sentence: "She learned to belay her climbing partner safely." },
+  { word: 'decay', arabic: 'تَحَلُّلٌ / يَتَفَسَّخُ', hint: 'to slowly break down or rot', visual: 'decay', level: 1, sentence: "Sugary snacks can cause tooth decay." },
+  { word: 'delay', arabic: 'تَأْخِيرٌ / يُؤَجِّلُ', hint: 'to make something happen later than planned', visual: 'delay', level: 1, sentence: "Heavy rain caused a delay in the flight." },
+  { word: 'essay', arabic: 'مَقَالٌ / مُحَاوَلَةٌ', hint: 'a short piece of writing about one topic', visual: 'essay', level: 1, sentence: "She wrote an essay about her summer vacation." },
+  { word: 'relay', arabic: 'تَرْحِيلٌ / سِبَاقُ التَّبَادُلِ', hint: 'a race where team members take turns, or to pass something along', visual: 'relay', level: 1, sentence: "Our class won the relay race at sports day." },
+  { word: 'repay', arabic: 'يُسَدِّدُ / يُرَدُّ', hint: 'to pay back money that was borrowed', visual: 'repay', level: 1, sentence: "He promised to repay his friend next week." },
+  { word: 'resay', arabic: 'يُعِيدُ القَوْلَ', hint: 'to say something again', visual: 'resay', level: 1, sentence: "Could you resay that so everyone can hear?" },
+  { word: 'stray', arabic: 'ضَالٌّ / يَتَشَرَّدُ', hint: 'a lost animal with no home, or to wander off', visual: 'stray', level: 1, sentence: "They fed a stray cat that lived near the school." },
+  { word: 'today', arabic: 'اليَوْمَ', hint: 'this day, right now', visual: 'today', level: 1, sentence: "We are going to the zoo today." },
+  { word: 'unlay', arabic: 'يَفُكُّ / يَفْرُدُ', hint: 'to untwist the strands of a rope', visual: 'unlay', level: 1, sentence: "The sailor had to unlay the old rope to repair it." },
+  { word: 'betray', arabic: 'يَخُونُ / يَغْدِرُ', hint: 'to be disloyal to someone who trusts you', visual: 'betray', level: 1, sentence: "It hurt when his friend chose to betray his trust." },
+  { word: 'friday', arabic: 'يَوْمُ الجُمُعَةِ', hint: 'the day of the week between Thursday and Saturday', visual: 'friday', level: 1, sentence: "We always order pizza on Friday night." },
+  { word: 'midday', arabic: 'ظُهْرٌ / مُنْتَصَفُ النَّهَارِ', hint: 'the middle of the day, around noon', visual: 'midday', level: 1, sentence: "We stopped for lunch at midday." },
+  { word: 'monday', arabic: 'يَوْمُ الاِثْنَيْنِ', hint: 'the first day of the school week', visual: 'monday', level: 1, sentence: "School starts again on Monday." },
+  { word: 'outlay', arabic: 'نَفَقَةٌ / يَصْرِفُ', hint: 'money spent on something, especially at the start', visual: 'outlay', level: 1, sentence: "The new equipment required a big outlay." },
+  { word: 'payday', arabic: 'يَوْمُ دَفْعِ الرَّوَاتِبِ', hint: 'the day workers receive their wages', visual: 'payday', level: 1, sentence: "Dad always takes us out to eat on payday." },
+  { word: 'runway', arabic: 'مَدْرَجُ الطَّائِرَاتِ', hint: 'a strip where planes take off and land', visual: 'runway', level: 1, sentence: "The airplane sped down the runway before takeoff." },
+  { word: 'subway', arabic: 'مِتْرُو / طَرِيقٌ تَحْتَ الأَرْضِ', hint: 'a train system that runs underground', visual: 'subway', level: 1, sentence: "We took the subway to get downtown quickly." },
+  { word: 'sunday', arabic: 'يَوْمُ الأَحَدِ', hint: 'the day of rest at the end of the week', visual: 'sunday', level: 1, sentence: "We visit our grandparents every Sunday." },
+  { word: 'waylay', arabic: 'يَتَرَبَّصُ / يَعْتَرِضُ الطَّرِيقَ', hint: 'to stop or ambush someone unexpectedly', visual: 'waylay', level: 1, sentence: "Bandits used to waylay travelers on that old road." },
+  { word: 'affray', arabic: 'شِجَارٌ / مُشَاجَرَةٌ', hint: 'a noisy public fight or disturbance', visual: 'affray', level: 1, sentence: "The police were called to break up the affray." },
+  { word: 'bayleaf', arabic: 'وَرَقُ الغَارِ', hint: 'a dried leaf used to flavor soups and stews', visual: 'bayleaf', level: 1, sentence: "Mom dropped a bayleaf into the simmering soup." },
+  { word: 'forelay', arabic: 'يَضَعُ مُسْبَقًا', hint: 'to plan or set something out in advance', visual: 'forelay', level: 1, sentence: "The scouts would forelay their route before every hike." },
+  { word: 'hayrack', arabic: 'حَامِلُ التِّبْنِ', hint: 'a rack used to hold and feed hay to animals', visual: 'hayrack', level: 1, sentence: "The horses ate from the hayrack in the barn." },
+  { word: 'layaway', arabic: 'خِطَّةُ تَسْلِيمٍ مُؤَجَّلٍ', hint: 'a plan to pay for something a little at a time before taking it home', visual: 'layaway', level: 1, sentence: "She put the bike on layaway until payday." },
+  { word: 'outplay', arabic: 'يَتَفَوَّقُ فِي اللَّعِبِ', hint: 'to play better than an opponent', visual: 'outplay', level: 1, sentence: "Our team worked hard to outplay their rivals." },
+  { word: 'overpay', arabic: 'يَدْفَعُ أَكْثَرَ مِنَ اللازِمِ', hint: 'to pay more than something is worth', visual: 'overpay', level: 1, sentence: "I didn't want to overpay for the used bike." },
+  { word: 'portray', arabic: 'يُصَوِّرُ / يَصِفُ', hint: 'to show or describe someone in a certain way', visual: 'portray', level: 1, sentence: "The actor had to portray a brave knight." },
+  { word: 'prepay', arabic: 'يَدْفَعُ مُقَدَّمًا', hint: 'to pay for something before you receive it', visual: 'prepay', level: 1, sentence: "You can prepay for your ticket online." },
+  { word: 'crayfish', arabic: 'سَمَكُ الجَرَادِ البَحْرِيِّ (كَرَيْفِيش)', hint: 'a small freshwater animal that looks like a tiny lobster', visual: 'crayfish', level: 1, sentence: "We caught a crayfish in the shallow creek." },
 ];
 
 // ---------- Catch the Sound: curated word pool ----------
@@ -533,14 +590,16 @@ function wordsInSoundGroup(groupId) {
 }
 
 // Which letter index(es) inside a word carry the long-vowel sound, for the
-// red highlight on its card — e.g. just the "a" in "cake" or "day", or both
-// letters of the "ai" digraph together in "rain" (the "ai" chapter's target
-// sound is the two-letter team, not a single letter within it) — not the
-// whole "ay" spelling though, since that chapter's approximation stays a
-// single-letter highlight. This is a deliberate approximation rather than a
-// full pronunciation model: for the plain "a" chapter it's the "a" in a
-// silent-e syllable (cake, translate) or an open syllable (potato), falling
-// back to the last "a" in the word when neither pattern is found.
+// red highlight on its card — e.g. just the "a" in "cake", or both letters
+// of the digraph together in "rain"/"day" (the "ai"/"ay" chapters' target
+// sound is the two-letter team, not a single letter within it — "day"
+// highlights the same way whether the team sits at the very end of the
+// word, as it usually does, or mid-word as in "claymore"; the regex below
+// doesn't care about position, only the substring). This is a deliberate
+// approximation rather than a full pronunciation model: for the plain "a"
+// chapter it's the "a" in a silent-e syllable (cake, translate) or an open
+// syllable (potato), falling back to the last "a" in the word when neither
+// pattern is found.
 //
 // The open-syllable guess can't distinguish a genuinely long, stressed "a"
 // (radiate, aviator) from an unstressed one that merely happens to match
@@ -551,18 +610,11 @@ function highlightIndices(word, override) {
   if (override) return override;
   const lower = word.toLowerCase();
   const group = soundGroupId(word);
-  if (group === 'ai') {
+  if (group === 'ai' || group === 'ay') {
     const indices = [];
-    const digraph = /ai/g;
+    const digraph = new RegExp(group, 'g');
     let match;
     while ((match = digraph.exec(lower))) indices.push(match.index, match.index + 1);
-    return indices;
-  }
-  if (group === 'ay') {
-    const indices = [];
-    const digraph = /ay/g;
-    let match;
-    while ((match = digraph.exec(lower))) indices.push(match.index);
     return indices;
   }
   const indices = new Set();
@@ -3308,10 +3360,10 @@ function sidebarLevelsTemplate(group) {
 }
 
 // Left-hand sidebar: one entry per SOUND_GROUPS entry, each expanding to
-// its own level list. A group with no active words yet (AI, AY today)
-// renders as a disabled "soon" placeholder with no expand arrow — adding
-// its first word to WORDS is all it takes for it to become a real,
-// expandable branch here.
+// its own level list. A group with no active words yet renders as a
+// disabled "soon" placeholder with no expand arrow — adding its first
+// word to WORDS is all it takes for it to become a real, expandable
+// branch here.
 function sidebarTemplate() {
   return `<aside class="sidebar" aria-label="Sound groups and levels">
     <nav class="sidebar-tree">${SOUND_GROUPS.map((group) => {
